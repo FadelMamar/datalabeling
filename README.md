@@ -28,10 +28,14 @@ Repository for data labeling
 (Instructions are available here: https://labelstud.io/guide/install.html#Install-using-Homebrew)
 - **Install homebrew** -> Follow instructions here https://brew.sh/
 - Open terminal 
-- Type in ```brew tap heartexlabs/tap``` and press "Enter"
-- Type in ```brew install heartexlabs/tap/label-studio``` and press "Enter"
+- Type in ```brew tap humansignal/tap``` and press "Enter"
+- Type in ```brew install humansignal/tap/label-studio``` and press "Enter"
 - Launch Label studio by typing ```label-studio``` and pressing "Enter".
 
+# Install Label-studio using Docker (Mac and windows)
+(instructions are available here https://labelstud.io/guide/install.html#Install-with-Docker)
+- Install Docker ->  https://www.docker.com/ 
+- open terminal in your workspace and run ```docker run -it -p 8080:8080 -v ./labeleddata:/label-studio/data heartexlabs/label-studio:latest```
 
 # Create a project in Label studio
 https://labelstud.io/guide/setup_project.html#Create-a-project
