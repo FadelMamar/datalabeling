@@ -11,18 +11,22 @@ Repository for data labeling
 # Install Label-studio for windows
 - **Install Anaconda** Follow instructions at https://www.anaconda.com/download
 (Instructions are also available here https://labelstud.io/guide/install.html#Install-with-Anaconda)
-- Open Anaconda prompt. Type 'anaconda prompt' in the search bar for your computer and launch it.
-- Create a virtual environment: type in ```python -m venv label-studio``` then press 'Enter'
-- Activate virtual environment: type in ```label-studio\Scripts\activate.bat``` then press 'Enter'
+- Open Anaconda prompt. Type 'anaconda prompt' in the search bar of your computer and launch it.
+- Create a conda virtual environment: type in ```conda create -n label-studio``` then press 'Enter'
+- Activate virtual environment: type in ```conda activate label-studio``` then press 'Enter'
 - Install label-studio: type in ```pip install label-studio``` then press 'Enter'
-- Launch label studio: type in ```label-studio``` then press 'Enter'
-- Close application: log out of the application then type ```deactivate``` then press 'Enter'
-## Launch Label-studio when it is already installed
-- Open Anaconda prompt. Type 'anaconda prompt' in the search bar for your computer and launch it.
-- Move to your workspace
-- Activate virtual environment: type in ```label-studio\Scripts\activate.bat``` then press 'Enter'
-- Launch label studio: type in ```label-studio start``` then press 'Enter'
-- To close application: log out of the application, press ```ctrl+c``` inside the terminal, then type in ```deactivate``` and press 'Enter'
+- Launch label studio: type in ```label-studio``` then press 'Enter'`
+- Close application: log out of the application then type ```conda deactivate``` then press 'Enter'
+
+# Launch Label-studio when it is already installed - Windows
+- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio.bat```
+- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend.bat```
+- To close application: close the window
+
+# Launch Label-studio when it is already installed - Linux
+- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio.sh```
+- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend.sh```
+- To close application: close the window
 
 # Instal Label-studio for Mac
 (Instructions are available here: https://labelstud.io/guide/install.html#Install-using-Homebrew)
