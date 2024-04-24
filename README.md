@@ -21,6 +21,7 @@ Repository for data labeling
 # Launch Label-studio when it is already installed - Windows
 - To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio.bat```
 - To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend.bat```
+- Label studio is accessible from the browser at ```http://localhost:8080```
 - To close application: close the window
 
 # Launch Label-studio when it is already installed - Linux
