@@ -58,7 +58,6 @@ https://labelstud.io/guide/tasks.html
   </RectangleLabels>
 </View>
 
-
 ## Annotation template for key points
 <View>
   <KeyPointLabels name="kp-1" toName="img-1">
@@ -67,3 +66,21 @@ https://labelstud.io/guide/tasks.html
   </KeyPointLabels>
   <Image name="img-1" value="$img" />
 </View>
+
+## Annotation template for segmentation
+<View>
+<PolygonLabels name="segmentation" toName="image"
+                 strokeWidth="3" pointSize="small"
+                 opacity="0.9">
+    <Label value="camp" background="red"/>
+    <Label value="notcamp" background="blue"/>
+ </PolygonLabels>
+ </View>
+ 
+ ## Annotation template for classification
+ <View>
+ <Choices name="choice" toName="image">
+   <Choice value="namp"/>
+   <Choice value="notCamp" />
+ </Choices>
+  </View>
