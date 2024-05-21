@@ -19,14 +19,14 @@ Repository for data labeling
 - Close application: log out of the application then type ```conda deactivate``` then press 'Enter'
 
 # Launch Label-studio when it is already installed - Windows
-- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio.bat```
-- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend.bat```
+- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio-windows.bat```
+- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend-windows.bat```
 - Label studio is accessible from the browser at ```http://localhost:8080```
 - To close application: close the window
 
 # Launch Label-studio when it is already installed - Linux
-- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio.sh```
-- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend.sh```
+- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio-linux.sh```
+- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend-linux.sh```
 - To close application: close the window
 
 # Instal Label-studio for Mac
