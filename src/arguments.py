@@ -17,4 +17,8 @@ class Arguments:
     # model type
     is_detector:bool=True
     
+    # training data
+    data_config_yaml:str='../data/data_config.yaml'
+
     # training hyperparameters
+    epochs:int=20
