@@ -4,3 +4,5 @@ ultralytics
 torch -index-url https://download.pytorch.org/whl/cu118
 sahi
 boto3
+mlflow
+cloudpickle
