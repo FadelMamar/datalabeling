@@ -12,3 +12,4 @@ cache.db
 *.csv
 *.json
 *.JPG
+labels

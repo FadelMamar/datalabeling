@@ -1,6 +1,6 @@
 path: ../data  # dataset root dir
 train: train/images  # train images (relative to 'path')
-val :  train/images
+# val :  train/images
 # test:  # test images (optional)
 
 # Classes
