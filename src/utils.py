@@ -95,10 +95,24 @@ def convert_json_annotations_to_csv(rewrite_existing=True):
             df = convert_json_to_df(json_data=annotation)
             df.to_csv(save_path,index=False)
 
+def save_df_as_yolo(df_annotation:pd.DataFrame,args:Arguments):
+    
+    cols = ['labels','x','y','width','height']
+    df_annotation['x'] = df_annotation['x']/args.width
+    df_annotation['y'] = df_annotation['y']/args.height
+    df_annotation['width'] = df_annotation['width']/args.width
+    df_annotation['height'] = df_annotation['height']/args.height
+    
+    for image_name,df in df_annotation.groupby('images'):
+        txt_file = image_name.split('.')[0] + '.txt'
+        df[cols].to_csv(os.path.join(args.dest_path_labels,txt_file),sep=' ',index=False,header=False)
+        
+
 def patcher(args:Arguments):
     
     # creating destination directory for tiles
-    Path(args.dest_path).mkdir(parents=True,exist_ok=True)
+    Path(args.dest_path_images).mkdir(parents=True,exist_ok=True)
+    Path(args.dest_path_labels).mkdir(parents=True,exist_ok=True)
     
     # get images paths 
     images_paths = set()
@@ -120,21 +134,24 @@ def patcher(args:Arguments):
                                        overlap=args.overlap,
                                        min_visibility=args.min_visibility).buffer
         patches_buffer['images'] = patches_buffer['images'].apply(os.path.basename)
-        patches_buffer.drop(columns='limits').to_csv(os.path.join(args.dest_path, 'gt.csv'), index=False)
+        patches_buffer.drop(columns='limits').to_csv(os.path.join(args.dest_path_labels, 'gt.csv'),
+                                                     index=False)
         patches_buffer['base_images'] = patches_buffer['base_images'].apply(os.path.basename)
-
+        
+        # save labels in yolo format
+        save_df_as_yolo(df_annotation=patches_buffer, args=args)
+    
     for img_path in tqdm(images_paths, desc='Exporting patches'):
         pil_img = PIL.Image.open(img_path)
         img_tensor = torchvision.transforms.ToTensor()(pil_img)
         img_name = os.path.basename(img_path)
-
+        
         if ALL_CSV is not None:
             # save all patches
             if args.save_all:
                 patches = ImageToPatches(img_tensor, (args.height, args.width),
                                          overlap=args.overlap).make_patches()
-                save_batch_images(patches, img_name, args.dest_path)
-
+                save_batch_images(patches, img_name, args.dest_path_images)
             # or only annotated ones
             else:
                 padder = PadIfNeeded(
@@ -148,17 +165,11 @@ def patcher(args:Arguments):
                     ptch_name, limits = row[0], row[1]
                     cropped_img = numpy.array(pil_img.crop(limits.get_tuple))
                     padded_img = PIL.Image.fromarray(padder(image = cropped_img)['image'])
-                    padded_img.save(os.path.join(args.dest_path, ptch_name))
-
+                    padded_img.save(os.path.join(args.dest_path_images, ptch_name))
         else:
             patches = ImageToPatches(img_tensor, (args.height, args.width), overlap=args.overlap).make_patches()
-            save_batch_images(patches, img_name, args.dest_path)
+            save_batch_images(patches, img_name, args.dest_path_images)
 
-    pass
-
-def convert_csv_to_yolo():
-
-    pass
 
 
 # Demo
