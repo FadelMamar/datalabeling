@@ -96,7 +96,10 @@ def convert_json_annotations_to_csv(rewrite_existing=True):
             df.to_csv(save_path,index=False)
 
 def patcher(args:Arguments):
-
+    
+    # creating destination directory for tiles
+    Path(args.dest_path).mkdir(parents=True,exist_ok=True)
+    
     # get images paths 
     images_paths = set()
     dfs = list()
@@ -116,10 +119,10 @@ def patcher(args:Arguments):
                                        (args.height, args.width),
                                        overlap=args.overlap,
                                        min_visibility=args.min_visibility).buffer
-        patches_buffer['base_images'] = patches_buffer['base_images'].apply(os.path.basename)
         patches_buffer['images'] = patches_buffer['images'].apply(os.path.basename)
         patches_buffer.drop(columns='limits').to_csv(os.path.join(args.dest_path, 'gt.csv'), index=False)
-        
+        patches_buffer['base_images'] = patches_buffer['base_images'].apply(os.path.basename)
+
     for img_path in tqdm(images_paths, desc='Exporting patches'):
         pil_img = PIL.Image.open(img_path)
         img_tensor = torchvision.transforms.ToTensor()(pil_img)
