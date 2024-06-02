@@ -1,0 +1,10 @@
+path: ../data  # dataset root dir
+train: train/images  # train images (relative to 'path')
+val :  train/images
+# test:  # test images (optional)
+
+# Classes
+nc: 1  # number of classes
+names:
+  0: wildlife
+  
