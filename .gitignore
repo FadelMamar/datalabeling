@@ -1,2 +1,14 @@
 labelstudio
 *.bak
+label-studio-ml-backend
+my_ml_backend/data
+my_ml_backend/mlartifacts
+my_ml_backend/mlruns
+my_ml_backend/__pycache__
+*.pt
+my_ml_backend/cache.db
+cache.db
+*.pyc
+*.csv
+*.json
+*.JPG
