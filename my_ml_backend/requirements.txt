@@ -6,3 +6,5 @@ sahi
 boto3
 mlflow
 cloudpickle
+albumentations
+wandb
