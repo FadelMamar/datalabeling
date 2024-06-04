@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 from typing import List,Dict
-from label_studio_ml.utils import get_local_path
+from label_studio_ml.utils import get_env
 import math
 import pandas as pd
 from arguments import Arguments
@@ -13,6 +13,7 @@ import numpy
 import cv2
 import math
 from tqdm import tqdm
+import urllib
 from animaloc.data import ImageToPatches, PatchesBuffer, save_batch_images
 from albumentations import PadIfNeeded
 
@@ -21,6 +22,17 @@ from albumentations import PadIfNeeded
 JSON_DIR_PATH = "../exported_annotations/json"
 CSV_DIR_PATH = "../exported_annotations/csv"
 ALL_CSV = "../exported_annotations/all_csv.csv"
+
+def get_local_path(url:str):
+    filename, dir_path = url.split('/data/', 1)[-1].split('?d=')
+    dir_path = str(urllib.parse.unquote(dir_path))
+    LOCAL_FILES_DOCUMENT_ROOT = get_env(
+        'LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT', default=os.path.abspath(os.sep)
+    )
+    filepath = os.path.join(LOCAL_FILES_DOCUMENT_ROOT,
+                            dir_path) #.replace('C:','D:')
+    
+    return filepath
 
 def load_ls_annotations():
 
@@ -85,7 +97,7 @@ def convert_json_annotations_to_csv(rewrite_existing=True):
     annotations, paths = load_ls_annotations()
 
     # parse and save annotations
-    for annotation, path in zip(annotations,paths):
+    for annotation, path in tqdm(zip(annotations,paths),desc='Converting jsons to csv'):
         save_path = f"../exported_annotations/csv/{path.name.removesuffix('.json')}.csv"
         if Path(save_path).exists():
             if rewrite_existing:
@@ -106,7 +118,6 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,args:Arguments):
     for image_name,df in df_annotation.groupby('images'):
         txt_file = image_name.split('.')[0] + '.txt'
         df[cols].to_csv(os.path.join(args.dest_path_labels,txt_file),sep=' ',index=False,header=False)
-        
 
 def patcher(args:Arguments):
     
@@ -125,6 +136,8 @@ def patcher(args:Arguments):
     dfs_concat = pd.concat(dfs,axis=0)
     if args.is_detector:
         dfs_concat['labels'] = 0
+    else:
+        raise NotImplementedError
     dfs_concat.to_csv(ALL_CSV,index=False)
 
     # tile and save
