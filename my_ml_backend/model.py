@@ -102,7 +102,7 @@ class NewModel(LabelStudioMLBase):
         # self.labels = schema['labels']
 
         # model from mlflow registry
-        # mlflow.set_tracking_uri(TRACKING_URI)
+        mlflow.set_tracking_uri(TRACKING_URI)
         client = mlflow.MlflowClient()
         name = 'detector'
         alias = 'start'
@@ -112,7 +112,7 @@ class NewModel(LabelStudioMLBase):
         # self.model = mlflow.pyfunc.load_model(modelURI)
 
         # Load localizer change model path to match
-        self.model = Detector(path_to_weights=r"C:\Users\fadel\OneDrive\Bureau\WILD-AI\datalabeling\my_ml_backend\mlartifacts\812136714965128590\bf2be0d4093744bfba49521071ea712c\artifacts\finetuned\artifacts\yolov8.kaza.pt",
+        self.model = Detector(path_to_weights=r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\my_ml_backend\mlartifacts\280575809951794862\7ee0da68b85f47ea9476a702444aab08\artifacts\finetuned\artifacts\yolov8.kaza.pt",
                             confidence_threshold=0.4)
 
     def __format_prediction(self,pred:Dict,img_height:int,img_width:int):
@@ -164,12 +164,20 @@ class NewModel(LabelStudioMLBase):
                                                        img_height=img_height,
                                                        img_width=img_width) for pred in predictions]
             conf_scores = [pred['score'] for pred in predictions]
-            preds.append({'result':formatted_pred,
-                          'model_version':self.modelversion,
-                          'task':task['id'],
-                          'score':min(conf_scores),
-                          }
-                        )
+            if len(conf_scores)>0:
+                preds.append({'result':formatted_pred,
+                            'model_version':self.modelversion,
+                            'task':task['id'],
+                            'score':min(conf_scores),
+                            }
+                            )
+            else:
+                preds.append({'result':formatted_pred,
+                            'model_version':self.modelversion,
+                            'task':task['id'],
+                            }
+                            )
+
 
         return preds
 
