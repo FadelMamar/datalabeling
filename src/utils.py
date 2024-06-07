@@ -48,6 +48,8 @@ def load_ls_annotations():
 
 def convert_json_to_df(json_data:List[Dict]):
 
+    # Reference for label studio output schema  https://labelstud.io/tags/rectanglelabels
+
     # placeholders
     image_paths = list()
     xs = list()
@@ -83,11 +85,12 @@ def convert_json_to_df(json_data:List[Dict]):
                 'labels':labels
                 }
     df = pd.DataFrame.from_dict(data=csv_data,orient='columns')
-
-    df['x_min'] = df['x'] - (df['width']*0.5).apply(int)
-    df['x_max'] = df['x'] + (df['width']*0.5).apply(int)
-    df['y_min'] = df['y'] - (df['height']*0.5).apply(int)
-    df['y_max'] = df['y'] + (df['height']*0.5).apply(int)
+    df['x_min'] = df['x'].copy()
+    df['x_max'] = df['x'] + df['width'].apply(int)
+    df['y_min'] = df['y'].copy()
+    df['y_max'] = df['y'] + df['height'].apply(int)
+    df['x'] = df['x_min'] + (df['width']*0.5).apply(int)
+    df['y'] = df['y_min'] + (df['height']*0.5).apply(int)
 
     return df
 
@@ -132,8 +135,14 @@ def patcher(args:Arguments):
         df = pd.read_csv(csv_path,sep=',')
         images_paths = images_paths.union(set(df['images'].to_list()))
         dfs.append(df)
+
     # merge all csv and save
     dfs_concat = pd.concat(dfs,axis=0)
+
+    # discard non-animals labels
+    dfs_concat = dfs_concat[~dfs_concat.labels.isin(args.discard_labels)]
+
+    # encode to numerical values
     if args.is_detector:
         dfs_concat['labels'] = 0
     else:
@@ -189,7 +198,7 @@ def patcher(args:Arguments):
 if __name__ == '__main__':
 
     from arguments import Arguments
-    # convert_json_annotations_to_csv()
+    convert_json_annotations_to_csv()
     args = Arguments()
     patcher(args=args)
 
