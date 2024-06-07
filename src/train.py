@@ -5,7 +5,7 @@ from arguments import Arguments
 def main(args:Arguments):
 
     # Load a pre-trained model
-    model = YOLO("yolov8.kaza.pt")
+    model = YOLO(args.path_weights)
 
     # Display model information (optional)
     model.info()
@@ -17,21 +17,21 @@ def main(args:Arguments):
                 device=0,
                 name='detector',
                 single_cls=True,
-                lr0=1e-3,
-                lrf=1e-2,
+                lr0=args.lr0,
+                lrf=args.lrf,
                 weight_decay=5e-4,
                 dropout=0.2,
-                batch=16,
+                batch=args.batchsize,
                 val=False,
                 plots=True,
                 cos_lr=True,
                 deterministic=False,
                 optimizer='Adam',
                 project='wildAI',
-                patience='10',
+                patience=10,
                 degrees=45.0,
                 mixup=0.2,
-                shear=30.,
+                shear=10.,
                 exist_ok=True,
                 seed=41
                 )

@@ -6,8 +6,10 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\my_ml_b
 
 :: call set LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=True
 :: call set LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT="D:\"
+start ..\launch_mlflow_server.bat
 
-label-studio-ml start ../my_ml_backend -p 9090
+call label-studio-ml start ../my_ml_backend -p 9090
 
 :: deactivate
-call "C:\Users\Machine Learning\Desktop\workspace-wildAI\envs\label-studio\Scripts\deactivate.bat"
+:: call "C:\Users\Machine Learning\Desktop\workspace-wildAI\envs\label-studio\Scripts\deactivate.bat"
+call conda deactivate
