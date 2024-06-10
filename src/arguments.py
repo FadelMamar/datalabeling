@@ -15,8 +15,14 @@ class Arguments:
     height:int = 640
     width:int = 640
     overlap:int=80
-    min_visibility:float=0.0
+    min_visibility:float=0.1
     save_all:bool=False
+    overlap_ratio:float=0.2
+    empty_ratio:int=3
+
+    # cli
+    build_yolo_dataset:bool=False
+    clear_yolo_dir:bool=False
 
     # model type
     is_detector:bool=True
