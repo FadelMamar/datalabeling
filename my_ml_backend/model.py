@@ -85,6 +85,7 @@ class Detector(object):
         return template
 
     def train(self, dataloader):
+       raise NotImplementedError('Not implemented.')
        pass 
 
 class NewModel(LabelStudioMLBase):
