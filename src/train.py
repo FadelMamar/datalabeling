@@ -35,6 +35,10 @@ def main(args:Arguments):
                 exist_ok=True,
                 seed=41
                 )
+    
+    # TODO: export best weights to onnx or TensorRT
+    # model = YOLO('../runs/detect/train/weight/best.pt')
+    # model.export(format='onnx')
 
 
 if __name__ == '__main__':
