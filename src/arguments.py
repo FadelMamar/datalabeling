@@ -40,3 +40,8 @@ class Arguments:
     batchsize:int=16
     epochs:int=50
 
+    # model exporting format
+    export_format:str=None
+    export_batch_size:int=1
+    export_model_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8.kaza.pt")
+
