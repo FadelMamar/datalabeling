@@ -13,3 +13,5 @@ cache.db
 *.json
 *.JPG
 labels
+images
+.tmp
