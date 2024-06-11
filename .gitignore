@@ -13,3 +13,9 @@ cache.db
 *.json
 *.JPG
 labels
+wandb
+wildAI
+mlflow
+mlartifacts
+runs
+*.cache
