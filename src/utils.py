@@ -4,7 +4,7 @@ from copy import copy
 import io
 import json
 from typing import List,Dict
-from label_studio_ml.utils import get_local_path #,get_env
+from label_studio_ml.utils import get_env ,get_local_path
 from sahi.utils.file import load_json
 from sahi.slicing import slice_coco
 from skimage.io import imread,imsave
@@ -143,15 +143,17 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None):
     # load and update image paths
     coco_json_path = os.path.join(TEMP,'result.json')
     coco_annotations = load_json(coco_json_path)
-    images_metadata = coco_annotations['images']
-    images_metadata_updated = list()
-    for metadata in tqdm(images_metadata,desc=f'json-to-coco for {input_file}'):
-        if metadata['width'] is not None:
-            file_path = get_local_path(metadata['file_name'])
-            metadata_copy = copy(metadata)
-            metadata_copy.update({'file_name':file_path})
-            images_metadata_updated.append(metadata_copy)
-    coco_annotations.update({'images':images_metadata_updated})
+    # images_metadata = coco_annotations['images']
+    # images_metadata_updated = list()
+    # for metadata in tqdm(images_metadata,desc=f'json-to-coco for {input_file}'):
+    #     if metadata['width'] is not None:
+    #         # print(metadata['file_name'])
+    #         # file_path = get_local_path(metadata['file_name'])
+    #         file_path = metadata['file_name']
+    #         metadata_copy = copy(metadata)
+    #         metadata_copy.update({'file_name':file_path})
+    #         images_metadata_updated.append(metadata_copy)
+    # coco_annotations.update({'images':images_metadata_updated})
     # save if requested
     if out_file_name is not None:
         with open(out_file_name,'w') as file:
@@ -194,6 +196,7 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
     overlap_width_ratio=overlap_width_ratio,
     min_area_ratio=min_area_ratio,
     verbose=verbose,
+    out_ext='.jpg',
     )
 
     return sliced_coco_dict
@@ -201,22 +204,22 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
 def sample_data(coco_dict_slices:dict,
                 img_dir:str,
                 empty_ratio:int=3,
-                out_csv_path:str=None)->pd.DataFrame:
+                out_csv_path:str=None,
+                labels_to_discard:list=None)->pd.DataFrame:
     
     assert (empty_ratio >= 0) and isinstance(empty_ratio,int),'Provide appropriate value'
 
-    def get_parent_image(file_name:str,lookup_extensions:list[str] = ['jpg','png','tif','JPG','PNG','TIF']):
-        file_name = os.path.basename(file_name)
+    def get_parent_image(file_name:str,lookup_extensions:list[str] = ['.jpg','.png','.tif','.JPG','.PNG','.TIF']):
+        ext = '.jpg' #Path(file_name).suffix
+        file_name = Path(file_name).stem
+        # print(file_name)
         parent_file = '_'.join(file_name.split('_')[:-5])
-        for ext in lookup_extensions:
-            parent_file = os.path.join(img_dir,parent_file+f'.{ext}')
-            if os.path.exists(parent_file):
-                # print(parent_file)
-                break
-            else:
-                # print(parent_file)
-                raise FileNotFoundError('Parent file note found.')
-        return parent_file
+        # for ext in lookup_extensions:
+        p = os.path.join(img_dir,parent_file+ext)
+        if os.path.exists(p):
+            return p
+        raise FileNotFoundError(f'Parent file note found for {file_name} in {img_dir} >> {parent_file}')
+    
     
     # build mapping for labels
     label_ids = [cat['id'] for cat in coco_dict_slices['categories']]
@@ -279,14 +282,21 @@ def sample_data(coco_dict_slices:dict,
 
     # join dataframes
     df = df_limits.join(df_annot,how='outer') 
+
     # get empty df and tiles
     df_empty = df[df['x_min'].isna()]
     df_non_empty = df[~df['x_min'].isna()]
     empty_num =  int(len(df_non_empty)*empty_ratio)
     df_empty = df_empty.sample(n=empty_num,random_state=41,replace=False)
+
     # concat dfs
     df = pd.concat([df_empty,df[~df['x_min'].isna()]],axis=0)
     df.reset_index(inplace=True)
+
+    # discard non-animal labels
+    if labels_to_discard is not None:
+        df = df[~df.labels.isin(labels_to_discard)]
+
 
     # create x_center and y_center
     df['x'] = df['x_min'] + df['width']*0.5
@@ -336,7 +346,7 @@ def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_di
 
     #clear directories
     if clear_out_dir:
-        for p in [args.dest_path_images,args.dest_path_labels]:
+        for p in [args.dest_path_images,args.dest_path_labels,COCO_DIR_PATH]:
             shutil.rmtree(p)
             Path(p).mkdir(parents=True,exist_ok=True)
 
@@ -357,8 +367,9 @@ def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_di
         # sample tiles
         df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
                                 empty_ratio=args.empty_ratio,
-                                out_csv_path=None,
-                                img_dir=img_dir
+                                out_csv_path=ALL_CSV,
+                                img_dir=img_dir,
+                                labels_to_discard=args.discard_labels
                                 )
         # save tiles
         save_tiles(df_tiles=df_tiles,
