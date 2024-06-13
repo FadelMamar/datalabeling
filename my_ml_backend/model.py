@@ -4,6 +4,7 @@ from sahi.models.yolov8 import Yolov8DetectionModel
 from sahi.predict import get_sliced_prediction
 from label_studio_ml.utils import (get_env, get_local_path)
 from PIL import Image
+from ultralytics import YOLO
 # import boto3
 import torch
 # from pathlib import Path
@@ -31,13 +32,17 @@ class Detector(object):
                 path_to_weights:str,
                 confidence_threshold:float=0.3):
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.detection_model = Yolov8DetectionModel(model_path=path_to_weights,
-                                                    confidence_threshold=confidence_threshold,
-                                                    device=device)
         self.tilesize=640
         self.overlapratio=0.1
         self.sahi_prostprocess='NMS'
         print('Device:', device)
+        self.detection_model = Yolov8DetectionModel(
+                                                    # model_path=path_to_weights,
+                                                    model=YOLO(path_to_weights,task='detect'),
+                                                    confidence_threshold=confidence_threshold,
+                                                    image_size=640,
+                                                    device=device,
+                                                    )
         
         
     def predict(self, image):
@@ -113,7 +118,7 @@ class NewModel(LabelStudioMLBase):
         # self.model = mlflow.pyfunc.load_model(modelURI)
 
         # Load localizer change model path to match
-        self.model = Detector(path_to_weights=r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\my_ml_backend\mlartifacts\280575809951794862\7ee0da68b85f47ea9476a702444aab08\artifacts\finetuned\artifacts\yolov8.kaza.pt",
+        self.model = Detector(path_to_weights=r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt",
                             confidence_threshold=0.4)
 
     def __format_prediction(self,pred:Dict,img_height:int,img_width:int):
