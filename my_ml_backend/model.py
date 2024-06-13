@@ -30,7 +30,7 @@ class Detector(object):
 
     def __init__(self,
                 path_to_weights:str,
-                confidence_threshold:float=0.3):
+                confidence_threshold:float=0.4):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tilesize=640
         self.overlapratio=0.1
@@ -40,7 +40,7 @@ class Detector(object):
                                                     # model_path=path_to_weights,
                                                     model=YOLO(path_to_weights,task='detect'),
                                                     confidence_threshold=confidence_threshold,
-                                                    image_size=640,
+                                                    image_size=self.tilesize,
                                                     device=device,
                                                     )
         

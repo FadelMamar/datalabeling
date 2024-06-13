@@ -9,7 +9,7 @@ CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 class Arguments:
 
     # data preparation arguments
-    root_path:str = r'C:\Users\fadel'
+    root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
     dest_path_images:str=os.path.join(CUR_DIR,'../data/train/images')
     dest_path_labels:str=os.path.join(CUR_DIR,'../data/train/labels')
     height:int = 640
@@ -18,14 +18,14 @@ class Arguments:
     min_visibility:float=0.1
     save_all:bool=False
     overlap_ratio:float=0.2
-    empty_ratio:int=3
+    empty_ratio:int=1
 
     # cli
     build_yolo_dataset:bool=False
     clear_yolo_dir:bool=False
 
     # model type
-    is_detector:bool=True
+    is_detector=True
     
     # training data
     data_config_yaml:str=os.path.join(CUR_DIR,'../data/data_config.yaml')

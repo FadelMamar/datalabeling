@@ -1,6 +1,5 @@
 from arguments import Arguments
 from datargs import parse
-from ultralytics import YOLO
 
 
 if __name__ == '__main__':
@@ -13,6 +12,7 @@ if __name__ == '__main__':
                            clear_out_dir=args.clear_yolo_dir)
         
     if args.export_format is not None:
+        from ultralytics import YOLO
         model = YOLO(args.export_model_weights)
         assert args.width==args.height,'Input image should have a square shape.'
         model.export(format=args.export_format,

@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 from datargs import parse
 from arguments import Arguments
+import os
 
 def main(args:Arguments):
 
@@ -8,7 +9,14 @@ def main(args:Arguments):
     model = YOLO(args.path_weights)
 
     # Display model information (optional)
-    model.info()
+    model.info()    
+
+    # Remove labels.cache
+    try:
+        CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+        os.remove(os.path.join(CUR_DIR,"../data/train/labels.cache"))
+    except:
+        pass
 
     # Train the model
     model.train(data=args.data_config_yaml,
@@ -16,7 +24,7 @@ def main(args:Arguments):
                 imgsz=min(args.height,args.width),
                 device=0,
                 name='detector',
-                single_cls=True,
+                single_cls=args.is_detector,
                 lr0=args.lr0,
                 lrf=args.lrf,
                 weight_decay=5e-4,

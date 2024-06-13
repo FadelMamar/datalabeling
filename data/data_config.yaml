@@ -1,6 +1,6 @@
-path: ../data  # dataset root dir
-train: train/images  # train images (relative to 'path')
-# val :  train/images
+path: C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data  # dataset root dir
+train: train\images  # train images (relative to 'path')
+val :  train\images
 # test:  # test images (optional)
 
 # Classes

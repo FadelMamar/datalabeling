@@ -209,12 +209,11 @@ def sample_data(coco_dict_slices:dict,
     
     assert (empty_ratio >= 0) and isinstance(empty_ratio,int),'Provide appropriate value'
 
-    def get_parent_image(file_name:str,lookup_extensions:list[str] = ['.jpg','.png','.tif','.JPG','.PNG','.TIF']):
-        ext = '.jpg' #Path(file_name).suffix
+    def get_parent_image(file_name:str):
+        ext = '.jpg' 
         file_name = Path(file_name).stem
         # print(file_name)
         parent_file = '_'.join(file_name.split('_')[:-5])
-        # for ext in lookup_extensions:
         p = os.path.join(img_dir,parent_file+ext)
         if os.path.exists(p):
             return p
@@ -239,10 +238,10 @@ def sample_data(coco_dict_slices:dict,
         x_0,y_0,x_1,y_1 = file_name.split('.')[0].split('_')[-4:]
         parent_image = get_parent_image(file_name)
         parent_file_paths.append(parent_image)
-        x0s.append(x_0)
-        x1s.append(x_1)
-        y0s.append(y_0)
-        y1s.append(y_1)
+        x0s.append(int(x_0))
+        x1s.append(int(x_1))
+        y0s.append(int(y_0))
+        y1s.append(int(y_1))
         ids.append(metadata['id'])
     df_limits = {'x0':x0s,
                  'x1':x1s,
@@ -283,20 +282,23 @@ def sample_data(coco_dict_slices:dict,
     # join dataframes
     df = df_limits.join(df_annot,how='outer') 
 
-    # get empty df and tiles
-    df_empty = df[df['x_min'].isna()]
-    df_non_empty = df[~df['x_min'].isna()]
-    empty_num =  int(len(df_non_empty)*empty_ratio)
-    df_empty = df_empty.sample(n=empty_num,random_state=41,replace=False)
-
-    # concat dfs
-    df = pd.concat([df_empty,df[~df['x_min'].isna()]],axis=0)
-    df.reset_index(inplace=True)
-
     # discard non-animal labels
     if labels_to_discard is not None:
-        df = df[~df.labels.isin(labels_to_discard)]
+        df = df[~df.labels.isin(labels_to_discard)].copy()
 
+    # get empty df and tiles
+    # TODO: select unique empty images
+    df_empty = df[df['x_min'].isna()].copy()
+    df_non_empty = df[~df['x_min'].isna()].copy()
+    empty_num =  int(len(df_non_empty)*empty_ratio)
+    df_empty = df_empty.sample(n=min(empty_num,len(df_empty)),
+                               random_state=41,
+                               replace=False)
+    print(f'Sampling {empty_num} empty images, and {len(df_non_empty)} non-empty images.')
+
+    # concat dfs
+    df = pd.concat([df_empty,df_non_empty],axis=0)
+    df.reset_index(inplace=True)
 
     # create x_center and y_center
     df['x'] = df['x_min'] + df['width']*0.5
@@ -315,6 +317,9 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         print('Deleting images in ',out_img_dir)
         shutil.rmtree(out_img_dir)
         Path(out_img_dir).mkdir(parents=True,exist_ok=True) 
+    
+    # selecting non-duplicated
+    df_tiles = df_tiles[~df_tiles.duplicated(['x0','x1','y0','y1','images'])].copy()
 
     for idx in tqdm(df_tiles.index,desc=f'Saving tiles to {out_img_dir}'):
         x0 = int(df_tiles.at[idx,'x0'])
@@ -323,22 +328,25 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         y1 = int(df_tiles.at[idx,'y1'])
         img_path = df_tiles.at[idx,'parent_images']
         tile_name = df_tiles.at[idx,'images']
+        save_path = os.path.join(out_img_dir,tile_name)
         img = imread(img_path)
         tile = img[y0:y1,x0:x1,:]
-        imsave(fname=os.path.join(out_img_dir,tile_name),arr=tile)
+        imsave(fname=save_path,arr=tile,check_contrast=False)
 
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
     
-    cols = ['labels','x','y','width','height']
+    cols = ['label_id','x','y','width','height']
     for col in cols:
         assert df_annotation[col].isna().sum()<1,'there are NaN values. Check out.'
+        # df_annotation[col] = df_annotation[col].apply(int)
 
-    df_annotation['x'] = df_annotation['x']/slice_width
-    df_annotation['y'] = df_annotation['y']/slice_height
-    df_annotation['width'] = df_annotation['width']/slice_width
-    df_annotation['height'] = df_annotation['height']/slice_height
+    # normalize values
+    df_annotation['x'] = df_annotation['x'].apply(lambda x: x/slice_width)
+    df_annotation['y'] = df_annotation['y'].apply(lambda y: y/slice_height)
+    df_annotation['width'] = df_annotation['width'].apply(lambda x : x/slice_width)
+    df_annotation['height'] = df_annotation['height'].apply(lambda y: y/slice_height)
     
-    for image_name,df in df_annotation.groupby('images'):
+    for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
         df[cols].to_csv(os.path.join(dest_path_labels,txt_file),sep=' ',index=False,header=False)
 
@@ -371,15 +379,22 @@ def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_di
                                 img_dir=img_dir,
                                 labels_to_discard=args.discard_labels
                                 )
+        
+        # detector_training mode
+        if args.is_detector:
+            df_tiles['label_id'] = 0
+        else:
+            raise NotImplementedError('Pipeline not designed to handle multiple classes.')
+        
+        # save labels in yolo format
+        save_df_as_yolo(df_annotation=df_tiles.dropna(axis=0,how='any'),
+                        slice_height=args.height,
+                        slice_width=args.width,
+                        dest_path_labels=args.dest_path_labels)
         # save tiles
         save_tiles(df_tiles=df_tiles,
                    out_img_dir=args.dest_path_images,
                    clear_out_img_dir=False)
-        # save labels in yolo format
-        save_df_as_yolo(df_annotation=df_tiles[~df_tiles['x'].isna()].copy(),
-                        slice_height=args.height,
-                        slice_width=args.width,
-                        dest_path_labels=args.dest_path_labels)
 
 def patcher(args:Arguments):
     
