@@ -19,3 +19,4 @@ mlflow
 mlartifacts
 runs
 *.cache
+*.onnx
