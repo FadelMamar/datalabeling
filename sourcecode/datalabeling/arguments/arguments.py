@@ -22,7 +22,8 @@ class Arguments:
     # cli
     build_yolo_dataset:bool=False
     clear_yolo_dir:bool=False
-
+    start_training:bool=False
+    
     # model type
     is_detector:bool=True
     
@@ -36,9 +37,8 @@ class Arguments:
     path_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-3
     lrf:float=1e-2
-    batchsize:int=16
+    batchsize:int=32
     epochs:int=50
-    start_training:bool=False
     seed=41
     optimizer:str='Adam'
     optimizer_momentum:float=0.937

@@ -6,7 +6,7 @@ import os
 def start_training(args:Arguments):
 
     # Load a pre-trained model
-    model = YOLO(args.path_weights)
+    model = YOLO(args.path_weights,task='detect',verbose=False)
 
     # Display model information (optional)
     model.info()    
