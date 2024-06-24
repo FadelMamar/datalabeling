@@ -19,3 +19,7 @@ if __name__ == '__main__':
                      nms=True,
                      batch=args.export_batch_size,
                      simplify=True)
+    
+    if args.start_training:
+        from datalabeling.train import start_training
+        start_training(args)

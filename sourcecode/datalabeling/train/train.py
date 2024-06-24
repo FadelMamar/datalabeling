@@ -3,7 +3,7 @@ from datargs import parse
 from ..arguments import Arguments
 import os
 
-def main(args:Arguments):
+def start_training(args:Arguments):
 
     # Load a pre-trained model
     model = YOLO(args.path_weights)
@@ -12,36 +12,50 @@ def main(args:Arguments):
     model.info()    
 
     # Remove labels.cache
-    try:
-        CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-        os.remove(os.path.join(CUR_DIR,"../data/train/labels.cache"))
-    except:
-        pass
+    CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+    path_to_labels = os.path.join(CUR_DIR,"../../../data/train/labels.cache")
+    if os.path.exists(path_to_labels):
+        os.remove(path_to_labels)
 
     # Train the model
     model.train(data=args.data_config_yaml,
                 epochs=args.epochs,
                 imgsz=min(args.height,args.width),
-                device=0,
-                name='detector',
+                device=args.device,
+                name=args.run_name,
                 single_cls=args.is_detector,
                 lr0=args.lr0,
                 lrf=args.lrf,
-                weight_decay=5e-4,
-                dropout=0.2,
+                momentum=args.optimizer_momentum,
+                weight_decay=args.weight_decay,
+                dropout=args.dropout,
                 batch=args.batchsize,
-                val=False,
+                val=True,
                 plots=True,
-                cos_lr=True,
+                cos_lr=args.cos_annealing,
                 deterministic=False,
-                optimizer='Adam',
-                project='wildAI',
-                patience=10,
-                degrees=45.0,
-                mixup=0.2,
-                shear=10.,
+                optimizer=args.optimizer,
+                project=args.project_name,
+                patience=args.patience,
+                multiscale=False,
+                degrees=args.rotation_degree,
+                mixup=args.mixup,
+                scale=args.scale,
+                mosaic=False,
+                augment=False,
+                erasing=args.erasing,
+                copy_paste=args.copy_paste,
+                shear=args.shear,
+                fliplr=args.fliplr,
+                flipud=args.flipud,
+                perspective=0.,
+                hsv_s=args.hsv_s,
+                hsv_h=args.hsv_h,
+                hsv_v=args.hsv_v,
+                translate=args.translate,
+                auto_augment='augmix',
                 exist_ok=True,
-                seed=41
+                seed=args.seed
                 )
     
     # TODO: export best weights to onnx or TensorRT
@@ -49,9 +63,9 @@ def main(args:Arguments):
     # model.export(format='onnx')
 
 
-if __name__ == '__main__':
-    args = parse(Arguments)
-    main(args=args)
+# if __name__ == '__main__':
+#     args = parse(Arguments)
+#     start_training(args=args)
 
 
 
