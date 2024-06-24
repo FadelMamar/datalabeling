@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from typing import Sequence
 import os
@@ -10,8 +9,8 @@ class Arguments:
 
     # data preparation arguments
     root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
-    dest_path_images:str=os.path.join(CUR_DIR,'../data/train/images')
-    dest_path_labels:str=os.path.join(CUR_DIR,'../data/train/labels')
+    dest_path_images:str=os.path.join(CUR_DIR,'../../../data/train/images')
+    dest_path_labels:str=os.path.join(CUR_DIR,'../../../data/train/labels')
     height:int = 640
     width:int = 640
     overlap:int=80
@@ -28,13 +27,13 @@ class Arguments:
     is_detector=True
     
     # training data
-    data_config_yaml:str=os.path.join(CUR_DIR,'../data/data_config.yaml')
+    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')
 
     # labels to discard
     discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
 
     # training details
-    path_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../base_models_weights/yolov8.kaza.pt")
+    path_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-3
     lrf:float=1e-2
     batchsize:int=16
@@ -43,5 +42,5 @@ class Arguments:
     # model exporting format
     export_format:str=None
     export_batch_size:int=1
-    export_model_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8.kaza.pt")
+    export_model_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
 

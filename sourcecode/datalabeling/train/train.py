@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 from datargs import parse
-from arguments import Arguments
+from ..arguments import Arguments
 import os
 
 def main(args:Arguments):

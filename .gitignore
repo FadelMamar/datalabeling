@@ -20,3 +20,4 @@ mlartifacts
 runs
 *.cache
 *.onnx
+.venv
