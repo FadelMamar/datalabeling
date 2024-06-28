@@ -34,10 +34,11 @@ class Arguments:
     discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
 
     # training details
-    path_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../base_models_weights/yolov8.kaza.pt")
+    # path_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8m.pt") 
+    path_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-3
     lrf:float=1e-2
-    batchsize:int=16
+    batchsize:int=32
     epochs:int=50
 
     # model exporting format

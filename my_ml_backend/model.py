@@ -111,15 +111,15 @@ class NewModel(LabelStudioMLBase):
         mlflow.set_tracking_uri(TRACKING_URI)
         client = mlflow.MlflowClient()
         name = 'detector'
-        alias = 'start'
+        alias = 'cycle1'
         version = client.get_model_version_by_alias(name=name,alias=alias).version
         self.modelversion = f'{name}:{version}'
         self.modelURI = f'models:/{name}/{version}'
-        # self.model = mlflow.pyfunc.load_model(modelURI)
+        self.model = mlflow.pyfunc.load_model(self.modelURI)
 
         # Load localizer change model path to match
-        self.model = Detector(path_to_weights=r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt",
-                            confidence_threshold=0.4)
+        #path_to_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt"
+        #self.model = Detector(path_to_weights=path_to_weights, confidence_threshold=0.4)
 
     def __format_prediction(self,pred:Dict,img_height:int,img_width:int):
         # formatting the prediction to work with Label studio

@@ -2,8 +2,10 @@ from ultralytics import YOLO
 from datargs import parse
 from arguments import Arguments
 import os
+import mlflow
 
 def main(args:Arguments):
+
 
     # Load a pre-trained model
     model = YOLO(args.path_weights)
@@ -25,6 +27,9 @@ def main(args:Arguments):
                 device=0,
                 name='detector',
                 single_cls=args.is_detector,
+                augment=False,
+                iou=0.5,
+                cache=True,
                 lr0=args.lr0,
                 lrf=args.lrf,
                 weight_decay=5e-4,
@@ -38,7 +43,12 @@ def main(args:Arguments):
                 project='wildAI',
                 patience=10,
                 degrees=45.0,
-                mixup=0.2,
+                flipud=0.0,
+                fliplr=0.5,
+                mosaic=0.0,
+                mixup=0.0,
+                erasing=0.0,
+                copy_paste=0.0,
                 shear=10.,
                 exist_ok=True,
                 seed=41

@@ -290,7 +290,7 @@ def sample_data(coco_dict_slices:dict,
     # TODO: select unique empty images
     df_empty = df[df['x_min'].isna()].copy()
     df_non_empty = df[~df['x_min'].isna()].copy()
-    empty_num =  int(len(df_non_empty)*empty_ratio)
+    empty_num =  int(df_non_empty['images'].unique().shape[0]*empty_ratio) #TODO: agree on sampling of empty tiles
     df_empty = df_empty.sample(n=min(empty_num,len(df_empty)),
                                random_state=41,
                                replace=False)
