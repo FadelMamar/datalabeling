@@ -115,7 +115,6 @@ class NewModel(LabelStudioMLBase):
         version = client.get_model_version_by_alias(name=name,alias=alias).version
         self.modelversion = f'{name}:{version}'
         self.modelURI = f'models:/{name}/{version}'
-        self.model = mlflow.pyfunc.load_model(self.modelURI)
 
         # Load localizer change model path to match
         #path_to_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt"
@@ -159,6 +158,9 @@ class NewModel(LabelStudioMLBase):
 
         # get predictions for every task
         preds = list()
+        
+        self.model = mlflow.pyfunc.load_model(self.modelURI)
+
         for task in tasks:
             img_url = task['data'][self.value]
             image = Image.open(get_local_path(img_url))
