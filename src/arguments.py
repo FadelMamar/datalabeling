@@ -12,6 +12,9 @@ class Arguments:
     root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
     dest_path_images:str=os.path.join(CUR_DIR,'../data/train/images')
     dest_path_labels:str=os.path.join(CUR_DIR,'../data/train/labels')
+    ls_json_dir:str =os.path.join(CUR_DIR,"../exported_annotations/json")
+    coco_json_dir:str = os.path.join(CUR_DIR,"../exported_annotations/coco-format")
+    LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../exported_annotations/label_studio_config.xml")
     height:int = 640
     width:int = 640
     overlap:int=80
@@ -20,12 +23,18 @@ class Arguments:
     overlap_ratio:float=0.2
     empty_ratio:int=1
 
+    # label mapping
+    label_map:str=None
+
     # cli
     build_yolo_dataset:bool=False
     clear_yolo_dir:bool=False
 
+    # run
+    run_name:str='detector'
+
     # model type
-    is_detector=True
+    is_detector:bool=False
     
     # training data
     data_config_yaml:str=os.path.join(CUR_DIR,'../data/data_config.yaml')

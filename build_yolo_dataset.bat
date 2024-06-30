@@ -5,6 +5,6 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\src"
 
 :: add --clear-yolo-dir to clear data in ./data/train
 
-call python cli.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 1
+call python cli.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 1 --is-detector
 
 call conda deactivate

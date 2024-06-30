@@ -16,7 +16,7 @@ def main(args:Arguments):
     # Remove labels.cache
     try:
         CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-        os.remove(os.path.join(CUR_DIR,"../data/train/labels.cache"))
+        os.remove(os.path.join(args.dest_path_images,"../labels.cache"))
     except:
         pass
 
@@ -25,17 +25,17 @@ def main(args:Arguments):
                 epochs=args.epochs,
                 imgsz=min(args.height,args.width),
                 device=0,
-                name='detector',
+                name=args.run_name,
                 single_cls=args.is_detector,
                 augment=False,
                 iou=0.5,
                 cache=True,
                 lr0=args.lr0,
                 lrf=args.lrf,
-                weight_decay=5e-4,
+                weight_decay=0,
                 dropout=0.2,
                 batch=args.batchsize,
-                val=False,
+                val=True,
                 plots=True,
                 cos_lr=True,
                 deterministic=False,
