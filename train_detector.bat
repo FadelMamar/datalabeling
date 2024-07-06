@@ -6,7 +6,11 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
 call wandb online
 
-call python ".\src\train.py" --batchsize 32  --epochs 50
+call python ".\src\train.py" --batchsize 32  --epochs 50 --lr0 0.0001 --patience 50 --is-detector^
+    --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
+    --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt" ^
+    --run-name "detector" ^
+    --dest-path-images "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\train\images"
 
 
 call conda deactivate
