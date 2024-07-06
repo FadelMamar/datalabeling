@@ -49,6 +49,19 @@ class Arguments:
     lrf:float=1e-2
     batchsize:int=32
     epochs:int=50
+    patience:int=10
+    degrees:float=45.0
+    flipud:float=0.0
+    fliplr:float=0.5
+    mosaic:float=0.0
+    mixup:float=0.0
+    erasing:float=0.0
+    copy_paste:float=0.0
+    shear:float=10.
+    weightdecay:float=0.
+    dropout:float=0
+    multiscale:bool=False
+    cos_lr:bool=False
 
     # model exporting format
     export_format:str=None
