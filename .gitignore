@@ -20,3 +20,6 @@ mlartifacts
 runs
 *.cache
 *.onnx
+.venv
+data/savmap_dataset_v2
+*.zip
