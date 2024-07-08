@@ -32,6 +32,8 @@ class Arguments:
 
     # run
     run_name:str='detector'
+    project_name:str='wildAI'
+    tag:Sequence[str]=('',)
 
     # model type
     is_detector:bool=False
@@ -45,23 +47,29 @@ class Arguments:
     # training details
     # path_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8m.pt") 
     path_weights:str=os.path.join(CUR_DIR,"../base_models_weights/yolov8.kaza.pt")
-    lr0:float=1e-3
-    lrf:float=1e-2
+    lr0:float=1e-4
+    lrf:float=1.
     batchsize:int=32
     epochs:int=50
     patience:int=10
     degrees:float=45.0
-    flipud:float=0.0
+    flipud:float=0.5
     fliplr:float=0.5
     mosaic:float=0.0
     mixup:float=0.0
     erasing:float=0.0
     copy_paste:float=0.0
+    hsv_h:float=0.0
+    hsv_s:float=0.
+    hsv_v:float=0.
+    scale:float=0.
     shear:float=10.
     weightdecay:float=0.
-    dropout:float=0
+    dropout:float=0.
     multiscale:bool=False
     cos_lr:bool=False
+    optimizer:str='Adam' #'AdamW', 'Adam'
+    freeze:int=None # freezes the N first layers
 
     # model exporting format
     export_format:str=None
