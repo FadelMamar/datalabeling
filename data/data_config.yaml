@@ -1,6 +1,17 @@
 path: C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data  # dataset root dir
-train: train\images  # train images (relative to 'path')
-val :  train\images
+
+train: 
+ - train\images
+ - delplanque_tiled_data\train_tiled\images
+ - delplanque_tiled_data\val_tiled\images
+ - delplanque_tiled_data\test_tiled\images
+ - WAID\images\train
+ - WAID\images\valid
+ - WAID\images\test
+
+val :  
+ - train\images
+
 # test:  # test images (optional)
 
 # Classes
