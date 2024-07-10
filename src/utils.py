@@ -369,6 +369,9 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     df_annotation.loc[:,'y'] = df_annotation['y'].apply(lambda y: y/slice_height)
     df_annotation.loc[:,'width'] = df_annotation['width'].apply(lambda x : x/slice_width)
     df_annotation.loc[:,'height'] = df_annotation['height'].apply(lambda y: y/slice_height)
+
+    # change type
+    df_annotation['label_id'] = df_annotation['label_id'].astype(int)
     
     for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
