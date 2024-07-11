@@ -23,3 +23,6 @@ runs
 data/WAID
 wildAI-detection
 Model trial on dataset v0
+.venv
+data/savmap_dataset_v2
+*.zip
