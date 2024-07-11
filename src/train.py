@@ -29,7 +29,7 @@ def main(args:Arguments):
                 name=args.run_name,
                 single_cls=args.is_detector,
                 iou=0.5,
-                cache=False,
+                cache=args.cache,
                 augment=False, # For TTA predictions
                 lr0=args.lr0,
                 lrf=args.lrf,
@@ -39,6 +39,7 @@ def main(args:Arguments):
                 freeze=args.freeze,
                 val=True,
                 plots=True,
+                close_mosaic=10,
                 cos_lr=args.cos_lr,
                 deterministic=False,
                 multi_scale=args.multiscale,

@@ -52,7 +52,7 @@ class Arguments:
     batchsize:int=32
     epochs:int=50
     patience:int=10
-    degrees:float=45.0
+    degrees:float=180.0
     flipud:float=0.5
     fliplr:float=0.5
     mosaic:float=0.0
@@ -70,6 +70,7 @@ class Arguments:
     cos_lr:bool=False
     optimizer:str='Adam' #'AdamW', 'Adam'
     freeze:int=None # freezes the N first layers
+    cache:bool = False
 
     # model exporting format
     export_format:str=None
