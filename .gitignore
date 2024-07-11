@@ -20,3 +20,6 @@ mlartifacts
 runs
 *.cache
 *.onnx
+data/WAID
+wildAI-detection
+Model trial on dataset v0
