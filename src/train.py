@@ -16,8 +16,11 @@ def main(args:Arguments):
 
     # Remove labels.cache
     try:
-        CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-        os.remove(os.path.join(args.dest_path_images,"../labels.cache"))
+        with open(args.data_config_yaml,'r') as file:
+            yolo_config = yaml.load(file,Loader=yaml.FullLoader)
+        root = yolo_config["path"]
+        for p in yolo_config["train"] + yolo_config["val"]:
+            os.remove(os.path.join(root,p,"../labels.cache"))
     except:
         pass
 
