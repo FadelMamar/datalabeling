@@ -21,3 +21,4 @@ runs
 *.cache
 *.onnx
 .venv
+*.egg-info
