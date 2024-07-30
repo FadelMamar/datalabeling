@@ -15,7 +15,7 @@ if __name__ == '__main__':
     if args.export_format is not None:
         model = YOLO(args.export_model_weights)
         assert args.width==args.height,'Input image should have a square shape.'
-        model.export(format=format,
+        model.export(format=args.export_format,
                      imgsz=args.width,
                      nms=True,
                      batch=args.export_batch_size,
