@@ -13,5 +13,12 @@ cache.db
 *.json
 *.JPG
 labels
-images
-.tmp
+wandb
+wildAI
+mlflow
+mlartifacts
+runs
+*.cache
+*.onnx
+.venv
+*.egg-info

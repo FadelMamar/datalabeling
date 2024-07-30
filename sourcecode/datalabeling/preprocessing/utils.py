@@ -4,47 +4,29 @@ from copy import copy
 import io
 import json
 from typing import List,Dict
-from label_studio_ml.utils import get_local_path #,get_env
+from label_studio_ml.utils import get_env ,get_local_path
 from sahi.utils.file import load_json
 from sahi.slicing import slice_coco
 from skimage.io import imread,imsave
 import shutil
 import math
 import pandas as pd
-from arguments import Arguments
+from ..arguments import Arguments
 import os
-import PIL
-import torchvision
-import numpy
-import cv2
 import math
 from tqdm import tqdm
-import urllib
-from animaloc.data import ImageToPatches, PatchesBuffer, save_batch_images
-from albumentations import PadIfNeeded
 from label_studio_converter import Converter
 
 # paths
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/json")
-JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/json-min")
-CSV_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/csv")
-COCO_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/coco-format")
-ALL_CSV = os.path.join(CUR_DIR,"../exported_annotations/all_csv.csv")
-LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../exported_annotations/label_studio_config.xml")
-TEMP = os.path.join(CUR_DIR,"../.tmp")
+JSON_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json")
+JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json-min")
+CSV_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/csv")
+COCO_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/coco-format")
+ALL_CSV = os.path.join(CUR_DIR,"../../../exported_annotations/all_csv.csv")
+LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../../../exported_annotations/label_studio_config.xml")
+TEMP = os.path.join(CUR_DIR,"../../../.tmp")
 
-
-# def get_local_path(url:str):
-#     filename, dir_path = url.split('/data/', 1)[-1].split('?d=')
-#     dir_path = str(urllib.parse.unquote(dir_path))
-#     LOCAL_FILES_DOCUMENT_ROOT = get_env(
-#         'LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT', default=os.path.abspath(os.sep)
-#     )
-#     filepath = os.path.join(LOCAL_FILES_DOCUMENT_ROOT,
-#                             dir_path) #.replace('C:','D:')
-    
-#     return filepath
 
 def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH):
 
@@ -143,15 +125,17 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None):
     # load and update image paths
     coco_json_path = os.path.join(TEMP,'result.json')
     coco_annotations = load_json(coco_json_path)
-    images_metadata = coco_annotations['images']
-    images_metadata_updated = list()
-    for metadata in tqdm(images_metadata,desc=f'json-to-coco for {input_file}'):
-        if metadata['width'] is not None:
-            file_path = get_local_path(metadata['file_name'])
-            metadata_copy = copy(metadata)
-            metadata_copy.update({'file_name':file_path})
-            images_metadata_updated.append(metadata_copy)
-    coco_annotations.update({'images':images_metadata_updated})
+    # images_metadata = coco_annotations['images']
+    # images_metadata_updated = list()
+    # for metadata in tqdm(images_metadata,desc=f'json-to-coco for {input_file}'):
+    #     if metadata['width'] is not None:
+    #         # print(metadata['file_name'])
+    #         # file_path = get_local_path(metadata['file_name'])
+    #         file_path = metadata['file_name']
+    #         metadata_copy = copy(metadata)
+    #         metadata_copy.update({'file_name':file_path})
+    #         images_metadata_updated.append(metadata_copy)
+    # coco_annotations.update({'images':images_metadata_updated})
     # save if requested
     if out_file_name is not None:
         with open(out_file_name,'w') as file:
@@ -181,6 +165,7 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
                min_area_ratio:float=0.1,
                ignore_negative_samples:bool=False,
                verbose:bool=False)->dict:
+    
     # print(coco_annotation_file_path)
     sliced_coco_dict, coco_path = slice_coco(
     coco_annotation_file_path=coco_annotation_file_path,
@@ -194,6 +179,7 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
     overlap_width_ratio=overlap_width_ratio,
     min_area_ratio=min_area_ratio,
     verbose=verbose,
+    out_ext='.jpg',
     )
 
     return sliced_coco_dict
@@ -201,22 +187,21 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
 def sample_data(coco_dict_slices:dict,
                 img_dir:str,
                 empty_ratio:int=3,
-                out_csv_path:str=None)->pd.DataFrame:
+                out_csv_path:str=None,
+                labels_to_discard:list=None)->pd.DataFrame:
     
     assert (empty_ratio >= 0) and isinstance(empty_ratio,int),'Provide appropriate value'
 
-    def get_parent_image(file_name:str,lookup_extensions:list[str] = ['jpg','png','tif','JPG','PNG','TIF']):
-        file_name = os.path.basename(file_name)
+    def get_parent_image(file_name:str):
+        ext = '.jpg' 
+        file_name = Path(file_name).stem
+        # print(file_name)
         parent_file = '_'.join(file_name.split('_')[:-5])
-        for ext in lookup_extensions:
-            parent_file = os.path.join(img_dir,parent_file+f'.{ext}')
-            if os.path.exists(parent_file):
-                # print(parent_file)
-                break
-            else:
-                # print(parent_file)
-                raise FileNotFoundError('Parent file note found.')
-        return parent_file
+        p = os.path.join(img_dir,parent_file+ext)
+        if os.path.exists(p):
+            return p
+        raise FileNotFoundError(f'Parent file note found for {file_name} in {img_dir} >> {parent_file}')
+    
     
     # build mapping for labels
     label_ids = [cat['id'] for cat in coco_dict_slices['categories']]
@@ -236,10 +221,10 @@ def sample_data(coco_dict_slices:dict,
         x_0,y_0,x_1,y_1 = file_name.split('.')[0].split('_')[-4:]
         parent_image = get_parent_image(file_name)
         parent_file_paths.append(parent_image)
-        x0s.append(x_0)
-        x1s.append(x_1)
-        y0s.append(y_0)
-        y1s.append(y_1)
+        x0s.append(int(x_0))
+        x1s.append(int(x_1))
+        y0s.append(int(y_0))
+        y1s.append(int(y_1))
         ids.append(metadata['id'])
     df_limits = {'x0':x0s,
                  'x1':x1s,
@@ -279,13 +264,23 @@ def sample_data(coco_dict_slices:dict,
 
     # join dataframes
     df = df_limits.join(df_annot,how='outer') 
+
+    # discard non-animal labels
+    if labels_to_discard is not None:
+        df = df[~df.labels.isin(labels_to_discard)].copy()
+
     # get empty df and tiles
-    df_empty = df[df['x_min'].isna()]
-    df_non_empty = df[~df['x_min'].isna()]
+    # TODO: select num empty images == num unique images
+    df_empty = df[df['x_min'].isna()].copy()
+    df_non_empty = df[~df['x_min'].isna()].copy()
     empty_num =  int(len(df_non_empty)*empty_ratio)
-    df_empty = df_empty.sample(n=empty_num,random_state=41,replace=False)
+    df_empty = df_empty.sample(n=min(empty_num,len(df_empty)),
+                               random_state=41,
+                               replace=False)
+    print(f'Sampling {empty_num} empty images, and {len(df_non_empty)} non-empty images.')
+
     # concat dfs
-    df = pd.concat([df_empty,df[~df['x_min'].isna()]],axis=0)
+    df = pd.concat([df_empty,df_non_empty],axis=0)
     df.reset_index(inplace=True)
 
     # create x_center and y_center
@@ -305,6 +300,9 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         print('Deleting images in ',out_img_dir)
         shutil.rmtree(out_img_dir)
         Path(out_img_dir).mkdir(parents=True,exist_ok=True) 
+    
+    # selecting non-duplicated
+    df_tiles = df_tiles[~df_tiles.duplicated(['x0','x1','y0','y1','images'])].copy()
 
     for idx in tqdm(df_tiles.index,desc=f'Saving tiles to {out_img_dir}'):
         x0 = int(df_tiles.at[idx,'x0'])
@@ -313,22 +311,25 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         y1 = int(df_tiles.at[idx,'y1'])
         img_path = df_tiles.at[idx,'parent_images']
         tile_name = df_tiles.at[idx,'images']
+        save_path = os.path.join(out_img_dir,tile_name)
         img = imread(img_path)
         tile = img[y0:y1,x0:x1,:]
-        imsave(fname=os.path.join(out_img_dir,tile_name),arr=tile)
+        imsave(fname=save_path,arr=tile,check_contrast=False)
 
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
     
-    cols = ['labels','x','y','width','height']
+    cols = ['label_id','x','y','width','height']
     for col in cols:
         assert df_annotation[col].isna().sum()<1,'there are NaN values. Check out.'
+        # df_annotation[col] = df_annotation[col].apply(int)
 
-    df_annotation['x'] = df_annotation['x']/slice_width
-    df_annotation['y'] = df_annotation['y']/slice_height
-    df_annotation['width'] = df_annotation['width']/slice_width
-    df_annotation['height'] = df_annotation['height']/slice_height
+    # normalize values
+    df_annotation['x'] = df_annotation['x'].apply(lambda x: x/slice_width)
+    df_annotation['y'] = df_annotation['y'].apply(lambda y: y/slice_height)
+    df_annotation['width'] = df_annotation['width'].apply(lambda x : x/slice_width)
+    df_annotation['height'] = df_annotation['height'].apply(lambda y: y/slice_height)
     
-    for image_name,df in df_annotation.groupby('images'):
+    for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
         df[cols].to_csv(os.path.join(dest_path_labels,txt_file),sep=' ',index=False,header=False)
 
@@ -336,7 +337,7 @@ def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_di
 
     #clear directories
     if clear_out_dir:
-        for p in [args.dest_path_images,args.dest_path_labels]:
+        for p in [args.dest_path_images,args.dest_path_labels,COCO_DIR_PATH]:
             shutil.rmtree(p)
             Path(p).mkdir(parents=True,exist_ok=True)
 
@@ -357,88 +358,27 @@ def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_di
         # sample tiles
         df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
                                 empty_ratio=args.empty_ratio,
-                                out_csv_path=None,
-                                img_dir=img_dir
+                                out_csv_path=ALL_CSV,
+                                img_dir=img_dir,
+                                labels_to_discard=args.discard_labels
                                 )
+        
+        # detector_training mode
+        if args.is_detector:
+            df_tiles['label_id'] = 0
+        else:
+            raise NotImplementedError('Pipeline not designed to handle multiple classes.')
+        
+        # save labels in yolo format
+        save_df_as_yolo(df_annotation=df_tiles.dropna(axis=0,how='any'),
+                        slice_height=args.height,
+                        slice_width=args.width,
+                        dest_path_labels=args.dest_path_labels)
         # save tiles
         save_tiles(df_tiles=df_tiles,
                    out_img_dir=args.dest_path_images,
                    clear_out_img_dir=False)
-        # save labels in yolo format
-        save_df_as_yolo(df_annotation=df_tiles[~df_tiles['x'].isna()].copy(),
-                        slice_height=args.height,
-                        slice_width=args.width,
-                        dest_path_labels=args.dest_path_labels)
 
-def patcher(args:Arguments):
-    
-    # creating destination directory for tiles
-    Path(args.dest_path_images).mkdir(parents=True,exist_ok=True)
-    Path(args.dest_path_labels).mkdir(parents=True,exist_ok=True)
-    
-    # get images paths 
-    images_paths = set()
-    dfs = list()
-    for csv_path in Path(CSV_DIR_PATH).glob('*.csv'):
-        df = pd.read_csv(csv_path,sep=',')
-        images_paths = images_paths.union(set(df['images'].to_list()))
-        dfs.append(df)
-
-    # merge all csv and save
-    dfs_concat = pd.concat(dfs,axis=0)
-
-    # discard non-animals labels
-    dfs_concat = dfs_concat[~dfs_concat.labels.isin(args.discard_labels)]
-
-    # encode to numerical values
-    if args.is_detector:
-        dfs_concat['labels'] = 0
-    else:
-        raise NotImplementedError
-    dfs_concat.to_csv(ALL_CSV,index=False)
-
-    # tile and save
-    if ALL_CSV is not None:
-        patches_buffer = PatchesBuffer(ALL_CSV, args.root_path,
-                                       (args.height, args.width),
-                                       overlap=args.overlap,
-                                       min_visibility=args.min_visibility).buffer
-        patches_buffer['images'] = patches_buffer['images'].apply(os.path.basename)
-        patches_buffer.drop(columns='limits').to_csv(os.path.join(args.dest_path_labels, 'gt.csv'),
-                                                     index=False)
-        patches_buffer['base_images'] = patches_buffer['base_images'].apply(os.path.basename)
-        
-        # save labels in yolo format
-        save_df_as_yolo(df_annotation=patches_buffer, args=args)
-    
-    for img_path in tqdm(images_paths, desc='Exporting patches'):
-        pil_img = PIL.Image.open(img_path)
-        img_tensor = torchvision.transforms.ToTensor()(pil_img)
-        img_name = os.path.basename(img_path)
-        
-        if ALL_CSV is not None:
-            # save all patches
-            if args.save_all:
-                patches = ImageToPatches(img_tensor, (args.height, args.width),
-                                         overlap=args.overlap).make_patches()
-                save_batch_images(patches, img_name, args.dest_path_images)
-            # or only annotated ones
-            else:
-                padder = PadIfNeeded(
-                    args.height, args.width,
-                    position = PadIfNeeded.PositionType.TOP_LEFT,
-                    border_mode = cv2.BORDER_CONSTANT,
-                    value= 0
-                    )
-                img_ptch_df = patches_buffer[patches_buffer['base_images']==img_name]
-                for row in img_ptch_df[['images','limits']].to_numpy().tolist():
-                    ptch_name, limits = row[0], row[1]
-                    cropped_img = numpy.array(pil_img.crop(limits.get_tuple))
-                    padded_img = PIL.Image.fromarray(padder(image = cropped_img)['image'])
-                    padded_img.save(os.path.join(args.dest_path_images, ptch_name))
-        else:
-            patches = ImageToPatches(img_tensor, (args.height, args.width), overlap=args.overlap).make_patches()
-            save_batch_images(patches, img_name, args.dest_path_images)
 
 
 # Demo
