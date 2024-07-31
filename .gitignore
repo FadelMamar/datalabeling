@@ -22,3 +22,6 @@ runs
 *.onnx
 .venv
 *.egg-info
+mlruns/0/meta.yaml
+*.db
+*.DS_Store
