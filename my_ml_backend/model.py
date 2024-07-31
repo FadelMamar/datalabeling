@@ -1,22 +1,20 @@
 from typing import List, Dict, Optional
 from label_studio_ml.model import LabelStudioMLBase
-from sahi.models.yolov8 import Yolov8DetectionModel
-from sahi.predict import get_sliced_prediction
-from label_studio_ml.utils import (get_env, get_local_path)
+# from sahi.models.yolov8 import Yolov8DetectionModel
+# from sahi.predict import get_sliced_prediction
+from label_studio_ml.utils import get_local_path
 from PIL import Image
-from ultralytics import YOLO
+# from ultralytics import YOLO
 # import boto3
-import torch
+# import torch
 # from pathlib import Path
-from urllib.parse import urlparse
+# from urllib.parse import urlparse
 import mlflow
 # from requests.auth import HTTPBasicAuth
 # import hashlib
 # import os
 import time
-#labelstudio API settings
-# HOSTNAME = get_env('HOSTNAME', 'http://localhost:8080')
-# API_KEY = get_env("KEY")
+from datalabeling.annotator import Detector
 
 # Authenticate AWS
 # PROFILE_NAME = 'my-profile' #TODO: update with your profile
@@ -26,72 +24,6 @@ import time
 #Mlflow
 TRACKING_URI="http://localhost:5000"
 
-class Detector(object):
-
-    def __init__(self,
-                path_to_weights:str,
-                confidence_threshold:float=0.4):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.tilesize=640
-        self.overlapratio=0.1
-        self.sahi_prostprocess='NMS'
-        print('Device:', device)
-        self.detection_model = Yolov8DetectionModel(
-                                                    # model_path=path_to_weights,
-                                                    model=YOLO(path_to_weights,task='detect'),
-                                                    confidence_threshold=confidence_threshold,
-                                                    image_size=self.tilesize,
-                                                    device=device,
-                                                    )
-
-
-    def predict(self, image):
-
-
-        # if data is on AWS
-        # r = urlparse(url, allow_fragments=False)
-        # bucket_name = r.netloc
-        # filename = r.path.lstrip('/')
-        # with open('./tmp/s3_img.jpg','wb+') as f:
-        #     S3.download_fileobj(bucket_name, filename, f)
-        #     image = Image.open(f)
-
-        result = get_sliced_prediction(image,
-                                        self.detection_model,
-                                        slice_height=self.tilesize,
-                                        slice_width=self.tilesize,
-                                        overlap_height_ratio=self.overlapratio,
-                                        overlap_width_ratio=self.overlapratio,
-                                        postprocess_type=self.sahi_prostprocess,
-                                        )
-
-        return result.to_coco_annotations()
-
-    def format_prediction(self,pred:Dict,img_height:int,img_width:int):
-        # formatting the prediction to work with Label studio
-        x, y, width, height = pred['bbox']
-        label = pred['category_name']
-        score = pred['score']
-
-        template = {
-                    "from_name": "label",
-                    "to_name": "image",
-                    "type": "rectanglelabels",
-                    'value': {
-                        'rectanglelabels': [label],
-                        'x': x / img_width * 100,
-                        'y': y / img_height * 100,
-                        'width': width / img_width * 100,
-                        'height': height / img_height * 100
-                    },
-                    'score': score
-        }
-
-        return template
-
-    def train(self, dataloader):
-       raise NotImplementedError('Not implemented.')
-       pass
 
 class NewModel(LabelStudioMLBase):
 
@@ -109,15 +41,15 @@ class NewModel(LabelStudioMLBase):
         mlflow.set_tracking_uri(TRACKING_URI)
         client = mlflow.MlflowClient()
         name = 'detector'
-        alias = 'start'
+        alias = 'pt'
         version = client.get_model_version_by_alias(name=name,alias=alias).version
         self.modelversion = f'{name}:{version}'
         self.modelURI = f'models:/{name}/{version}'
         self.model = 0
         
         # Load localizer change model path to match
-        # self.model = Detector(path_to_weights=r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt",
-        #                     confidence_threshold=0.4)
+        self.model = Detector(path_to_weights="/Users/sfadel/Desktop/datalabeling/best.pt",
+                            confidence_threshold=0.1)
 
     def __format_prediction(self,pred:Dict,img_height:int,img_width:int):
         # formatting the prediction to work with Label studio

@@ -378,13 +378,3 @@ def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_di
         save_tiles(df_tiles=df_tiles,
                    out_img_dir=args.dest_path_images,
                    clear_out_img_dir=False)
-
-
-
-# Demo
-# if __name__ == '__main__':
-#     args = Arguments()
-# #     build_yolo_dataset(args=args,clear_out_dir=True)
-#     # patcher(args=args)
-#     # convert_json_to_coco(input_file=r"..\exported_annotations\json\project-1-at-2024-06-09-00-41-b6d95d93.json")
-#     pass

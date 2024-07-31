@@ -6,7 +6,7 @@ if __name__ == '__main__':
     args = parse(Arguments)
 
     if args.build_yolo_dataset:
-        from datalabeling.preprocessing import build_yolo_dataset
+        from datalabeling.dataset import build_yolo_dataset
         build_yolo_dataset(args=args,
                            clear_out_dir=args.clear_yolo_dir)
         
