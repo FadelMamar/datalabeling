@@ -26,3 +26,8 @@ Model trial on dataset v0
 .venv
 data/savmap_dataset_v2
 *.zip
+.venv
+*.egg-info
+mlruns/0/meta.yaml
+*.db
+*.DS_Store

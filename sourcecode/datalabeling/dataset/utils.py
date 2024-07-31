@@ -12,40 +12,22 @@ from skimage.io import imread,imsave
 import shutil
 import math
 import pandas as pd
-from arguments import Arguments
+from ..arguments import Arguments
 import os
-import PIL
-import torchvision
-import numpy
-import cv2
 import math
 from tqdm import tqdm
-import urllib
-from animaloc.data import ImageToPatches, PatchesBuffer, save_batch_images
-from albumentations import PadIfNeeded
 from label_studio_converter import Converter
 
 # paths
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/json")
-JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/json-min")
-CSV_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/csv")
-COCO_DIR_PATH = os.path.join(CUR_DIR,"../exported_annotations/coco-format")
-ALL_CSV = os.path.join(CUR_DIR,"../exported_annotations/all_csv.csv")
-LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../exported_annotations/label_studio_config.xml")
-TEMP = os.path.join(CUR_DIR,"../.tmp")
+JSON_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json")
+JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json-min")
+CSV_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/csv")
+COCO_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/coco-format")
+ALL_CSV = os.path.join(CUR_DIR,"../../../exported_annotations/all_csv.csv")
+LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../../../exported_annotations/label_studio_config.xml")
+TEMP = os.path.join(CUR_DIR,"../../../.tmp")
 
-
-# def get_local_path(url:str):
-#     filename, dir_path = url.split('/data/', 1)[-1].split('?d=')
-#     dir_path = str(urllib.parse.unquote(dir_path))
-#     LOCAL_FILES_DOCUMENT_ROOT = get_env(
-#         'LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT', default=os.path.abspath(os.sep)
-#     )
-#     filepath = os.path.join(LOCAL_FILES_DOCUMENT_ROOT,
-#                             dir_path) #.replace('C:','D:')
-    
-#     return filepath
 
 def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH):
 
@@ -184,6 +166,7 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
                min_area_ratio:float=0.1,
                ignore_negative_samples:bool=False,
                verbose:bool=False)->dict:
+    
     # print(coco_annotation_file_path)
     sliced_coco_dict, coco_path = slice_coco(
     coco_annotation_file_path=coco_annotation_file_path,
@@ -288,6 +271,10 @@ def sample_data(coco_dict_slices:dict,
         df = df[~df.labels.isin(labels_to_discard)].copy()
 
     # get empty df and tiles
+<<<<<<< HEAD:src/utils.py
+=======
+    # TODO: select num empty images == num unique images
+>>>>>>> refactoring:sourcecode/datalabeling/dataset/utils.py
     df_empty = df[df['x_min'].isna()].copy()
     df_empty.drop_duplicates(subset='images',inplace=True)
     df_non_empty = df[~df['x_min'].isna()].copy()
@@ -432,6 +419,7 @@ def build_yolo_dataset(args:Arguments):
         save_tiles(df_tiles=df_tiles,
                    out_img_dir=args.dest_path_images,
                    clear_out_img_dir=False)
+<<<<<<< HEAD:src/utils.py
 
 def patcher(args:Arguments):
     
@@ -511,3 +499,5 @@ def patcher(args:Arguments):
 #     # patcher(args=args)
 #     # convert_json_to_coco(input_file=r"..\exported_annotations\json\project-1-at-2024-06-09-00-41-b6d95d93.json")
 #     pass
+=======
+>>>>>>> refactoring:sourcecode/datalabeling/dataset/utils.py

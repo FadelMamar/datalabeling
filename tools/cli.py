@@ -1,14 +1,14 @@
-from arguments import Arguments
+from datalabeling.arguments import Arguments
 from datargs import parse
-
 
 if __name__ == '__main__':
 
     args = parse(Arguments)
 
     if args.build_yolo_dataset:
-        from utils import build_yolo_dataset
-        build_yolo_dataset(args=args)
+        from datalabeling.dataset import build_yolo_dataset
+        build_yolo_dataset(args=args,
+                           clear_out_dir=args.clear_yolo_dir)
         
     if args.export_format is not None:
         from ultralytics import YOLO
@@ -19,3 +19,7 @@ if __name__ == '__main__':
                      nms=True,
                      batch=args.export_batch_size,
                      simplify=True)
+    
+    if args.start_training:
+        from datalabeling.train import start_training
+        start_training(args)
