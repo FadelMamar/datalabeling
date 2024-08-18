@@ -28,3 +28,8 @@ data/savmap_dataset_v2
 Model trial*
 .env
 src/helper.py
+.venv
+*.egg-info
+mlruns/0/meta.yaml
+*.db
+*.DS_Store

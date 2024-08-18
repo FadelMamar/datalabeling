@@ -1,12 +1,12 @@
 call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
 call conda activate label-backend
 
-call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
-
+call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools"
 
 call wandb online
 
 :: freeze layers for transfer-learning
+:: --freeze 22
 
 call python ".\src\train.py" --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.1 --patience 10 --is-detector^
     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
@@ -15,7 +15,7 @@ call python ".\src\train.py" --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.1 
     --dest-path-images "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\train\images"^
     --tag "dataset-v2"^ 
     --weightdecay 0.0005
-:: --freeze 22
+    
 
 
 call conda deactivate

@@ -1,14 +1,13 @@
-# datalabeling
-Repository for data labeling
+# Datalabeling
+This repository is used to facilitate data labeling in the context of **automated aerial census of large herbivores**. The project aims to facilitate the labeling of aerial images by integrating a YOLO-based object detector that learns from the annotations. The active learning pipeline is currently semi-automated. It uses *Label studio* as the labeling platform and *Ultralytics* as the machine learning training library.
 
 # Set up a workspace 
-- Open terminal
-- Create a folder ``` mkidr datalabeling```
-- Move to folder ```cd datalabeling```
-- Create a subfolder ```mkdir data```
-- Copy the images to be labeled inside './datalabeling/data/' 
+- Open a terminal
+- Create a folder ``` mkidr workspace```
+- Move to folder ```cd workspace```
+- Clone repository into the workspace ```git clone https://github.com/FadelMamar/datalabeling.git```
 
-# Install Label-studio for windows
+# Installing Label-studio for windows
 - **Install Anaconda** Follow instructions at https://www.anaconda.com/download
 (Instructions are also available here https://labelstud.io/guide/install.html#Install-with-Anaconda)
 - Open Anaconda prompt. Type 'anaconda prompt' in the search bar of your computer and launch it.
@@ -29,7 +28,7 @@ Repository for data labeling
 - To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend-linux.sh```
 - To close application: close the window
 
-# Instal Label-studio for Mac
+# Installing Label-studio for Mac
 (Instructions are available here: https://labelstud.io/guide/install.html#Install-using-Homebrew)
 - **Install homebrew** -> Follow instructions here https://brew.sh/
 - Open terminal 
@@ -37,7 +36,7 @@ Repository for data labeling
 - Type in ```brew install humansignal/tap/label-studio``` and press "Enter"
 - Launch Label studio by typing ```label-studio``` and pressing "Enter".
 
-# Install Label-studio using Docker (Mac and windows)
+# Installing Label-studio using Docker (Mac and windows)
 (instructions are available here https://labelstud.io/guide/install.html#Install-with-Docker)
 - Install Docker ->  https://www.docker.com/ 
 - open terminal in your workspace and run ```docker run -it -p 8080:8080 -v ./labeleddata:/label-studio/data heartexlabs/label-studio:latest```
