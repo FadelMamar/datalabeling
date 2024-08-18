@@ -22,3 +22,6 @@ runs
 *.onnx
 .venv
 *.egg-info
+*.JPG
+*.PNG
+.env

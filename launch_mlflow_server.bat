@@ -1,0 +1,6 @@
+::call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
+::call conda activate label-backend
+
+call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+
+call mlflow server --backend-store-uri runs\mlflow 
