@@ -7,7 +7,7 @@ from time import time
 from pathlib import Path
 import mlflow
 import json
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 from label_studio_ml.utils import get_local_path
 from label_studio_sdk import Client
 from tqdm import tqdm
@@ -40,14 +40,14 @@ class Annotator(object):
 
         # Connect to the Label Studio API and check the connection
         LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL')
-        API_KEY = os.getenv("LABELSTUDIO-API-KEY")      
+        API_KEY = os.getenv("LABELSTUDIO-API-KEY")
         self.labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
 
         ## Load model from path
         self.tilesize=640
         self.overlapratio=0.1
         self.sahi_prostprocess='NMS'
-        
+
         self.path_to_weights = path_to_weights
         if self.path_to_weights is None:
             TRACKING_URI="http://localhost:5000"
@@ -95,8 +95,8 @@ class Annotator(object):
                                             postprocess_type=self.sahi_prostprocess,
                                             )
             return result.to_coco_annotations()
-        
-            
+
+
         return  self.model.predict(image)
 
     def format_prediction(self,pred:dict,img_height:int,img_width:int) -> dict:
@@ -166,9 +166,9 @@ class Annotator(object):
                                 score=max_score,
                                 result=formatted_pred,
                                 model_version=self.modelversion)
-        
-    def build_upload_json(self,path_img_dir:str=None,
-                          root:str=None,
+
+    def build_upload_json(self,path_img_dir:str,
+                          root:str,
                           project_id:int=None,
                           pattern="*.JPG",
                           bulk_predictions:list[dict]=None,
@@ -187,19 +187,21 @@ class Annotator(object):
         """
         directory_preds = list()
         # Select project
-        project = self.labelstudio_client.get_project(id=project_id)
+        # project = self.labelstudio_client.get_project(id=project_id)
+        # tasks = project.get_tasks()
 
         # Upload predictions for each task
-        tasks = project.get_tasks()
-        for task in tasks:
-        # for image_path in Path(path_img_dir).glob(pattern):
-            # d=image_path.relative_to(Path(root)).as_posix()
-            task_id = task['id']
-            img_url = task['data']['image']
-            pred = {    "id": task_id,
+        # for task in tasks:
+        for image_path in Path(path_img_dir).glob(pattern):
+            img_path_as_posix = image_path.relative_to(Path(root)).as_posix()
+            # task_id = task['id']
+            # img_url = task['data']['image']
+            img_url = f"/data/local-files/?d={img_path_as_posix}"
+            pred = {
                         "data": {"image" : img_url},
                         "predictions":[],
                     }
+            # pred['id'] = task_id
             image_path = Path(get_local_path(img_url))
             # get predictions
             if bulk_predictions is None:
