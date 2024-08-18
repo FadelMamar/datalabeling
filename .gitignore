@@ -26,3 +26,4 @@ wildAI-detection
 data/savmap_dataset_v2
 *.zip
 Model trial*
+.env
