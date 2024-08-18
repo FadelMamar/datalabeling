@@ -21,7 +21,7 @@ class Arguments:
     min_visibility:float=0.1
     save_all:bool=False
     overlap_ratio:float=0.2
-    empty_ratio:int=1
+    empty_ratio:float=1.
 
     # label mapping
     label_map:str=None
