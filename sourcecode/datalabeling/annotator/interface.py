@@ -12,6 +12,7 @@ from label_studio_ml.utils import get_local_path
 from label_studio_sdk import Client
 from tqdm import tqdm
 import os
+import logging
 
 class Annotator(object):
 
@@ -35,13 +36,12 @@ class Annotator(object):
         # Load environment variables
         if dotenv_path is not None:
             load_dotenv(dotenv_path=dotenv_path)
+            # Connect to the Label Studio API and check the connection
+            LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL')
+            API_KEY = os.getenv("LABELSTUDIO-API-KEY")
+            self.labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
         else:
-            print("Warning: make sure necessary env variables are set.")
-
-        # Connect to the Label Studio API and check the connection
-        LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL')
-        API_KEY = os.getenv("LABELSTUDIO-API-KEY")
-        self.labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
+            logging.warning(msg="Pass argument `dotenv_path` to access label studio API")
 
         ## Load model from path
         self.tilesize=640
@@ -59,6 +59,7 @@ class Annotator(object):
             self.modelversion = f'{name}:{version}'
             self.modelURI = f'models:/{name}/{version}'
             self.model = mlflow.pyfunc.load_model(self.modelURI)
+            # print('Device:',self.model.detection_model.device)
         else:
             device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model = Yolov8DetectionModel(
@@ -68,7 +69,7 @@ class Annotator(object):
                                                         device=device,
                                                         )
             self.modelversion = Path(path_to_weights).stem
-        print('Device:', self.model.device)
+            # print('Device:', device)
         # LS label config
         self.from_name = "label"
         self.to_name = "image"
@@ -136,7 +137,8 @@ class Annotator(object):
         return template
 
     def upload_predictions(self,project_id:int,top_n:int=None)->None:
-        """_summary_
+        """Uploads predictions using label studio API.
+        Make sure to set the API key and url inside .env
 
         Args:
             project_id (int): _description_
@@ -169,7 +171,7 @@ class Annotator(object):
 
     def build_upload_json(self,path_img_dir:str,
                           root:str,
-                          project_id:int=None,
+                        #   project_id:int=None,
                           pattern="*.JPG",
                           bulk_predictions:list[dict]=None,
                           save_json_path:str=None) -> list[dict]:
