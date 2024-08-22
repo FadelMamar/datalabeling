@@ -2,9 +2,7 @@ import argparse
 import cloudpickle
 import mlflow
 from sys import version_info
-from datalabeling.mlflow import get_experiment_id
-from datalabeling.mlflow import  model_wrapper
-from datalabeling.mlflow import DetectorWrapper
+from datalabeling.mlflow import get_experiment_id, model_wrapper, DetectorWrapper
 
 # set local tracking server
 TRACKING_URI="http://localhost:5000"
