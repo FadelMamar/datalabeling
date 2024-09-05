@@ -140,7 +140,7 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
     def get_upload_img_dir(coco_annotation:dict):
         directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
         assert len(directory)==1,'There should be one upload directory per annotation project'
-        return directory.pop() #list(directory)[0]
+        return directory.pop() 
 
     upload_img_dirs,coco_paths = list(),list()
     for path in Path(input_dir).glob('*.json'):
@@ -148,6 +148,19 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
         annot = convert_json_to_coco(path,out_file_name=coco_path)
         upload_img_dirs.append(get_upload_img_dir(coco_annotation=annot))
         coco_paths.append(coco_path)
+
+    return dict(zip(upload_img_dirs,coco_paths))
+
+def load_coco_annotations(dest_dir_coco:str=COCO_DIR_PATH)->dict:
+
+    def get_upload_img_dir(coco_annotation:dict):
+        directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
+        assert len(directory)==1,'There should be one upload directory per annotation project'
+        return directory.pop()
+    
+    coco_paths = list(Path(dest_dir_coco).glob('*.json'))
+    upload_img_dirs = [get_upload_img_dir(coco_annotation=load_json(coco_path)) for coco_path in coco_paths]
+  
 
     return dict(zip(upload_img_dirs,coco_paths))
     
@@ -266,13 +279,13 @@ def sample_data(coco_dict_slices:dict,
     df_empty = df[df['x_min'].isna()].copy()
     df_empty.drop_duplicates(subset='images',inplace=True)
     if sample_only_empty:
-        df = df_empty
+        df = df_empty.sample(frac=empty_ratio)
         df.reset_index(inplace=True)
         # create x_center and y_center
-        df['x'] = np.nan()
-        df['y'] = np.nan()
-        df['width'] = np.nan()
-        df['height'] = np.nan()
+        df['x'] = np.nan
+        df['y'] = np.nan
+        df['width'] = np.nan
+        df['height'] = np.nan
 
     else:
         df_non_empty = df[~df['x_min'].isna()].copy()
@@ -325,11 +338,11 @@ def load_label_map(path:str,label_to_discard:list):
     # load label mapping
     with open(path,'r') as file:
         label_map = json.load(file)
-    names = [p['name'] for p in label_map if p['name'] not in label_to_discard ]
+    names = [p['name'] for p in label_map if p['name'] not in label_to_discard]
     label_map = dict(zip(range(len(names)),names))
     return label_map
 
-def update_yolo_data_cfg(args:Arguments):
+def update_yolo_data_cfg(args:Dataprepconfigs):
 
     assert args.label_map is not None, 'Provide path to label mapping.'
 
@@ -363,7 +376,7 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
         txt_file = image_name.split('.')[0] + '.txt'
         df[cols].to_csv(os.path.join(dest_path_labels,txt_file),sep=' ',index=False,header=False)
 
-def build_yolo_dataset(args:Arguments):
+def build_yolo_dataset(args:Dataprepconfigs):
 
     #clear directories
     if args.clear_yolo_dir:
@@ -372,7 +385,10 @@ def build_yolo_dataset(args:Arguments):
             Path(p).mkdir(parents=True,exist_ok=True)
 
     # convert ls json to coco
-    map_imgdir_cocopath = convert_json_annotations_to_coco(input_dir=args.ls_json_dir,
+    if args.load_coco_annotations:
+        map_imgdir_cocopath = load_coco_annotations(dest_dir_coco=args.coco_json_dir)
+    else:
+        map_imgdir_cocopath = convert_json_annotations_to_coco(input_dir=args.ls_json_dir,
                                                            dest_dir_coco=args.coco_json_dir)
 
     # load label map
