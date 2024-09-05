@@ -48,8 +48,8 @@ class NewModel(LabelStudioMLBase):
         self.model = 0
         
         # Load localizer change model path to match
-        self.model = Detector(path_to_weights="/Users/sfadel/Desktop/datalabeling/best.pt",
-                            confidence_threshold=0.1)
+        # self.model = Detector(path_to_weights="...",
+        #                     confidence_threshold=0.1)
 
     def __format_prediction(self,pred:Dict,img_height:int,img_width:int):
         # formatting the prediction to work with Label studio

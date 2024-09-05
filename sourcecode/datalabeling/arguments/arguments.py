@@ -17,18 +17,29 @@ class Arguments:
     min_visibility:float=0.1
     save_all:bool=False
     overlap_ratio:float=0.2
-    empty_ratio:int=1
+    empty_ratio:float=0.1
+
+    # annotations paths
+    coco_json_dir:str=""
+    ls_json_dir:str=""
+    
 
     # cli
     build_yolo_dataset:bool=False
     clear_yolo_dir:bool=False
     start_training:bool=False
+    save_only_empty:bool=False
     
     # model type
-    is_detector:bool=True
-    
+    is_detector:bool=False
+
+    # active learning flags
+    mlflow_tracking_uri:str="http://localhost:5000"
+    mlflow_model_alias:str=None
+
     # training data
     data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')
+    
 
     # labels to discard
     discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
@@ -43,11 +54,14 @@ class Arguments:
     optimizer:str='Adam'
     optimizer_momentum:float=0.937
     device:int=0
-    patience=int=10
+    patience:int=10
 
     # regularization
     dropout:float=0.
     weight_decay:float=5e-4
+
+    # transfer learning
+    freeze:int=None
 
     # lr scheduling
     cos_annealing:bool=False
@@ -55,20 +69,22 @@ class Arguments:
     # run and project name MLOps
     run_name:str='detector'
     project_name:str='wildAI'
-
+    tag:Sequence[str]=("",)
+    
     # data augmentation https://docs.ultralytics.com/modes/train/#augmentation-settings-and-hyperparameters
     rotation_degree:float=45.
     mixup:float=0.
     shear:float=10.
     copy_paste:float=0.
     erasing:float=0.
-    scale:float=0.5 
+    scale:float=0.5
     fliplr:float=0.3
     flipud:float=0.3
     hsv_h:float=0.
     hsv_s:float=0.3
     hsv_v:float=0.4
     translate:float=0.1
+    mosaic:float=0.
 
     # model exporting format
     export_format:str=None

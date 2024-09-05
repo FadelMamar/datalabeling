@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import yaml
 from datargs import parse
 from ..arguments import Arguments
-import os
+import os, logging
 
 def start_training(args:Arguments):
 
@@ -18,15 +18,19 @@ def start_training(args:Arguments):
             yolo_config = yaml.load(file,Loader=yaml.FullLoader)
         root = yolo_config["path"]
         for p in yolo_config["train"] + yolo_config["val"]:
-            os.remove(os.path.join(root,p,"../labels.cache"))
-    except:
-        pass
+            path = os.path.join(root,p,"../labels.cache")
+            if os.path.exists(path):
+                os.remove(path)
+                logging.info(f"Removing: {os.path.join(root,p,"../labels.cache")}")
+    except Exception as e:
+        print(e)
 
     # Train the model
     model.train(data=args.data_config_yaml,
                 epochs=args.epochs,
                 imgsz=min(args.height,args.width),
                 device=args.device,
+                freeze=args.freeze,
                 name=args.run_name,
                 single_cls=args.is_detector,
                 lr0=args.lr0,
@@ -42,11 +46,11 @@ def start_training(args:Arguments):
                 optimizer=args.optimizer,
                 project=args.project_name,
                 patience=args.patience,
-                multiscale=False,
+                multi_scale=False,
                 degrees=args.rotation_degree,
                 mixup=args.mixup,
                 scale=args.scale,
-                mosaic=False,
+                mosaic=args.mosaic,
                 augment=False,
                 erasing=args.erasing,
                 copy_paste=args.copy_paste,

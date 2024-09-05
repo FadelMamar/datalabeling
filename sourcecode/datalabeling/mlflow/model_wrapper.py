@@ -8,7 +8,7 @@ class DetectorWrapper(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.detection_model = Yolov8DetectionModel(model_path=context.artifacts['path'],
-                                                    confidence_threshold=0.4, #context.artifacts['confidence_threshold'],
+                                                    confidence_threshold=0.1, #context.artifacts['confidence_threshold'],
                                                     device=device)
         self.tilesize=640
         self.overlapratio=0.1
