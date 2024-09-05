@@ -2,7 +2,15 @@ from dataclasses import dataclass
 from typing import Sequence
 import os
 
+# paths
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json")
+JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json-min")
+CSV_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/csv")
+COCO_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/coco-format")
+ALL_CSV = os.path.join(CUR_DIR,"../../../exported_annotations/all_csv.csv")
+LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../../../exported_annotations/label_studio_config.xml")
+TEMP = os.path.join(CUR_DIR,"../../../.tmp")
 
 @dataclass
 class Arguments:
@@ -46,13 +54,13 @@ class Arguments:
 
     # training flags
     path_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
-    lr0:float=1e-3
+    lr0:float=1e-4
     lrf:float=1e-2
     batchsize:int=32
     epochs:int=50
     seed=41
-    optimizer:str='Adam'
-    optimizer_momentum:float=0.937
+    optimizer:str='AdamW'
+    optimizer_momentum:float=0.99
     device:int=0
     patience:int=10
 
@@ -64,7 +72,7 @@ class Arguments:
     freeze:int=None
 
     # lr scheduling
-    cos_annealing:bool=False
+    cos_annealing:bool=True
 
     # run and project name MLOps
     run_name:str='detector'

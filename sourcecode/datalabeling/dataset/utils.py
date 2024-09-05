@@ -5,28 +5,19 @@ import io
 import json
 import yaml
 from typing import List,Dict
-from label_studio_ml.utils import get_env ,get_local_path
+from label_studio_ml.utils import get_local_path
 from sahi.utils.file import load_json
 from sahi.slicing import slice_coco
 from skimage.io import imread,imsave
 import shutil
 import math
 import pandas as pd
-from ..arguments import Arguments
+from ..arguments import *
 import os
 import math
 from tqdm import tqdm
 from label_studio_converter import Converter
 
-# paths
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json")
-JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json-min")
-CSV_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/csv")
-COCO_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/coco-format")
-ALL_CSV = os.path.join(CUR_DIR,"../../../exported_annotations/all_csv.csv")
-LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../../../exported_annotations/label_studio_config.xml")
-TEMP = os.path.join(CUR_DIR,"../../../.tmp")
 
 
 def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH):

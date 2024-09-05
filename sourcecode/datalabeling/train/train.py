@@ -1,6 +1,5 @@
 from ultralytics import YOLO
 import yaml
-from datargs import parse
 from ..arguments import Arguments
 import os, logging
 
@@ -66,15 +65,7 @@ def start_training(args:Arguments):
                 exist_ok=True,
                 seed=args.seed
                 )
-    
-    # TODO: export best weights to onnx or TensorRT
-    # model = YOLO('../runs/detect/train/weight/best.pt')
-    # model.export(format='onnx')
 
-
-# if __name__ == '__main__':
-#     args = parse(Arguments)
-#     start_training(args=args)
 
 
 
