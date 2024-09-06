@@ -1,31 +1,23 @@
 # imports
 from pathlib import Path
-from copy import copy
+import numpy as np
 import io
 import json
+import yaml
 from typing import List,Dict
-from label_studio_ml.utils import get_env ,get_local_path
+from label_studio_ml.utils import get_local_path
 from sahi.utils.file import load_json
 from sahi.slicing import slice_coco
 from skimage.io import imread,imsave
 import shutil
 import math
 import pandas as pd
-from ..arguments import Arguments
+from ..arguments import *
 import os
 import math
 from tqdm import tqdm
 from label_studio_converter import Converter
 
-# paths
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json")
-JSONMIN_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/json-min")
-CSV_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/csv")
-COCO_DIR_PATH = os.path.join(CUR_DIR,"../../../exported_annotations/coco-format")
-ALL_CSV = os.path.join(CUR_DIR,"../../../exported_annotations/all_csv.csv")
-LABELSTUDIOCONFIG = os.path.join(CUR_DIR,"../../../exported_annotations/label_studio_config.xml")
-TEMP = os.path.join(CUR_DIR,"../../../.tmp")
 
 
 def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH):
@@ -143,7 +135,7 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None):
 
     return coco_annotations
 
-def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH)->dict:
+def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH)->dict:
 
     def get_upload_img_dir(coco_annotation:dict):
         directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
@@ -152,7 +144,7 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH)->dict:
 
     upload_img_dirs,coco_paths = list(),list()
     for path in Path(input_dir).glob('*.json'):
-        coco_path = os.path.join(COCO_DIR_PATH,path.name)
+        coco_path = os.path.join(dest_dir_coco,path.name)
         annot = convert_json_to_coco(path,out_file_name=coco_path)
         upload_img_dirs.append(get_upload_img_dir(coco_annotation=annot))
         coco_paths.append(coco_path)
@@ -188,9 +180,10 @@ def sample_data(coco_dict_slices:dict,
                 img_dir:str,
                 empty_ratio:int=3,
                 out_csv_path:str=None,
-                labels_to_discard:list=None)->pd.DataFrame:
+                labels_to_discard:list=None,
+                sample_only_empty:bool=False)->pd.DataFrame:
     
-    assert (empty_ratio >= 0) and isinstance(empty_ratio,int),'Provide appropriate value'
+    assert empty_ratio >= 0.,'Provide appropriate value'
 
     def get_parent_image(file_name:str):
         ext = '.jpg' 
@@ -270,22 +263,34 @@ def sample_data(coco_dict_slices:dict,
         df = df[~df.labels.isin(labels_to_discard)].copy()
 
     # get empty df and tiles
-    # TODO: select num empty images == num unique images
     df_empty = df[df['x_min'].isna()].copy()
-    df_non_empty = df[~df['x_min'].isna()].copy()
-    empty_num =  int(len(df_non_empty)*empty_ratio)
-    df_empty = df_empty.sample(n=min(empty_num,len(df_empty)),
-                               random_state=41,
-                               replace=False)
-    print(f'Sampling {empty_num} empty images, and {len(df_non_empty)} non-empty images.')
+    df_empty.drop_duplicates(subset='images',inplace=True)
+    if sample_only_empty:
+        df = df_empty
+        df.reset_index(inplace=True)
+        # create x_center and y_center
+        df['x'] = np.nan()
+        df['y'] = np.nan()
+        df['width'] = np.nan()
+        df['height'] = np.nan()
 
-    # concat dfs
-    df = pd.concat([df_empty,df_non_empty],axis=0)
-    df.reset_index(inplace=True)
+    else:
+        df_non_empty = df[~df['x_min'].isna()].copy()
+        non_empty_num = df_non_empty['images'].unique().shape[0]
+        empty_num =  math.floor(non_empty_num*empty_ratio) 
+        empty_num = min(empty_num,len(df_empty))
+        df_empty = df_empty.sample(n=empty_num,
+                                random_state=41,
+                                replace=False)
+        print(f'Sampling {empty_num} empty images, and {non_empty_num} non-empty images.')
 
-    # create x_center and y_center
-    df['x'] = df['x_min'] + df['width']*0.5
-    df['y'] = df['y_min'] + df['height']*0.5
+        # concat dfs
+        df = pd.concat([df_empty,df_non_empty],axis=0)
+        df.reset_index(inplace=True)
+
+        # create x_center and y_center
+        df['x'] = df['x_min'] + df['width']*0.5
+        df['y'] = df['y_min'] + df['height']*0.5
 
     # save df
     if out_csv_path is not None:
@@ -316,6 +321,28 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         tile = img[y0:y1,x0:x1,:]
         imsave(fname=save_path,arr=tile,check_contrast=False)
 
+def load_label_map(path:str,label_to_discard:list):
+    # load label mapping
+    with open(path,'r') as file:
+        label_map = json.load(file)
+    names = [p['name'] for p in label_map if p['name'] not in label_to_discard ]
+    label_map = dict(zip(range(len(names)),names))
+    return label_map
+
+def update_yolo_data_cfg(args:Arguments):
+
+    assert args.label_map is not None, 'Provide path to label mapping.'
+
+    # load yaml
+    with open(args.data_config_yaml,'r') as file:
+        yolo_config = yaml.load(file,Loader=yaml.FullLoader)
+    # load label mapping
+    label_map = load_label_map(args.label_map,args.discard_labels)
+    # updaate yaml and save
+    yolo_config.update({'names':label_map,'nc':len(label_map)})
+    with open(args.data_config_yaml,'w') as file:
+        yaml.dump(yolo_config,file,default_flow_style=False, sort_keys=False)
+
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
     
     cols = ['label_id','x','y','width','height']
@@ -324,67 +351,75 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
         # df_annotation[col] = df_annotation[col].apply(int)
 
     # normalize values
-    df_annotation['x'] = df_annotation['x'].apply(lambda x: x/slice_width)
-    df_annotation['y'] = df_annotation['y'].apply(lambda y: y/slice_height)
-    df_annotation['width'] = df_annotation['width'].apply(lambda x : x/slice_width)
-    df_annotation['height'] = df_annotation['height'].apply(lambda y: y/slice_height)
+    df_annotation.loc[:,'x'] = df_annotation['x'].apply(lambda x: x/slice_width)
+    df_annotation.loc[:,'y'] = df_annotation['y'].apply(lambda y: y/slice_height)
+    df_annotation.loc[:,'width'] = df_annotation['width'].apply(lambda x : x/slice_width)
+    df_annotation.loc[:,'height'] = df_annotation['height'].apply(lambda y: y/slice_height)
+
+    # change type
+    df_annotation.loc[:,'label_id'] = df_annotation.loc[:,'label_id'].astype(int)
     
     for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
         df[cols].to_csv(os.path.join(dest_path_labels,txt_file),sep=' ',index=False,header=False)
 
-def build_yolo_dataset(args:Arguments,ls_json_dir:str=JSON_DIR_PATH,clear_out_dir:bool=False):
+def build_yolo_dataset(args:Arguments):
 
     #clear directories
-    if clear_out_dir:
-        for p in [args.dest_path_images,args.dest_path_labels,COCO_DIR_PATH]:
+    if args.clear_yolo_dir:
+        for p in [args.dest_path_images,args.dest_path_labels,args.coco_json_dir]:
             shutil.rmtree(p)
             Path(p).mkdir(parents=True,exist_ok=True)
 
     # convert ls json to coco
-    map_imgdir_cocopath = convert_json_annotations_to_coco(input_dir=ls_json_dir)
+    map_imgdir_cocopath = convert_json_annotations_to_coco(input_dir=args.ls_json_dir,
+                                                           dest_dir_coco=args.coco_json_dir)
 
+    # load label map
+    if not args.is_detector:
+        update_yolo_data_cfg(args=args)
+        label_map = load_label_map(path=args.label_map,label_to_discard=args.discard_labels)
+        name_id_map = {val:key for key,val in label_map.items()}
+        
     # slice coco annotations and save tiles
     for img_dir,cocopath in map_imgdir_cocopath.items():
-        # slice annotations
-        coco_dict_slices = get_slices(coco_annotation_file_path=cocopath,
-                            img_dir=img_dir,
+        try:
+            # slice annotations
+            coco_dict_slices = get_slices(coco_annotation_file_path=cocopath,
+                                img_dir=img_dir,
+                                slice_height=args.height,
+                                slice_width=args.width,
+                                overlap_height_ratio=args.overlap_ratio,
+                                overlap_width_ratio=args.overlap_ratio,
+                                min_area_ratio=args.min_visibility
+                                )
+            # sample tiles
+            df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
+                                    empty_ratio=args.empty_ratio,
+                                    out_csv_path=ALL_CSV,
+                                    img_dir=img_dir,
+                                    labels_to_discard=args.discard_labels,
+                                    sample_only_empty=args.save_only_empty
+                                    )
+            
+            # detector_training mode
+            if args.is_detector:
+                df_tiles['label_id'] = 0
+            else:
+                df_tiles['label_id'] = df_tiles['labels'].map(name_id_map)
+                mask = ~df_tiles['label_id'].isna()
+                df_tiles.loc[mask,'label_id'] = df_tiles.loc[mask,'label_id'].apply(int)
+                # raise NotImplementedError('Pipeline not designed to handle multiple classes.')
+            
+            # save labels in yolo format
+            save_df_as_yolo(df_annotation=df_tiles.dropna(axis=0,how='any'),
                             slice_height=args.height,
                             slice_width=args.width,
-                            overlap_height_ratio=args.overlap_ratio,
-                            overlap_width_ratio=args.overlap_ratio,
-                            min_area_ratio=args.min_visibility
-                            )
-        # sample tiles
-        df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
-                                empty_ratio=args.empty_ratio,
-                                out_csv_path=ALL_CSV,
-                                img_dir=img_dir,
-                                labels_to_discard=args.discard_labels
-                                )
-        
-        # detector_training mode
-        if args.is_detector:
-            df_tiles['label_id'] = 0
-        else:
-            raise NotImplementedError('Pipeline not designed to handle multiple classes.')
-        
-        # save labels in yolo format
-        save_df_as_yolo(df_annotation=df_tiles.dropna(axis=0,how='any'),
-                        slice_height=args.height,
-                        slice_width=args.width,
-                        dest_path_labels=args.dest_path_labels)
-        # save tiles
-        save_tiles(df_tiles=df_tiles,
-                   out_img_dir=args.dest_path_images,
-                   clear_out_img_dir=False)
-
-
-
-# Demo
-# if __name__ == '__main__':
-#     args = Arguments()
-# #     build_yolo_dataset(args=args,clear_out_dir=True)
-#     # patcher(args=args)
-#     # convert_json_to_coco(input_file=r"..\exported_annotations\json\project-1-at-2024-06-09-00-41-b6d95d93.json")
-#     pass
+                            dest_path_labels=args.dest_path_labels)
+            # save tiles
+            save_tiles(df_tiles=df_tiles,
+                    out_img_dir=args.dest_path_images,
+                    clear_out_img_dir=False)
+        except Exception as e:
+            print(e)
+            print(f"Failed for {img_dir} \n {cocopath}")

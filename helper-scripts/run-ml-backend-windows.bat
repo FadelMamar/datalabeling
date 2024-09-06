@@ -9,9 +9,11 @@ call conda env config vars set LOCAL_FILES_DOCUMENT_ROOT=D:\
 call conda deactivate
 call conda activate label-backend
 
+start .\launch_mlflow_server.bat
+
+
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\my_ml_backend"
 
-start ..\launch_mlflow_server.bat
 
 call label-studio-ml start ../my_ml_backend -p 9090
 

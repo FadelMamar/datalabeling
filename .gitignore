@@ -20,8 +20,16 @@ mlartifacts
 runs
 *.cache
 *.onnx
+data/WAID
+wildAI-detection
+.venv
+data/savmap_dataset_v2
+*.zip
+Model trial*
+.env
+src/helper.py
 .venv
 *.egg-info
-*.JPG
-*.PNG
-.env
+mlruns/0/meta.yaml
+*.db
+*.DS_Store
