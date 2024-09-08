@@ -46,8 +46,7 @@ class Arguments:
     mlflow_model_alias:str=None
 
     # training data
-    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')
-    
+    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')    
 
     # labels to discard
     discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
@@ -99,3 +98,39 @@ class Arguments:
     export_batch_size:int=1
     export_model_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     
+@dataclass
+class Dataprepconfigs:
+    # data preparation arguments
+    root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+    dest_path_images:str=os.path.join(CUR_DIR,'../../../data/train/images')
+    dest_path_labels:str=os.path.join(CUR_DIR,'../../../data/train/labels')
+    height:int = 640
+    width:int = 640
+    overlap:int=80
+    min_visibility:float=0.1
+    save_all:bool=False
+    overlap_ratio:float=0.2
+    empty_ratio:float=0.1
+
+    # annotations paths
+    coco_json_dir:str=""
+    ls_json_dir:str=""
+    
+
+    # cli
+    build_yolo_dataset:bool=False
+    clear_yolo_dir:bool=False
+    start_training:bool=False
+    save_only_empty:bool=False
+    
+    # model type
+    is_detector:bool=False
+
+    # create coco from ls
+    load_coco_annotations:bool=False
+
+    # labels to discard
+    discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
+
+    # label mapping for identification dataset
+    label_map:str = None
