@@ -1,5 +1,4 @@
 mlflow==2.13.2
-label-studio==1.13.1
 datargs
 scikit-image
 sahi
