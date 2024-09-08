@@ -4,12 +4,22 @@ call conda activate label-backend
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools"
 
 :: add --clear-yolo-dir to clear data in ./data/train
+:: --load-coco-annotations
 
-call python cli.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 0.1 --is-detector^
-    --dest-path-labels "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\train-wildai\labels" ^
-    --dest-path-images "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\train-wildai\images" ^
-    --coco-json-dir "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\exported_annotations\coco-format" ^
-    --ls-json-dir "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\exported_annotations\json" ^
-    --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml"
+:: builds detection dataset
+@REM call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 0.1 --is-detector^
+@REM     --dest-path-labels "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\train-wildai\labels" ^
+@REM     --dest-path-images "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\train-wildai\images" ^
+@REM     --coco-json-dir "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\exported_annotations\coco-format" ^
+@REM     --ls-json-dir "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\exported_annotations\json" ^
+
+:: **Saves only empty tiles**
+@REM call python build_dataset.py --build-yolo-dataset  --is-detector --clear-yolo-dir^
+@REM     --dest-path-labels "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\negative-samples\labels" ^
+@REM     --dest-path-images "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\negative-samples\images" ^
+@REM     --coco-json-dir "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\exported_annotations\coco-format" ^
+@REM     --ls-json-dir "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\exported_annotations\json" ^
+@REM     --save-only-empty --empty-ratio 0.1
+
 
 call conda deactivate
