@@ -12,6 +12,7 @@ cache.db
 *.csv
 *.json
 *.JPG
+*.png
 labels
 wandb
 wildAI
