@@ -32,6 +32,8 @@ class Arguments:
     discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
 
     # training flags
+    height:int = 640
+    width:int = 640
     path_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-4
     lrf:float=1e-2
