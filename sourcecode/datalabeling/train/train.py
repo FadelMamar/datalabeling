@@ -4,6 +4,11 @@ from ..arguments import Arguments
 import os, logging
 
 def start_training(args:Arguments):
+    """Trains a YOLO model using ultralytics. By defaults, it will compile new 'labels.cache' files.
+
+    Args:
+        args (Arguments): configs
+    """
 
     # Load a pre-trained model
     model = YOLO(args.path_weights,task='detect',verbose=False)

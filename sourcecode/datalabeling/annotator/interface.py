@@ -26,11 +26,11 @@ class Annotator(object):
         """_summary_
 
         Args:
-            path_to_weights (str, optional): _description_. Defaults to None.
-            mlflow_model_alias (str, optional): _description_. Defaults to "start".
-            mlflow_model_name (str, optional): _description_. Defaults to "detector".
-            mlflow_model_version (str, optional): _description_. Defaults to None.
-            confidence_threshold (float, optional): _description_. Defaults to 0.35.
+            path_to_weights (str, optional): path to weights. Defaults to None.
+            mlflow_model_alias (str, optional): mflow registered model alias. Defaults to "start".
+            mlflow_model_name (str, optional): model name. Defaults to "detector".
+            mlflow_model_version (str, optional): registered model version. Defaults to None.
+            confidence_threshold (float, optional): Detection threshold. Defaults to 0.35.
         """
 
         # Load environment variables
@@ -104,12 +104,12 @@ class Annotator(object):
         """_summary_
 
         Args:
-            pred (dict): _description_
-            img_height (int): _description_
-            img_width (int): _description_
+            pred (dict): prediction in coco format
+            img_height (int): image height
+            img_width (int): image width
 
         Returns:
-            dict: _description_
+            dict: Label studio formated prediction
         """
         # formatting the prediction to work with Label studio
         x, y, width, height = pred['bbox']
@@ -141,7 +141,8 @@ class Annotator(object):
         Make sure to set the API key and url inside .env
 
         Args:
-            project_id (int): _description_
+            project_id (int): project id from Label studio
+            top_n (int): top n tasks to be uploaded in descending order of task_id.
         """
         # Select project
         project = self.labelstudio_client.get_project(id=project_id)
@@ -178,11 +179,11 @@ class Annotator(object):
         """_summary_
 
         Args:
-            path_img_dir (str): _description_
-            root (str): _description_
-            pattern (str, optional): _description_. Defaults to "*.JPG".
-            bulk_predictions (list[dict], optional): _description_. Defaults to None.
-            save_json_path (str, optional): _description_. Defaults to None.
+            path_img_dir (str): directory with images of interest
+            root (str): root specified in environment variable LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT or LOCAL_FILES_DOCUMENT_ROOT.
+            pattern (str, optional): image extension pattern. It is passed to glob. Defaults to "*.JPG".
+            bulk_predictions (dict, optional): dictionary with pre-computed detections. The key are the image file names. Defaults to None.
+            save_json_path (str, optional): path to which the json file should be saved. Defaults to None.
 
         Returns:
             list[dict]: _description_

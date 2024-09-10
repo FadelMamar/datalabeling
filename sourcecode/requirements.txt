@@ -1,12 +1,16 @@
 mlflow==2.13.2
-label-studio==1.13.1
 datargs
 scikit-image
+python-dotenv
 sahi
+geopandas
 label-studio-ml
 label-studio-sdk
+label-studio-converter
 redis
 rq
 ultralytics
+dill
+wandb
 cloudpickle
 torch --index-url https://download.pytorch.org/whl/cu118
