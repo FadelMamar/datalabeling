@@ -15,29 +15,9 @@ TEMP = os.path.join(CUR_DIR,"../../../.tmp")
 @dataclass
 class Arguments:
 
-    # data preparation arguments
-    root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
-    dest_path_images:str=os.path.join(CUR_DIR,'../../../data/train/images')
-    dest_path_labels:str=os.path.join(CUR_DIR,'../../../data/train/labels')
-    height:int = 640
-    width:int = 640
-    overlap:int=80
-    min_visibility:float=0.1
-    save_all:bool=False
-    overlap_ratio:float=0.2
-    empty_ratio:float=0.1
-
-    # annotations paths
-    coco_json_dir:str=""
-    ls_json_dir:str=""
-    
-
     # cli
-    build_yolo_dataset:bool=False
-    clear_yolo_dir:bool=False
     start_training:bool=False
-    save_only_empty:bool=False
-    
+       
     # model type
     is_detector:bool=False
 
@@ -111,16 +91,19 @@ class Dataprepconfigs:
     save_all:bool=False
     overlap_ratio:float=0.2
     empty_ratio:float=0.1
+    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')
 
     # annotations paths
     coco_json_dir:str=""
     ls_json_dir:str=""
-    
 
+    # convert dataset formats
+    yolo_to_obb:bool=False
+    obb_to_yolo:bool=False
+    
     # cli
     build_yolo_dataset:bool=False
     clear_yolo_dir:bool=False
-    start_training:bool=False
     save_only_empty:bool=False
     
     # model type

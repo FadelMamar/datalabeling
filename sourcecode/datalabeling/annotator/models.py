@@ -81,12 +81,12 @@ class Detector(object):
         """Formatting the prediction to work with Label studio
 
         Args:
-            pred (Dict): _description_
-            img_height (int): _description_
-            img_width (int): _description_
+            pred (dict): prediction in coco format
+            img_height (int): image height
+            img_width (int): image width
 
         Returns:
-            _type_: _description_
+            dict: Label studio formated prediction
         """
         x, y, width, height = pred['bbox']
         label = pred['category_name']

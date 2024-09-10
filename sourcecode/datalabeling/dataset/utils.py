@@ -20,7 +20,15 @@ from label_studio_converter import Converter
 
 
 
-def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH):
+def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH)->tuple[list,list]:
+    """Loads label studio annotations
+
+    Args:
+        input_dir (str, optional): directory with label studio ``json-min`` annotations. Defaults to JSONMIN_DIR_PATH.
+
+    Returns:
+        tuple[list,list]: loaded_annotations,path_to_json_file
+    """
 
     ls_annotations = []
     paths = list(Path(input_dir).glob('*.json'))
@@ -32,7 +40,15 @@ def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH):
 
     return ls_annotations,paths
 
-def convert_json_to_df(json_data:List[Dict]):
+def convert_json_to_df(json_data:List[Dict])->pd.DataFrame:
+    """Converts Label studio (LS) annotations from json to DataFrames
+
+    Args:
+        json_data (List[Dict]): list of LS ``json-min`` annotations
+
+    Returns:
+        pd.DataFrame: converted annotations
+    """
 
     # Reference for label studio output schema  https://labelstud.io/tags/rectanglelabels
 
@@ -86,15 +102,19 @@ def convert_json_to_df(json_data:List[Dict]):
 
     return df
 
-def convert_json_annotations_to_csv(rewrite_existing=True):
+def convert_json_annotations_to_csv(rewrite_existing=True)->None:
+    """Converts LS json-min annotations to csv and saves to the same directory
 
+    Args:
+        rewrite_existing (bool, optional): states with the csv should be saved if it already exists. Defaults to True.
+    """
     # load all available annotations
     annotations, paths = load_ls_annotations(input_dir=JSONMIN_DIR_PATH)
 
     # parse and save annotations
     for annotation, path in tqdm(zip(annotations,paths),desc='Converting jsons to csv'):
         save_path = os.path.join(CSV_DIR_PATH,path.name.replace('.json','.csv'))
-        if Path(save_path).exists():
+        if Path(save_path).exists() :
             if rewrite_existing:
                 df = convert_json_to_df(json_data=annotation)
                 df.to_csv(save_path,index=False)
@@ -102,7 +122,16 @@ def convert_json_annotations_to_csv(rewrite_existing=True):
             df = convert_json_to_df(json_data=annotation)
             df.to_csv(save_path,index=False)
 
-def convert_json_to_coco(input_file:str,out_file_name:str=None):
+def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
+    """Converts LS json annotations to coco format
+
+    Args:
+        input_file (str): path to LS json annotation file
+        out_file_name (str, optional): if not None, it will save the converted annotations. Defaults to None.
+
+    Returns:
+        dict: annotations in coco format
+    """
     
     # load converter
     with io.open(LABELSTUDIOCONFIG) as f:
@@ -136,6 +165,15 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None):
     return coco_annotations
 
 def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH)->dict:
+    """Converts directory with LS json files to coco format.
+
+    Args:
+        input_dir (str, optional): directory with LS json annotation files. Defaults to JSON_DIR_PATH.
+        dest_dir_coco (str, optional): destination directory. It should be different from input_dir. Defaults to COCO_DIR_PATH.
+
+    Returns:
+        dict: the schema is {uploaded_image_dir:coco_annotation_path}
+    """
 
     def get_upload_img_dir(coco_annotation:dict):
         directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
@@ -152,6 +190,14 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
     return dict(zip(upload_img_dirs,coco_paths))
 
 def load_coco_annotations(dest_dir_coco:str=COCO_DIR_PATH)->dict:
+    """Loads existing coco annotations
+
+    Args:
+        dest_dir_coco (str, optional): directory with annotations in coco format. Defaults to COCO_DIR_PATH.
+
+    Returns:
+        dict: the schema is {uploaded_image_dir:coco_annotation_path}
+    """
 
     def get_upload_img_dir(coco_annotation:dict):
         directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
@@ -170,6 +216,23 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
                min_area_ratio:float=0.1,
                ignore_negative_samples:bool=False,
                verbose:bool=False)->dict:
+    """Slices annotations. This function call slice_coco from ``sahi``. See https://github.com/obss/sahi/blob/main/sahi/slicing.py#L413
+
+    Args:
+        coco_annotation_file_path (str): path to annotation
+        img_dir (str): directory of images
+        overlap_height_ratio (float, optional): Defaults to 0.2.
+        overlap_width_ratio (float, optional): Defaults to 0.2.
+        slice_height (int, optional): Defaults to 640.
+        slice_width (int, optional): Defaults to 640.
+        min_area_ratio (float, optional):If the cropped annotation area to original annotation 
+            ratio is smaller than this value, the annotation is filtered out. Defaults to 0.1.
+        ignore_negative_samples (bool, optional): states if empty images should be ignored. Defaults to False.
+        verbose (bool, optional): Defaults to False.
+
+    Returns:
+        dict: sliced annotations
+    """
     
     # print(coco_annotation_file_path)
     sliced_coco_dict, coco_path = slice_coco(
@@ -191,10 +254,26 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
 
 def sample_data(coco_dict_slices:dict,
                 img_dir:str,
-                empty_ratio:int=3,
+                empty_ratio:float=3.,
                 out_csv_path:str=None,
                 labels_to_discard:list=None,
                 sample_only_empty:bool=False)->pd.DataFrame:
+    """Sample annotations from sliced coco annotations
+
+    Args:
+        coco_dict_slices (dict): sliced coco annotation from .utils.get_slices
+        img_dir (str): image directory
+        empty_ratio (float, optional): ratio negative samples (i.e. empty images) to positive samples. Defaults to 3. It loads 3 times more empty tiles than non-empty.
+        out_csv_path (str, optional): if given, it saves the sampled annotations to the path. Defaults to None.
+        labels_to_discard (list, optional): labels to discard. Defaults to None.
+        sample_only_empty (bool, optional): states if only negative samples should be saved. It is useful for hard negative sample mining. Defaults to False.
+
+    Raises:
+        FileNotFoundError: raised when a parent image can't be found for a sliced_image (i.e. tile)
+
+    Returns:
+        pd.DataFrame: sampled annotations. Columns are 'x' (center), 'y' (center), 'w', 'h', 'x_min', 'y_min', 'x_max', 'y_max' etc.
+    """
     
     assert empty_ratio >= 0.,'Provide appropriate value'
 
@@ -312,6 +391,13 @@ def sample_data(coco_dict_slices:dict,
     return df
 
 def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=False)->None:
+    """Saves tiles (or slices of images)
+
+    Args:
+        df_tiles (pd.DataFrame): provides tiles boundaries. Computed from .utils.sample_data
+        out_img_dir (str): output directory to save tiles
+        clear_out_img_dir (bool, optional): states if output directory should be emptied. Defaults to False.
+    """
 
     # clear out_img_dir
     if clear_out_img_dir:
@@ -334,7 +420,16 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         tile = img[y0:y1,x0:x1,:]
         imsave(fname=save_path,arr=tile,check_contrast=False)
 
-def load_label_map(path:str,label_to_discard:list):
+def load_label_map(path:str,label_to_discard:list)->dict:
+    """Loads label map. The map should be a json mapping class index to class name.
+
+    Args:
+        path (str): path to json file
+        label_to_discard (list): labels to discard. If none, proide an empty list
+
+    Returns:
+        dict: label map {index:name}
+    """
     # load label mapping
     with open(path,'r') as file:
         label_map = json.load(file)
@@ -343,6 +438,11 @@ def load_label_map(path:str,label_to_discard:list):
     return label_map
 
 def update_yolo_data_cfg(args:Dataprepconfigs):
+    """Updates yolo data config yaml file using args.label_map
+
+    Args:
+        args (Dataprepconfigs): configs
+    """
 
     assert args.label_map is not None, 'Provide path to label mapping.'
 
@@ -357,6 +457,16 @@ def update_yolo_data_cfg(args:Dataprepconfigs):
         yaml.dump(yolo_config,file,default_flow_style=False, sort_keys=False)
 
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
+    """Saves annotations as yolo dataset. 
+
+    Args:
+        df_annotation (pd.DataFrame): annotations. 
+            Should have the columns ['label_id','x','y','width','height'] with no NaN values. 
+            The bounbing box cordinates are expected to be in sliced imaged coordinate system.
+        dest_path_labels (str): destination
+        slice_width (int): image slice width to be used for normalization
+        slice_height (int): image slice height to be used for normalization
+    """
     
     cols = ['label_id','x','y','width','height']
     for col in cols:
@@ -369,6 +479,10 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     df_annotation.loc[:,'width'] = df_annotation['width'].apply(lambda x : x/slice_width)
     df_annotation.loc[:,'height'] = df_annotation['height'].apply(lambda y: y/slice_height)
 
+    # check value range
+    assert df_annotation[cols[1:]].all().max() <=1., "max value <= 1"
+    assert df_annotation[cols[1:]].all().min() >= 0., "min value >=0"
+
     # change type
     df_annotation.loc[:,'label_id'] = df_annotation.loc[:,'label_id'].astype(int)
     
@@ -377,6 +491,12 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
         df[cols].to_csv(os.path.join(dest_path_labels,txt_file),sep=' ',index=False,header=False)
 
 def build_yolo_dataset(args:Dataprepconfigs):
+    """Builds a yolo dataset
+
+    Args:
+        args (Dataprepconfigs): arguments defining desired behavior. See tutorials for a better explanation.
+
+    """
 
     #clear directories
     if args.clear_yolo_dir:

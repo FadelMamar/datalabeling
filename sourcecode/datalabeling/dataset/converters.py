@@ -3,9 +3,18 @@ import pandas as pd
 from tqdm import tqdm
 
 def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str)->None:
+    """Converts labels in yolo format to Oriented Bounding Box (obb) format.
+
+    Args:
+        yolo_labels_dir (str): directory with txt files following yolo format
+        output_dir (str): output directory. It's a directory with txt files following guidelines at https://docs.ultralytics.com/datasets/obb/
+    """
 
     cols = ['id','x1','y1','x2','y2','x3','y3','x4','y4']
     names = ['id','x','y','w','h']
+
+    if not Path(yolo_labels_dir).exists():
+        raise FileNotFoundError('Directory does not exist.')
 
     # Iterate through labels
     for label_path in tqdm(Path(yolo_labels_dir).glob("*.txt"),desc='yolo->obb'):
@@ -43,9 +52,18 @@ def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str)->None:
                         sep=' ',index=False,header=False)
 
 def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str)->None:
+    """Converts labels in Oriented Bounding Box (obb) format to yolo format
+
+    Args:
+        obb_labels_dir (str): directory with txt files following guidelines at https://docs.ultralytics.com/datasets/obb/
+        output_dir (str): output directory
+    """
 
     names = ['id','x1','y1','x2','y2','x3','y3','x4','y4']
     cols = ['id','x','y','w','h']
+
+    if not Path(obb_labels_dir).exists():
+        raise FileNotFoundError('Directory does not exist.')
 
     # Iterate through labels
     for label_path in tqdm(Path(obb_labels_dir).glob("*.txt"),desc='obb->yolo'):

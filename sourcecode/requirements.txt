@@ -6,6 +6,7 @@ sahi
 geopandas
 label-studio-ml
 label-studio-sdk
+label-studio-converter
 redis
 rq
 ultralytics
