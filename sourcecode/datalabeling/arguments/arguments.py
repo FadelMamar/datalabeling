@@ -60,7 +60,7 @@ class Arguments:
     seed=41
     optimizer:str='AdamW'
     optimizer_momentum:float=0.99
-    device:int=0
+    device:str= 0
     patience:int=10
 
     # regularization
