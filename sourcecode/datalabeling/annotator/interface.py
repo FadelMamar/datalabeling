@@ -13,6 +13,7 @@ from label_studio_sdk import Client
 from tqdm import tqdm
 import os
 import logging
+from urllib.parse import unquote
 
 class Annotator(object):
 
@@ -154,7 +155,10 @@ class Annotator(object):
         for task in tqdm(tasks,desc="Uploading predictions"):
             task_id = task['id']
             img_url = task['data']['image']
-            img_path = get_local_path(img_url)
+            try:
+                img_path = get_local_path(img_url)
+            except:
+                img_path = get_local_path(unquote(img_url))
             img = Image.open(img_path)
             prediction = self.predict(img)
             img_width, img_height = img.size
