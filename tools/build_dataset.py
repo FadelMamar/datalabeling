@@ -37,6 +37,7 @@ if __name__ == '__main__':
                        'discard_labels','ls_json_dir',
                        'coco_json_dir','dest_path_images',
                        'dest_path_labels','clear_yolo_dir',
+                       'height','width','overlap_ratio',
                        'empty_ratio']
             configs = dict(zip(configs,[args.__dict__[k] for k in configs]))
             json.dump(configs,file,indent=2)
