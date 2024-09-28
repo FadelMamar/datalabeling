@@ -471,7 +471,9 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     cols = ['label_id','x','y','width','height']
     for col in cols:
         assert df_annotation[col].isna().sum()<1,'there are NaN values. Check out.'
-        # df_annotation[col] = df_annotation[col].apply(int)
+
+    for col in cols[1:]:
+        df_annotation[col] = df_annotation[col].apply(float)
 
     # normalize values
     df_annotation.loc[:,'x'] = df_annotation['x'].apply(lambda x: x/slice_width)
@@ -497,6 +499,10 @@ def build_yolo_dataset(args:Dataprepconfigs):
         args (Dataprepconfigs): arguments defining desired behavior. See tutorials for a better explanation.
 
     """
+
+    # Checking inconsistency in arguments
+    if (args.clear_yolo_dir + args.load_coco_annotations) == 2:
+        raise ValueError("Warning : both clear_yolo_dir and load_coco_annotations are enabled! it is likely to not work as expected.")
 
     #clear directories
     if args.clear_yolo_dir:
@@ -527,7 +533,8 @@ def build_yolo_dataset(args:Dataprepconfigs):
                                 slice_width=args.width,
                                 overlap_height_ratio=args.overlap_ratio,
                                 overlap_width_ratio=args.overlap_ratio,
-                                min_area_ratio=args.min_visibility
+                                min_area_ratio=args.min_visibility,
+                                ignore_negative_samples=args.empty_ratio<1e-8, # equivalent to args.empty_ratio == 0.0
                                 )
             # sample tiles
             df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
