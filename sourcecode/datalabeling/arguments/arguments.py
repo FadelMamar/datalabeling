@@ -66,13 +66,13 @@ class Arguments:
     shear:float=10.
     copy_paste:float=0.
     erasing:float=0.
-    scale:float=0.5
-    fliplr:float=0.3
-    flipud:float=0.3
+    scale:float=0.0
+    fliplr:float=0.5
+    flipud:float=0.5
     hsv_h:float=0.
     hsv_s:float=0.3
-    hsv_v:float=0.4
-    translate:float=0.1
+    hsv_v:float=0.3
+    translate:float=0.2
     mosaic:float=0.
 
     # model exporting format
