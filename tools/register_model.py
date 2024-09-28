@@ -2,13 +2,13 @@ import argparse
 import cloudpickle
 import mlflow
 from sys import version_info
-from datalabeling.mlflow import get_experiment_id, model_wrapper, DetectorWrapper
+from datalabeling.mlflow import get_experiment_id, model_wrapper, DetectorWrapper, ObbDetectorWrapper
 from datalabeling.arguments import Arguments
 
 # set local tracking server
-args = Arguments()
+config = Arguments()
 # TRACKING_URI=  "http://localhost:5000"
-mlflow.set_tracking_uri(args.mlflow_tracking_uri)
+mlflow.set_tracking_uri(config.mlflow_tracking_uri)
 
 PYTHON_VERSION = "{major}.{minor}.1".format(major=version_info.major,
                                             minor=version_info.minor)
@@ -37,12 +37,23 @@ def main():
     parser.add_argument('--name', help='MLflow experiment name')
     parser.add_argument('--model', help='Path to saved PyTorch model')
     parser.add_argument('--model-name', help='Registered model name')
+    parser.add_argument('--is-yolo-obb', help='Boolean indicator',
+                        default=False, type=bool, required=True, choices=[True, False])
 
     args = parser.parse_args()
 
     artifacts = {'path': args.model}
 
-    model = DetectorWrapper()
+    if args.is_yolo_obb:
+        model = ObbDetectorWrapper(tilesize=640,
+                                    confidence_threshold=0.1,
+                                    overlap_ratio=0.1,
+                                    sahi_postprocess='NMS')
+    else:
+        model = DetectorWrapper(tilesize=640,
+                                confidence_threshold=0.1,
+                                overlap_ratio=0.1,
+                                sahi_postprocess='NMS')
 
     exp_id = get_experiment_id(args.name)
 

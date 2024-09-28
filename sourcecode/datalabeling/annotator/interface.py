@@ -1,4 +1,5 @@
 from sahi.models.yolov8 import Yolov8DetectionModel
+from .models import Yolov8ObbDetectionModel, Detector
 from ultralytics import YOLO
 from sahi.predict import get_sliced_prediction
 import torch
@@ -23,6 +24,7 @@ class Annotator(object):
                 mlflow_model_alias:str="start",
                 mlflow_model_name:str="detector",
                 mlflow_model_version:str=None,
+                is_yolo_obb:bool=False,
                 confidence_threshold:float=0.1):
         """_summary_
 
@@ -39,7 +41,7 @@ class Annotator(object):
             load_dotenv(dotenv_path=dotenv_path)
             # Connect to the Label Studio API and check the connection
             LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL')
-            API_KEY = os.getenv("LABELSTUDIO-API-KEY")
+            API_KEY = os.getenv("LABEL_STUDIO_API_KEY")
             self.labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
         else:
             logging.warning(msg="Pass argument `dotenv_path` to access label studio API")
@@ -63,12 +65,11 @@ class Annotator(object):
             # print('Device:',self.model.detection_model.device)
         else:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.model = Yolov8DetectionModel(
-                                                        model=YOLO(path_to_weights,task='detect'),
-                                                        confidence_threshold=confidence_threshold,
-                                                        image_size=self.tilesize,
-                                                        device=device,
-                                                        )
+            self.model = Detector(path_to_weights=path_to_weights,
+                                  confidence_threshold=confidence_threshold,
+                                  overlap_ratio=self.overlapratio,
+                                  tilesize=self.tilesize,
+                                  is_yolo_obb=is_yolo_obb)
             self.modelversion = Path(path_to_weights).stem
             # print('Device:', device)
         # LS label config
@@ -79,7 +80,7 @@ class Annotator(object):
             self.modelversion = mlflow_model_version
 
     def predict(self, image:bytearray) -> dict:
-        """_summary_
+        """Sliced prediction using Sahi
 
         Args:
             image (bytearray): object of PIL.Image.open
@@ -87,20 +88,8 @@ class Annotator(object):
         Returns:
             dict: prediction in coco annotation format
         """
-        if self.path_to_weights is not None:
-            result = get_sliced_prediction(image,
-                                            self.model,
-                                            slice_height=self.tilesize,
-                                            slice_width=self.tilesize,
-                                            overlap_height_ratio=self.overlapratio,
-                                            overlap_width_ratio=self.overlapratio,
-                                            postprocess_type=self.sahi_prostprocess,
-                                            )
-            return result.to_coco_annotations()
-
-
-        return  self.model.predict(image)
-
+        return self.model.predict(image)
+        
     def format_prediction(self,pred:dict,img_height:int,img_width:int) -> dict:
         """_summary_
 
@@ -163,8 +152,8 @@ class Annotator(object):
             prediction = self.predict(img)
             img_width, img_height = img.size
             formatted_pred = [self.format_prediction(pred,
-                                                        img_height=img_height,
-                                                        img_width=img_width) for pred in prediction]
+                                                    img_height=img_height,
+                                                    img_width=img_width) for pred in prediction]
             conf_scores = [pred['score'] for pred in prediction]
             max_score = 0.0
             if len(conf_scores)>0:
@@ -180,7 +169,7 @@ class Annotator(object):
                           pattern="*.JPG",
                           bulk_predictions:list[dict]=None,
                           save_json_path:str=None) -> list[dict]:
-        """_summary_
+        """Build Label studio json for data uploading
 
         Args:
             path_img_dir (str): directory with images of interest
@@ -190,7 +179,7 @@ class Annotator(object):
             save_json_path (str, optional): path to which the json file should be saved. Defaults to None.
 
         Returns:
-            list[dict]: _description_
+            list[dict]: predictions in label sutdio format
         """
         directory_preds = list()
         # Select project

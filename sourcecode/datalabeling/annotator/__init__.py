@@ -1,2 +1,2 @@
-from .interface import *
-from .models import *
+from .interface import Annotator
+from .models import Yolov8ObbDetectionModel,Detector
