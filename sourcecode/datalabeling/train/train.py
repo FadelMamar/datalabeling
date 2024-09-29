@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import yaml
 from ..arguments import Arguments
-import os, logging
+import os, logging, traceback
 
 def start_training(args:Arguments):
     """Trains a YOLO model using ultralytics. By defaults, it will compile new 'labels.cache' files.
@@ -9,6 +9,8 @@ def start_training(args:Arguments):
     Args:
         args (Arguments): configs
     """
+
+    logger = logging.getLogger(__name__)
 
     # Load a pre-trained model
     model = YOLO(args.path_weights,task='detect',verbose=False)
@@ -25,9 +27,10 @@ def start_training(args:Arguments):
             path = os.path.join(root,p,"../labels.cache")
             if os.path.exists(path):
                 os.remove(path)
-                logging.info(f"Removing: {os.path.join(root,p,"../labels.cache")}")
+                logger.info(f"Removing: {os.path.join(root,p,"../labels.cache")}")
     except Exception as e:
-        print(e)
+        # print(e)
+        traceback.print_exc()
 
     # Train the model
     model.train(data=args.data_config_yaml,
