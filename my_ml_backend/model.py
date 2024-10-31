@@ -41,7 +41,7 @@ class NewModel(LabelStudioMLBase):
         mlflow.set_tracking_uri(TRACKING_URI)
         client = mlflow.MlflowClient()
         name = 'detector'
-        alias = 'pt'
+        alias = 'last'
         version = client.get_model_version_by_alias(name=name,alias=alias).version
         self.modelversion = f'{name}:{version}'
         self.modelURI = f'models:/{name}/{version}'
