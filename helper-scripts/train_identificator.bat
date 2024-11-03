@@ -1,12 +1,12 @@
-call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
-call conda activate label-backend
+call .\activate_label-backend_env.bat
 
-call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+
+call cd ..\tools
 
 
 call wandb online
 
-call python ..\tools\train.py --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.01 --patience 50^
+call python train.py --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.01 --patience 50^
     --data-config-yaml "D:\PhD\Data per camp\IdentificationDataset\data_config.yaml" ^
     --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolov8.kaza.pt" ^
     --run-name "identificator" ^

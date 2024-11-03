@@ -1,7 +1,6 @@
-call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
-call conda activate label-backend
+call .\activate_label-backend_env.bat
 
-call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+call cd ..
 
 call wandb online
 

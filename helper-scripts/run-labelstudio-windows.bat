@@ -1,4 +1,3 @@
-:: Line 2 needs to be updated to match the location of anaconda scripts
 call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
 call conda activate label-studio
 
