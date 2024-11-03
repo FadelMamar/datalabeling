@@ -2,6 +2,8 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
+# TODO: add format check before conversion!
+
 def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str)->None:
     """Converts labels in yolo format to Oriented Bounding Box (obb) format.
 

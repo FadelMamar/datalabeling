@@ -163,7 +163,7 @@ class Yolov8ObbDetectionModel(DetectionModel):
                         bbox=bbox,
                         category_id=category_id,
                         score=score,
-                        segmentation=None,
+                        # segmentation=None,
                         category_name=category_name,
                         shift_amount=shift_amount,
                         full_shape=full_shape,

@@ -45,11 +45,13 @@ def main():
     artifacts = {'path': args.model}
 
     if args.is_yolo_obb:
+        print("Registering obb-detector")
         model = ObbDetectorWrapper(tilesize=640,
                                     confidence_threshold=0.1,
                                     overlap_ratio=0.1,
                                     sahi_postprocess='NMS')
     else:
+        print("Registering detector")
         model = DetectorWrapper(tilesize=640,
                                 confidence_threshold=0.1,
                                 overlap_ratio=0.1,

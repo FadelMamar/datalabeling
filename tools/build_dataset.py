@@ -15,15 +15,24 @@ def load_datasets(data_config_yaml:str)->list[str]:
 
     paths = list()
     root = data_config['path']
-    for p in data_config['train']+data_config['val']:
+    for p in data_config['train']:
         path = os.path.join(root,p)
         paths.append(path)
+    try:
+        for p in data_config['val']:
+            path = os.path.join(root,p)
+            paths.append(path)
+    except Exception as e:
+        print('Failed to load validation datasets for conversion --> ',e)
+
 
     return paths
 
 
 
 if __name__ == '__main__':
+
+    logger = logging.getLogger(__name__)
 
     args = parse(Dataprepconfigs)
 
@@ -50,9 +59,10 @@ if __name__ == '__main__':
         for p in paths:
             try:
                 p_new = p.replace('images','labels')
+                logger.info(f"Converting {p_new}: yolo->obb")
                 convert_yolo_to_obb(yolo_labels_dir=p_new,output_dir=p_new)
             except Exception as e:
-                logging.warning(f"Failed for {p_new}")
+                logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
 
     # convert obb dataset to yolo
@@ -61,7 +71,8 @@ if __name__ == '__main__':
         for p in paths:
             try:
                 p_new = p.replace('images','labels')
+                logger.info(f"Converting {p_new}: obb->yolo")
                 convert_obb_to_yolo(obb_labels_dir=p_new,output_dir=p_new)
             except Exception as e:
-                logging.warning(f"Failed for {p_new}")
+                logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
