@@ -7,28 +7,28 @@ This repository is used to facilitate data labeling in the context of **automate
 - Move to folder ```cd workspace```
 - Clone repository into the workspace ```git clone https://github.com/FadelMamar/datalabeling.git```
 
-# Installing Label-studio for windows
-- **Install Anaconda** Follow instructions at https://www.anaconda.com/download
-(Instructions are also available here https://labelstud.io/guide/install.html#Install-with-Anaconda)
+# Creating virtual environments
+### Create virtual environment for Label studio UI
 - Open Anaconda prompt. Type 'anaconda prompt' in the search bar of your computer and launch it.
-- Create a conda virtual environment: type in ```conda create -n label-studio``` then press 'Enter'
-- Activate virtual environment: type in ```conda activate label-studio``` then press 'Enter'
-- Install label-studio: type in ```pip install label-studio``` then press 'Enter'
+- Change directory ```cd ./sourcecode```
+- Create a conda virtual environment with ```conda env create -f environment_labelstudio.yml```
+- Activate virtual environment:```conda activate label-studio``` 
+- Run the command ```pip install -e .```
 - Launch label studio: type in ```label-studio``` then press 'Enter'`
 - Close application: log out of the application then type ```conda deactivate``` then press 'Enter'
+### Create virtual environment for ML backend
+- Change directory ```cd ../my_ml_backend```
+- Create a conda virtual environment with ```conda env create -f environment_mlbackend.yml```
+- Activate virtual environment:```conda activate label-backend``` 
+- Change directory ```cd ../sourcecode```
+- Run the command ```pip install -e .```
 
-# Launch Label-studio when it is already installed - Windows
-- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio-windows.bat```
-- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend-windows.bat```
-- Label studio is accessible from the browser at ```http://localhost:8080```
-- To close application: close the window
 
-# Launch Label-studio when it is already installed - Linux
-- To launch label studio, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-labelstudio-linux.sh```
-- To launch the ML backend, run the file at ```C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\run-ml-backend-linux.sh```
-- To close application: close the window
+# [Optional] Installing Label-studio for windows
+- **Install Anaconda** Follow instructions at https://www.anaconda.com/download
+(Instructions are also available here https://labelstud.io/guide/install.html#Install-with-Anaconda)
 
-# Installing Label-studio for Mac
+# [Optional] Installing Label-studio for Mac
 (Instructions are available here: https://labelstud.io/guide/install.html#Install-using-Homebrew)
 - **Install homebrew** -> Follow instructions here https://brew.sh/
 - Open terminal 
@@ -36,10 +36,23 @@ This repository is used to facilitate data labeling in the context of **automate
 - Type in ```brew install humansignal/tap/label-studio``` and press "Enter"
 - Launch Label studio by typing ```label-studio``` and pressing "Enter".
 
-# Installing Label-studio using Docker (Mac and windows)
+# [Optional] Installing Label-studio using Docker (Mac and windows)
 (instructions are available here https://labelstud.io/guide/install.html#Install-with-Docker)
 - Install Docker ->  https://www.docker.com/ 
 - open terminal in your workspace and run ```docker run -it -p 8080:8080 -v ./labeleddata:/label-studio/data heartexlabs/label-studio:latest```
+
+# Launch Label-studio when it is already installed - Windows
+- To launch label studio, run the file at ```datalabeling\helper-scripts\run-labelstudio-windows.bat```
+- To launch the ML backend, run the file at ```datalabeling\helper-scripts\run-ml-backend-windows.bat```
+- Label studio is accessible from the browser at ```http://localhost:8080```
+- To close application: close the window
+
+# Launch Label-studio when it is already installed - Linux
+- To launch label studio, run the file at ```datalabeling\helper-scripts\run-labelstudio-linux.sh```
+- To launch the ML backend, run the file at ```datalabeling\helper-scripts\run-ml-backend-linux.sh```
+- To close application: close the window
+
+
 
 # Create a project in Label studio
 https://labelstud.io/guide/setup_project.html#Create-a-project
