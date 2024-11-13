@@ -102,6 +102,7 @@ class Dataprepconfigs:
     # convert dataset formats
     yolo_to_obb:bool=False
     obb_to_yolo:bool=False
+    skip:bool=False # will skip wrongly formatted target files else, interrupts process
     
     # cli
     build_yolo_dataset:bool=False
@@ -119,3 +120,4 @@ class Dataprepconfigs:
 
     # label mapping for identification dataset
     label_map:str = None
+

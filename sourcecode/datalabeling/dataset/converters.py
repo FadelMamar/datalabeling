@@ -3,8 +3,30 @@ import pandas as pd
 from tqdm import tqdm
 
 # TODO: add format check before conversion!
+def check_label_format(loaded_df:pd.DataFrame)->str:
+    """checks label format
 
-def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str)->None:
+    Args:
+        loaded_df (pd.DataFrame): target values
+
+    Raises:
+        NotImplementedError: when the format is not yolo or yolo-obb
+
+    Returns:
+        str: yolo or yolo-obb
+    """
+
+    num_features = len(loaded_df.columns)
+
+    if num_features == 5:
+        return "yolo"
+    elif num_features == 9:
+        return "yolo-obb"
+    else:
+        raise NotImplementedError(f"The number of features ({num_features}) in the label file is wrong. Check yolo or yolo-obb format from ultralytics.")
+
+
+def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str,skip:bool=True)->None:
     """Converts labels in yolo format to Oriented Bounding Box (obb) format.
 
     Args:
@@ -20,7 +42,19 @@ def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str)->None:
 
     # Iterate through labels
     for label_path in tqdm(Path(yolo_labels_dir).glob("*.txt"),desc='yolo->obb'):
-        df = pd.read_csv(label_path,sep=' ',names=names)
+        df = pd.read_csv(label_path,sep=' ',header=None)
+        
+        # check format is yolo
+        if check_label_format(loaded_df=df) == "yolo":
+            df.columns = names
+            pass
+        else:
+            if skip:
+                print(label_path, " does not follow yolo format. Skipped",end="\n")
+                continue
+            else:
+                raise ValueError(f"{label_path} does not follow yolo format.")
+                
 
         # check bounds
         assert df[names[1:]].all().max() <=1., "max value <= 1"
@@ -53,7 +87,7 @@ def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str)->None:
         df[cols].to_csv(Path(output_dir)/label_path.name,
                         sep=' ',index=False,header=False)
 
-def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str)->None:
+def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str,skip:bool=True)->None:
     """Converts labels in Oriented Bounding Box (obb) format to yolo format
 
     Args:
@@ -69,7 +103,18 @@ def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str)->None:
 
     # Iterate through labels
     for label_path in tqdm(Path(obb_labels_dir).glob("*.txt"),desc='obb->yolo'):
-        df = pd.read_csv(label_path,sep=' ',names=names)
+        df = pd.read_csv(label_path,sep=' ',header=None)
+
+        # check format
+        if check_label_format(loaded_df=df) == "yolo-obb":
+            df.columns = names
+            pass
+        else:
+            if skip:
+                print(label_path, " does not follow yolo-obb format. Skipped",end="\n")
+                continue
+            else:
+                raise ValueError(f"{label_path} does not follow yolo-obb format.")
 
         # check bounds
         assert df[names[1:]].all().max() <=1., "max value <= 1"

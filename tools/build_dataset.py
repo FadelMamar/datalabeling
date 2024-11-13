@@ -15,9 +15,12 @@ def load_datasets(data_config_yaml:str)->list[str]:
 
     paths = list()
     root = data_config['path']
-    for p in data_config['train']:
-        path = os.path.join(root,p)
-        paths.append(path)
+    try:
+        for p in data_config['train']:
+            path = os.path.join(root,p)
+            paths.append(path)
+    except Exception as e:
+        print('Failed to load training datasets for conversion --> ',e)
     try:
         for p in data_config['val']:
             path = os.path.join(root,p)
@@ -60,7 +63,7 @@ if __name__ == '__main__':
             try:
                 p_new = p.replace('images','labels')
                 logger.info(f"Converting {p_new}: yolo->obb")
-                convert_yolo_to_obb(yolo_labels_dir=p_new,output_dir=p_new)
+                convert_yolo_to_obb(yolo_labels_dir=p_new,output_dir=p_new,skip=True)
             except Exception as e:
                 logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
@@ -72,7 +75,7 @@ if __name__ == '__main__':
             try:
                 p_new = p.replace('images','labels')
                 logger.info(f"Converting {p_new}: obb->yolo")
-                convert_obb_to_yolo(obb_labels_dir=p_new,output_dir=p_new)
+                convert_obb_to_yolo(obb_labels_dir=p_new,output_dir=p_new,skip=True)
             except Exception as e:
                 logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
