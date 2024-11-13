@@ -1,10 +1,10 @@
-path: C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data  # dataset root dir
+path: D:\PhD\Data per camp\DetectionDataset # dataset root dir
 
 train: 
- - train-wildai\images
  - delplanque_tiled_data\train_tiled\images
  - delplanque_tiled_data\val_tiled\images
- - negative-samples\images
+ - WAID\images\valid
+
  
 val :  
  - delplanque_tiled_data\test_tiled\images
