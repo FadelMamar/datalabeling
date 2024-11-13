@@ -22,11 +22,11 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools"
 @REM     --save-only-empty 
 
 :: Rep 1 data
-@REM call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 0.0 --is-detector --min-visibility 0.8^
-@REM     --dest-path-labels "D:\PhD\Data per camp\DetectionDataset\Rep 1\train\labels" ^
-@REM     --dest-path-images "D:\PhD\Data per camp\DetectionDataset\Rep 1\train\images" ^
-@REM     --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\train\coco-format" ^
-@REM     --ls-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\train\labelstudio"
+call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 0.0 --is-detector --min-visibility 0.8^
+    --dest-path-labels "D:\PhD\Data per camp\DetectionDataset\Rep 1\train\labels" ^
+    --dest-path-images "D:\PhD\Data per camp\DetectionDataset\Rep 1\train\images" ^
+    --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\train\coco-format" ^
+    --ls-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\train\labelstudio"
 
 @REM call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 0.0 --is-detector --min-visibility 0.8^
 @REM     --dest-path-labels "D:\PhD\Data per camp\DetectionDataset\Rep 1\val\labels" ^
@@ -58,5 +58,14 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools"
 @REM     --dest-path-images "D:\PhD\Data per camp\DetectionDataset\Rep 2\test\images" ^
 @REM     --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 2\test\coco-format" ^
 @REM     --ls-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 2\test\labelstudio"
+
+
+:: Bushriver data
+@REM  call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 0.1 --is-detector --min-visibility 0.8^
+@REM      --dest-path-labels "D:\PhD\Data per camp\DetectionDataset\bushriver\labels" ^
+@REM      --dest-path-images "D:\PhD\Data per camp\DetectionDataset\bushriver\images" ^
+@REM      --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\bushriver-extra\coco-format" ^
+@REM      --ls-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\bushriver-extra\labelstudio"
+
 
 call conda deactivate
