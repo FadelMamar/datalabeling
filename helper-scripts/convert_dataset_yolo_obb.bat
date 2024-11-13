@@ -5,9 +5,9 @@ call conda activate label-backend
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
 :: yolo to obb
-@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_5.yaml"
+@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_conversion.yaml"
 
 :: obb to yolo
-@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_4.yaml"
+@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_conversion.yaml"
 
 call conda deactivate
