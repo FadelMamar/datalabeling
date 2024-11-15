@@ -1,0 +1,3 @@
+[submodule "HerdNet"]
+	path = HerdNet
+	url = git@github.com:FadelMamar/HerdNet.git
