@@ -14,7 +14,7 @@ from label_studio_sdk import Client
 from tqdm import tqdm
 import os
 import logging
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
 
 class Annotator(object):
 
@@ -190,9 +190,10 @@ class Annotator(object):
         # for task in tasks:
         for image_path in Path(path_img_dir).glob(pattern):
             img_path_as_posix = image_path.relative_to(Path(root)).as_posix()
+            img_path_as_url = quote(img_path_as_posix)
             # task_id = task['id']
             # img_url = task['data']['image']
-            img_url = f"/data/local-files/?d={img_path_as_posix}"
+            img_url = f"/data/local-files/?d={img_path_as_url}"
             pred = {
                         "data": {"image" : img_url},
                         "predictions":[],
