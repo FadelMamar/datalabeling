@@ -23,6 +23,9 @@ class Annotator(object):
                 path_to_weights:str=None,
                 mlflow_model_alias:str="start",
                 mlflow_model_name:str="detector",
+                tilesize:int=640,
+                overlapratio:float=0.1,
+                device:str=None,
                 mlflow_model_version:str=None,
                 is_yolo_obb:bool=False,
                 confidence_threshold:float=0.1):
@@ -47,8 +50,8 @@ class Annotator(object):
             logging.warning(msg="Pass argument `dotenv_path` to access label studio API")
 
         ## Load model from path
-        self.tilesize=640
-        self.overlapratio=0.1
+        self.tilesize=tilesize
+        self.overlapratio=overlapratio
         self.sahi_prostprocess='NMS'
 
         self.path_to_weights = path_to_weights
@@ -64,11 +67,12 @@ class Annotator(object):
             self.model = mlflow.pyfunc.load_model(self.modelURI)
             # print('Device:',self.model.detection_model.device)
         else:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            # device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model = Detector(path_to_weights=path_to_weights,
                                   confidence_threshold=confidence_threshold,
                                   overlap_ratio=self.overlapratio,
                                   tilesize=self.tilesize,
+                                  device=device,
                                   is_yolo_obb=is_yolo_obb)
             self.modelversion = Path(path_to_weights).stem
             # print('Device:', device)
@@ -126,13 +130,13 @@ class Annotator(object):
         }
         return template
 
-    def upload_predictions(self,project_id:int,top_n:int=None)->None:
+    def upload_predictions(self,project_id:int,top_n:int=0)->None:
         """Uploads predictions using label studio API.
         Make sure to set the API key and url inside .env
 
         Args:
             project_id (int): project id from Label studio
-            top_n (int): top n tasks to be uploaded in descending order of task_id.
+            top_n (int): top n tasks to be uploaded in descending order of task_id. Default 0 which disables the feature.
         """
         # Select project
         project = self.labelstudio_client.get_project(id=project_id)

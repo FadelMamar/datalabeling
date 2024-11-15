@@ -79,6 +79,9 @@ class Arguments:
     export_format:str=None
     export_batch_size:int=1
     export_model_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
+    half:bool=False # to use FP16
+    int8:bool=False # int8 quantization\
+    dynamic:bool=False # allows dynamic input sizes 
     
 @dataclass
 class Dataprepconfigs:

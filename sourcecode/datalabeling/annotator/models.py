@@ -180,6 +180,7 @@ class Detector(object):
                 confidence_threshold:float=0.1,
                 overlap_ratio:float=0.1,
                 tilesize:int=1280,
+                device:str=None,
                 is_yolo_obb:bool=False):
         """
 
@@ -187,14 +188,14 @@ class Detector(object):
             path_to_weights (str): path to the weights to be loaded
             confidence_threshold (float, optional): confidence threshold for detection. Defaults to 0.1.
         """
-        
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tilesize=tilesize
         self.overlapratio=overlap_ratio
         self.sahi_prostprocess='NMS'
         logger.info( f"Computing device: {device}")
         if is_yolo_obb:
-            self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='detect'),
+            self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='obb'),
                                                             confidence_threshold=confidence_threshold,
                                                             image_size=self.tilesize,
                                                             device=device)
@@ -205,7 +206,7 @@ class Detector(object):
                                                         device=device,
                                                         )
 
-    def predict(self, image:Image):
+    def predict(self, image:Image,return_coco:bool=True):
         """Run sliced predictions
 
         Args:
@@ -230,8 +231,10 @@ class Detector(object):
                                         overlap_width_ratio=self.overlapratio,
                                         postprocess_type=self.sahi_prostprocess,
                                         )
-
-        return result.to_coco_annotations()
+        if return_coco:
+            return result.to_coco_annotations()
+        else:
+            return result
     
     def predict_directory(self,path_to_dir:str):
         """Computes predictions on a directory
