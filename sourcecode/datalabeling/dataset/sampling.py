@@ -16,6 +16,8 @@ def compute_predictions(weight_path:str,
                         iou:float,
                         half:bool,
                         imgsz:int,
+                        results_dir_name:str,
+                        val_run_name:str,
                         data_config_yaml:str,
                         batch_size:int=1):
     
@@ -24,11 +26,16 @@ def compute_predictions(weight_path:str,
 
     # compute metrics per image
     _ = model.val(data=data_config_yaml,
+                        project=results_dir_name,
+                        name=val_run_name,
                         imgsz=imgsz,
                         iou=iou,
                         half=half,
                         save_json=True,
                         batch=batch_size)
+    
+    return os.path(results_dir_name,val_run_name,'predictions.json')
+
 def load_prediciton_results(path_result:str):
     return pd.read_json(path_result,orient='records')
 
@@ -72,6 +79,7 @@ def load_groundtruth(data_config_yaml:str):
 
 # compute mAP@50
 def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:list[str]):
+
     m_ap = MeanAveragePrecision(box_format="xyxy",iou_type="bbox",max_detection_thresholds=[10,100,300])
 
     def get_bbox(gt:np.ndarray):
@@ -123,14 +131,30 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:lis
 
     return df_results_per_img
 
-
 # select images with low mAP@50 but high confidence
-def select_hard_samples(df_results_per_img:pd.DataFrame,map_thrs:float=0.3,score_thrs:float=0.7):
-
+def select_hard_samples(df_results_per_img:pd.DataFrame,
+                        map_thrs:float=0.3,score_thrs:float=0.7,
+                        save_path_samples:str=None,
+                        root:str='D:\\',
+                        save_data_yaml:str=None):
+    
     mask_low_map = (df_results_per_img['map50']<map_thrs) * (df_results_per_img['map75']<map_thrs)
     mask_high_scores = df_results_per_img['max_scores']>score_thrs
 
     mask_selected = mask_low_map * mask_high_scores 
     df_hard_negatives = df_results_per_img.loc[mask_selected]
+
+    # save image paths in data_config yaml
+    if save_path_samples is not None:
+        df_hard_negatives['image_paths'].to_csv(save_path_samples,
+                                                sep=" ",index=False,header=False)
+    if save_data_yaml is not None:
+        cfg_dict = {'path':root,
+                    'names': {0: 'wildlife'},
+                    'train': os.path.relpath(save_path_samples,start=root),
+                    'val':   os.path.relpath(save_path_samples,start=root),
+                    'nc': 1,}
+        with open(save_data_yaml,'w') as file:
+            yaml.dump(cfg_dict,file)
 
     return df_hard_negatives
