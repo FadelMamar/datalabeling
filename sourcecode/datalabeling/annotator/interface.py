@@ -150,9 +150,10 @@ class Annotator(object):
             img_url = task['data']['image']
             try:
                 # using unquote to deal with special characters
-                img_path = get_local_path(unquote(img_url))
-            except:
-                img_path = get_local_path(img_url)
+                img_path = get_local_path(unquote(img_url),download_resources=False)
+            except :
+                # print(f"Failed for {img_url}\n",e)
+                img_path = get_local_path(img_url,download_resources=False)
             img = Image.open(img_path)
             prediction = self.predict(img)
             img_width, img_height = img.size
