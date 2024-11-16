@@ -17,6 +17,7 @@ labels
 wandb
 wildAI
 mlflow
+/models/
 mlartifacts
 runs
 *.cache
