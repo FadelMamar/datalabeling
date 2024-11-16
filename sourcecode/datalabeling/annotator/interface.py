@@ -149,9 +149,10 @@ class Annotator(object):
             task_id = task['id']
             img_url = task['data']['image']
             try:
-                img_path = get_local_path(img_url)
-            except:
+                # using unquote to deal with special characters
                 img_path = get_local_path(unquote(img_url))
+            except:
+                img_path = get_local_path(img_url)
             img = Image.open(img_path)
             prediction = self.predict(img)
             img_width, img_height = img.size
