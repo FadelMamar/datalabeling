@@ -1,15 +1,13 @@
 from dotenv import load_dotenv
 load_dotenv("../.env")
 
-from datalabeling.annotator import Detector
-from datalabeling.dataset.sampling import (get_preds_targets, 
-                                           select_hard_samples,
-                                           compute_detector_performance)
+
 import pandas as pd
 import yaml
 import os
 from dataclasses import dataclass
 from datargs import parse
+from pathlib import Path
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,6 +18,7 @@ class Args:
     confidence_threshold:float=0.1
     overlap_ratio:float=0.1
     tilesize:int=1280
+    use_sliding_window:bool=False
     device:str="cpu"
     is_yolo_obb:bool=False
 
@@ -38,13 +37,25 @@ class Args:
 
 if __name__ == "__main__":
 
+    from datalabeling.annotator import Detector
+    from datalabeling.dataset.sampling import (get_preds_targets, 
+                                            select_hard_samples,
+                                            compute_detector_performance)
+    
     args = parse(Args)
+
+    # creating paths if do not exist
+    for p in [args.save_path_samples,args.save_data_config_yaml]:
+        Path(p).parent.mkdir(parents=True,exist_ok=True)
+    Path(args.pred_results_dir).mkdir(parents=True,exist_ok=True)
+
 
     # Define detector
     model = Detector(path_to_weights=args.path_to_weights,
                     confidence_threshold=args.confidence_threshold,
                     overlap_ratio=args.overlap_ratio,
                     tilesize=args.tilesize,
+                    use_sliding_window=args.use_sliding_window,
                     device=args.device,
                     is_yolo_obb=args.is_yolo_obb)
 
