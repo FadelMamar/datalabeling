@@ -15,6 +15,7 @@ from tqdm import tqdm
 import os
 import logging
 from urllib.parse import unquote, quote
+import traceback
 
 class Annotator(object):
 
@@ -26,6 +27,7 @@ class Annotator(object):
                 tilesize:int=640,
                 overlapratio:float=0.1,
                 device:str=None,
+                use_sliding_window:bool=True,
                 mlflow_model_version:str=None,
                 is_yolo_obb:bool=False,
                 confidence_threshold:float=0.1):
@@ -73,6 +75,7 @@ class Annotator(object):
                                   overlap_ratio=self.overlapratio,
                                   tilesize=self.tilesize,
                                   device=device,
+                                  use_sliding_window=use_sliding_window,
                                   is_yolo_obb=is_yolo_obb)
             self.modelversion = Path(path_to_weights).stem
             # print('Device:', device)
@@ -148,12 +151,14 @@ class Annotator(object):
         for task in tqdm(tasks,desc="Uploading predictions"):
             task_id = task['id']
             img_url = task['data']['image']
+            
             try:
                 # using unquote to deal with special characters
                 img_path = get_local_path(unquote(img_url),download_resources=False)
-            except :
-                # print(f"Failed for {img_url}\n",e)
+            except Exception as e :
+                traceback.print_exc()
                 img_path = get_local_path(img_url,download_resources=False)
+
             img = Image.open(img_path)
             prediction = self.predict(img)
             img_width, img_height = img.size

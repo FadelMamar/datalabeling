@@ -8,6 +8,7 @@ from sahi.predict import get_sliced_prediction
 from tqdm import tqdm
 from PIL import Image
 from ultralytics import YOLO
+import ultralytics
 import torch
 import json
 from pathlib import Path
@@ -185,6 +186,7 @@ class Detector(object):
                 overlap_ratio:float=0.1,
                 tilesize:int=1280,
                 device:str=None,
+                use_sliding_window:bool=True,
                 is_yolo_obb:bool=False):
         """
 
@@ -197,6 +199,8 @@ class Detector(object):
         self.tilesize=tilesize
         self.overlapratio=overlap_ratio
         self.sahi_prostprocess='NMS'
+        self.use_sliding_window = use_sliding_window
+        self.is_yolo_obb = is_yolo_obb
         logger.info( f"Computing device: {device}")
         if is_yolo_obb:
             self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='obb'),
@@ -210,7 +214,7 @@ class Detector(object):
                                                         device=device,
                                                         )
 
-    def predict(self, image:Image,return_coco:bool=True):
+    def predict(self, image:Image,return_coco:bool=True,nms_iou:float=0.5):
         """Run sliced predictions
 
         Args:
@@ -227,19 +231,53 @@ class Detector(object):
         #     S3.download_fileobj(bucket_name, filename, f)
         #     image = Image.open(f)
 
-        result = get_sliced_prediction(image,
-                                        self.detection_model,
-                                        slice_height=self.tilesize,
-                                        slice_width=self.tilesize,
-                                        overlap_height_ratio=self.overlapratio,
-                                        overlap_width_ratio=self.overlapratio,
-                                        postprocess_type=self.sahi_prostprocess,
-                                        )
-        if return_coco:
-            return result.to_coco_annotations()
+        if self.use_sliding_window:
+            result = get_sliced_prediction(image,
+                                            self.detection_model,
+                                            slice_height=self.tilesize,
+                                            slice_width=self.tilesize,
+                                            overlap_height_ratio=self.overlapratio,
+                                            overlap_width_ratio=self.overlapratio,
+                                            postprocess_type=self.sahi_prostprocess,
+                                            )
+            if return_coco:
+                return result.to_coco_annotations()
+        
         else:
-            return result
-    
+            result = self.detection_model.model.predict(image,iou=nms_iou,
+                                                        imgsz=self.tilesize,
+                                                        save_crop=False,
+                                                        show_conf=False,
+                                                        show_labels=False,
+                                                        save=False)
+        
+            return self.yolo_results_to_coco(results=result[0],is_yolo_obb=self.is_yolo_obb)
+
+
+    def yolo_results_to_coco(self,results:ultralytics.engine.results.Results,
+                             is_yolo_obb:bool=True):
+
+        if not is_yolo_obb:
+            raise NotImplementedError("Supports only yolo-obb")
+        
+        coordinates = results.obb.xyxy.cpu().numpy().tolist()
+        coco_results = list()
+
+        for (x_min,y_min,x_max,y_max) in coordinates:
+            
+            template = {'image_id': None,
+                    'bbox': [x_min, y_min, x_max-x_min, y_max-y_min], 
+                    'score': results.obb.conf[0].item(),
+                    'category_id': 0, 
+                    'category_name': 'wildlife', 
+                    'segmentation': [], 
+                    'iscrowd': 0, 
+                    'area': None}
+            coco_results.append(template)
+        
+        return coco_results
+
+
     def predict_directory(self,path_to_dir:str,as_dataframe:bool=False,save_path:str=None):
         """Computes predictions on a directory
 
