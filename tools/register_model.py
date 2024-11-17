@@ -1,14 +1,32 @@
+"""Creates/gets an MLflow experiment and registers a detection model to the Model Registry.
+"""
+
 import argparse
 import cloudpickle
 import mlflow
 from sys import version_info
-from datalabeling.mlflow import get_experiment_id, model_wrapper, DetectorWrapper, ObbDetectorWrapper
-from datalabeling.arguments import Arguments
+from datalabeling.mlflow import get_experiment_id, model_wrapper, DetectorWrapper
+from dataclasses import dataclass
+from datargs import parse
 
-# set local tracking server
-config = Arguments()
-# TRACKING_URI=  "http://localhost:5000"
-mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+@dataclass
+class Args:
+
+    name:str="" # MLflow experiment name
+    model:str="" # Path to saved PyTorch model
+    model_name:str="" # Registered model name
+
+    mlflow_tracking_uri:str="http://localhost:5000"
+
+    confidence_threshold:float=0.1
+    overlap_ratio:float=0.1
+    tilesize:int=1280
+    nms_iou:float=0.5 # used when use_sliding_window=False
+
+    use_sliding_window:bool=False
+
+    is_yolo_obb:bool=False
+
 
 PYTHON_VERSION = "{major}.{minor}.1".format(major=version_info.major,
                                             minor=version_info.minor)
@@ -33,29 +51,28 @@ conda_env = {
 }
 
 def main():
-    parser = argparse.ArgumentParser('Creates/gets an MLflow experiment and registers a detection model to the Model Registry')
-    parser.add_argument('--name', help='MLflow experiment name')
-    parser.add_argument('--model', help='Path to saved PyTorch model')
-    parser.add_argument('--model-name', help='Registered model name')
-    parser.add_argument('--is-yolo-obb', help='Boolean indicator',
-                        default=False, type=bool, required=True, choices=[True, False])
+    # parser = argparse.ArgumentParser('Creates/gets an MLflow experiment and registers a detection model to the Model Registry')
+    # parser.add_argument('--name', help='MLflow experiment name')
+    # parser.add_argument('--model', help='Path to saved PyTorch model')
+    # parser.add_argument('--model-name', help='Registered model name')
+    # parser.add_argument('--is-yolo-obb', help='Boolean indicator',
+    #                     default=False, type=bool, required=True, choices=[True, False])
 
-    args = parser.parse_args()
+    args = parse(Args)
+
+
+    # TRACKING_URI=  "http://localhost:5000"
+    mlflow.set_tracking_uri(args.mlflow_tracking_uri)
 
     artifacts = {'path': args.model}
 
-    if args.is_yolo_obb:
-        print("Registering obb-detector")
-        model = ObbDetectorWrapper(tilesize=640,
-                                    confidence_threshold=0.1,
-                                    overlap_ratio=0.1,
-                                    sahi_postprocess='NMS')
-    else:
-        print("Registering detector")
-        model = DetectorWrapper(tilesize=640,
-                                confidence_threshold=0.1,
-                                overlap_ratio=0.1,
-                                sahi_postprocess='NMS')
+    model = DetectorWrapper(tilesize=args.tilesize,
+                            confidence_threshold=args.confidence_threshold,
+                            overlap_ratio=args.overlap_ratio,
+                            use_sliding_window=args.use_sliding_window,
+                            nms_iou=args.nms_iou,
+                            is_yolo_obb=args.is_yolo_obb,
+                            sahi_postprocess='NMS')
 
     exp_id = get_experiment_id(args.name)
 

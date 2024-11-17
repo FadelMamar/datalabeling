@@ -12,7 +12,8 @@ def main(project_id:int,
          tilesize:int, 
          overlapratio:float,
          confidence_threshold:float,
-         device:str):
+         device:str,
+         use_sliding_window:bool):
     
 
     from datalabeling.annotator import Annotator
@@ -23,7 +24,9 @@ def main(project_id:int,
                         is_yolo_obb=is_yolo_obb,
                         tilesize=tilesize,
                         overlapratio=overlapratio,
+                        use_sliding_window=use_sliding_window,
                         confidence_threshold=confidence_threshold,
+                        tag_to_append=f"-sahi:{use_sliding_window}",
                         device=device,
                         dotenv_path=DOTENV_PATH)
     
