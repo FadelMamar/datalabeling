@@ -6,62 +6,35 @@ from PIL import Image
 import numpy as np
 import torch
 from tqdm import tqdm
+from datalabeling.annotator import Detector
 
 
-def compute_predictions(weight_path:str,
-                        task:str,
-                        iou:float,
-                        half:bool,
-                        imgsz:int,
-                        results_dir_name:str,
-                        val_run_name:str,
-                        data_config_yaml:str,
-                        batch_size:int=1):
-    
-    # load model
-    from ultralytics import YOLO
-    model= YOLO(weight_path,task=task)
-
-    # compute metrics per image
-    _ = model.val(data=data_config_yaml,
-                        project=results_dir_name,
-                        name=val_run_name,
-                        imgsz=imgsz,
-                        iou=iou,
-                        half=half,
-                        save_json=True,
-                        batch=batch_size)
-    
-    return os.path(results_dir_name,val_run_name,'predictions.json')
-
-def load_prediciton_results(path_result:str):
+def load_prediction_results(path_result:str)->pd.DataFrame:
     return pd.read_json(path_result,orient='records')
 
 # load groundtruth
-def load_groundtruth(data_config_yaml:str):
-
-    with open(data_config_yaml,'r') as file:
-        yolo_config = yaml.load(file,Loader=yaml.FullLoader)
-    val_images_path = os.path.join(yolo_config['path'],yolo_config['val'][0])
-    val_labels_path = val_images_path.replace('images','labels')
-
+def load_groundtruth(images_dir:str)->tuple[pd.DataFrame,list]:
+    
     df_list = list()
     col_names = None
-    for path in Path(val_labels_path).glob('*.txt'):
-        df = pd.read_csv(path,sep=' ',header=None)
+    for image_path in Path(images_dir).glob('*'):
+
+        # read label file and check if yolo or yolo-obb
+        label_path = str(image_path.with_suffix('.txt')).replace('images','labels')
+        df = pd.read_csv(label_path,sep=' ',header=None)
         if len(df.columns) == 9:
-            df.columns = ['id','x1','y1','x2','y2','x3','y3','x4','y4']
+            df.columns = ['category_id','x1','y1','x2','y2','x3','y3','x4','y4']
         elif len(df.columns) == 5:
-            df.columns = ['id','x','y','w','h']
+            df.columns = ['category_id','x','y','w','h']
         else:
             raise ValueError("Check features in label file.")
         
         # record features
         if col_names is None:
             col_names = list(df.columns)
-
-        df['image_id'] = path.stem
-        image_path = os.path.join(val_images_path,f"{path.stem}.JPG")
+        
+        # add features
+        df['image_path'] = str(image_path)
         width, height = Image.open(image_path).size
         df['width'] = width
         df['height'] = height
@@ -75,12 +48,47 @@ def load_groundtruth(data_config_yaml:str):
 
     return pd.concat(df_list,axis=0), col_names
 
+# get preds and targets
+def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detector,load_results:bool=False):
+
+    dfs_results = list()
+    dfs_labels = list()
+    features_names = None
+
+    for image_dir in images_dirs:
+
+        sfx = str(image_dir).split(":\\")[-1].replace("\\","_").replace("/","_")
+        save_path = os.path.join(pred_results_dir,f'predictions-{sfx}.json')
+        
+        # get prediction results
+        if load_results:
+            results = load_prediction_results(save_path)
+        else:
+            results = detector.predict_directory(image_dir,as_dataframe=True,save_path=save_path)
+        dfs_results.append(results)
+
+        # get targets
+        df_labels, col_names = load_groundtruth(images_dir=image_dir)
+        dfs_labels.append(df_labels)
+
+        # update and check for changes
+        if features_names is None:
+            features_names = col_names
+        else:
+            check_changes = len(set(features_names).intersection(set(col_names))) == len(features_names)
+            assert check_changes, "groundtruth labels aren't all similar."
+    
+    return pd.concat(dfs_results,axis=0), pd.concat(dfs_labels,axis=0),features_names
+
 # compute mAP@50
-def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:list[str]):
+def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,col_names:list[str]):
     
     from torchmetrics.detection import MeanAveragePrecision
 
-    m_ap = MeanAveragePrecision(box_format="xyxy",iou_type="bbox",max_detection_thresholds=[10,100,300])
+    m_ap = MeanAveragePrecision(box_format="xyxy",iou_type="bbox",
+                                max_detection_thresholds=[1,10,100],
+                                iou_thresholds=[0.25,0.35,0.5,0.75,0.85,0.95]
+                                )
 
     def get_bbox(gt:np.ndarray):
         if len(col_names)==9:
@@ -98,34 +106,29 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:lis
     map_50s = list()
     maps_75s = list()
     max_scores = list()
-    image_paths = list()
-    imgs_ids = df_results['image_id'].unique()
-    for image_id in tqdm(imgs_ids):
+    # image_paths = list()
+    image_paths = df_results['image_path'].unique()
+    for image_path in tqdm(image_paths):
 
         # get gt
-        mask_gt = df_labels['image_id'] == image_id
+        mask_gt = df_labels['image_path'] == image_path
         gt = df_labels.loc[mask_gt,col_names].iloc[:,1:].to_numpy()
-        labels = df_labels.loc[mask_gt,'id'].to_numpy()
-        p = df_labels.loc[mask_gt,'image_path'].unique()[0]
-        p = str(p.with_suffix(".JPG")).replace('labels','images')
-        image_paths.append(p)
+        labels = df_labels.loc[mask_gt,'category_id'].to_numpy()
 
         # get preds
-        mask_pred = df_results['image_id'] == image_id
-        pred = df_results.loc[mask_pred,'poly'].to_list()
-        pred = np.array(pred)
+        mask_pred = df_results['image_path'] == image_path
+        pred = df_results.loc[mask_pred,['x_min', 'y_min', 'x_max', 'y_max']].to_numpy()
         pred = np.clip(pred,a_min=0,a_max=pred.max())
         pred_score = df_results.loc[mask_pred,'score'].to_numpy()
-        classes = df_results.loc[mask_pred,'category_id'].to_numpy()
+        classes = df_results.loc[mask_pred,'category_id'].to_numpy().astype(int)
         max_scores.append(pred_score.max())
 
         # compute mAPs
-        pred_list = [{'boxes':torch.from_numpy(get_bbox(gt=pred)),
+        pred_list = [{'boxes':torch.from_numpy(pred),
                 'scores':torch.from_numpy(pred_score),
                 'labels':torch.from_numpy(classes)}]
         target_list = [{"boxes":torch.from_numpy(get_bbox(gt=gt)),
                         "labels":torch.from_numpy(labels)}]
-
         
         metric = m_ap(preds=pred_list,target=target_list)
         map_50s.append(metric['map_50'].item())
@@ -134,7 +137,6 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:lis
     results_per_img = {"map50":map_50s,
                         "map75":maps_75s,
                         "max_scores":max_scores,
-                        "image_ids":imgs_ids,
                         "image_paths":image_paths}
     df_results_per_img = pd.DataFrame.from_dict(results_per_img,orient='columns')
 
