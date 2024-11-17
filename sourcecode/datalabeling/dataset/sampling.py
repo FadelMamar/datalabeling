@@ -1,12 +1,9 @@
-from ultralytics import YOLO
-# from ultralytics.data import YOLODataset
 import yaml
 import pandas as pd
 import os
 from pathlib import Path
 from PIL import Image
 import numpy as np
-from torchmetrics.detection import MeanAveragePrecision
 import torch
 from tqdm import tqdm
 
@@ -22,6 +19,7 @@ def compute_predictions(weight_path:str,
                         batch_size:int=1):
     
     # load model
+    from ultralytics import YOLO
     model= YOLO(weight_path,task=task)
 
     # compute metrics per image
@@ -79,6 +77,8 @@ def load_groundtruth(data_config_yaml:str):
 
 # compute mAP@50
 def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:list[str]):
+    
+    from torchmetrics.detection import MeanAveragePrecision
 
     m_ap = MeanAveragePrecision(box_format="xyxy",iou_type="bbox",max_detection_thresholds=[10,100,300])
 
@@ -98,6 +98,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:lis
     map_50s = list()
     maps_75s = list()
     max_scores = list()
+    image_paths = list()
     imgs_ids = df_results['image_id'].unique()
     for image_id in tqdm(imgs_ids):
 
@@ -105,6 +106,9 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:lis
         mask_gt = df_labels['image_id'] == image_id
         gt = df_labels.loc[mask_gt,col_names].iloc[:,1:].to_numpy()
         labels = df_labels.loc[mask_gt,'id'].to_numpy()
+        p = df_labels.loc[mask_gt,'image_path'].unique()[0]
+        p = str(p.with_suffix(".JPG")).replace('labels','images')
+        image_paths.append(p)
 
         # get preds
         mask_pred = df_results['image_id'] == image_id
@@ -122,11 +126,16 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels,col_names:lis
         target_list = [{"boxes":torch.from_numpy(get_bbox(gt=gt)),
                         "labels":torch.from_numpy(labels)}]
 
+        
         metric = m_ap(preds=pred_list,target=target_list)
         map_50s.append(metric['map_50'].item())
         maps_75s.append(metric['map_75'].item())
 
-    results_per_img = {"map50":map_50s,"map75":maps_75s,"max_scores":max_scores,"image_ids":imgs_ids}
+    results_per_img = {"map50":map_50s,
+                        "map75":maps_75s,
+                        "max_scores":max_scores,
+                        "image_ids":imgs_ids,
+                        "image_paths":image_paths}
     df_results_per_img = pd.DataFrame.from_dict(results_per_img,orient='columns')
 
     return df_results_per_img
