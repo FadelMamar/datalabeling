@@ -5,14 +5,18 @@ from sahi.utils.import_utils import check_requirements
 from sahi.models.base import DetectionModel
 from sahi.predict import get_sliced_prediction
 # from label_studio_ml.utils import (get_env, get_local_path)
+from tqdm import tqdm
 from PIL import Image
 from ultralytics import YOLO
 import torch
+import json
 from pathlib import Path
 import logging
 from typing import Any, List, Optional
 import numpy as np
+import pandas as pd
 import torch
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -236,20 +240,66 @@ class Detector(object):
         else:
             return result
     
-    def predict_directory(self,path_to_dir:str):
+    def predict_directory(self,path_to_dir:str,as_dataframe:bool=False,save_path:str=None):
         """Computes predictions on a directory
 
         Args:
             path_to_dir (str): path to directory with images
+            as_dataframe (bool): returns results as pd.DataFrame
+            save_path (str) : converts to dataframe and then save
 
         Returns:
             dict: a directory with the schema {image_path:prediction_coco_format}
         """
         results = {}
-        for image_path in Path(path_to_dir).iterdir():
-            pred = self.predict(Image.open(image_path))
+        for image_path in tqdm(Path(path_to_dir).iterdir()):
+            pred = self.predict(Image.open(image_path),return_coco=True)
             results.update({str(image_path):pred})
+        
+        # returns as df or save
+        if as_dataframe or (save_path is not None):
+            results = self.get_pred_results_as_dataframe(results)
+
+            if save_path is not None:
+                try:
+                    results.to_json(save_path,orient='records',indent=2)
+                except Exception as e:
+                    print('!!!Failed to save results as json!!!\n')
+                    traceback.print_exc()
+
+            return results
+                        
         return results
+
+    
+    def get_pred_results_as_dataframe(self,results:dict[str:list]):
+
+        df_results = pd.DataFrame.from_dict(results,orient='index')
+        dfs = list()
+        
+        for i in tqdm(range(len(df_results)),desc='pred results as df'):
+            df_i = pd.DataFrame.from_records(df_results.iloc[i,:].dropna().to_list())
+            df_i['image_path'] = df_results.index[i]
+            
+            dfs.append(df_i)
+
+        dfs = pd.concat(dfs,axis=0)
+        dfs['x_min'] = dfs['bbox'].apply(lambda x: x[0])
+        dfs['y_min'] = dfs['bbox'].apply(lambda x: x[1])
+        dfs['bbox_w'] = dfs['bbox'].apply(lambda x: x[2])
+        dfs['bbox_h'] = dfs['bbox'].apply(lambda x: x[3])
+        dfs['x_max'] = dfs['x_min'] + dfs['bbox_w']
+        dfs['y_max'] = dfs['y_min'] + dfs['bbox_h']
+
+        try:
+            dfs.drop(columns=['bbox','image_id','segmentation','iscrowd'],inplace=True)
+        except Exception as e:
+            print("Tried to drop columns: ['bbox','image_id','segmentation','iscrowd'].")
+            traceback.print_exc()
+            
+
+        return dfs
+
 
     def format_prediction(self,pred:dict,img_height:int,img_width:int):
         """Formatting the prediction to work with Label studio
