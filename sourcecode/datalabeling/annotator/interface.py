@@ -28,16 +28,16 @@ class Annotator(object):
                 overlapratio:float=0.1,
                 device:str=None,
                 use_sliding_window:bool=True,
-                mlflow_model_version:str=None,
                 is_yolo_obb:bool=False,
-                confidence_threshold:float=0.1):
+                confidence_threshold:float=0.1,
+                tag_to_append:str=""
+                ):
         """_summary_
 
         Args:
             path_to_weights (str, optional): path to weights. Defaults to None.
             mlflow_model_alias (str, optional): mflow registered model alias. Defaults to "start".
             mlflow_model_name (str, optional): model name. Defaults to "detector".
-            mlflow_model_version (str, optional): registered model version. Defaults to None.
             confidence_threshold (float, optional): Detection threshold. Defaults to 0.35.
         """
 
@@ -64,7 +64,7 @@ class Annotator(object):
             name = mlflow_model_name
             alias = mlflow_model_alias
             version = client.get_model_version_by_alias(name=name,alias=alias).version
-            self.modelversion = f'{name}:{version}'
+            self.modelversion = f'{name}:{version}' + tag_to_append
             self.modelURI = f'models:/{name}/{version}'
             self.model = mlflow.pyfunc.load_model(self.modelURI)
             # print('Device:',self.model.detection_model.device)
@@ -77,14 +77,13 @@ class Annotator(object):
                                   device=device,
                                   use_sliding_window=use_sliding_window,
                                   is_yolo_obb=is_yolo_obb)
-            self.modelversion = Path(path_to_weights).stem
+            self.modelversion = Path(path_to_weights).stem + tag_to_append
             # print('Device:', device)
         # LS label config
         self.from_name = "label"
         self.to_name = "image"
         self.label_type = "rectanglelabels"
-        if mlflow_model_version is not None:
-            self.modelversion = mlflow_model_version
+        
 
     def predict(self, image:bytearray) -> dict:
         """Sliced prediction using Sahi
@@ -151,7 +150,7 @@ class Annotator(object):
         for task in tqdm(tasks,desc="Uploading predictions"):
             task_id = task['id']
             img_url = task['data']['image']
-            
+
             try:
                 # using unquote to deal with special characters
                 img_path = get_local_path(unquote(img_url),download_resources=False)
