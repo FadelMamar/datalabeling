@@ -10,6 +10,7 @@ call cd ..\tools
 @REM overlapratio:float,
 @REM confidence_threshold:float,
 @REM device:str
-call python upload_predictions.py 3 "..\models\best_openvino_model" True 1280 0.1 0.2 "NPU"
+@REM use_sliding_window
+call python upload_predictions.py 1 "..\models\best_openvino_model" True 1280 0.1 0.2 "NPU" False
 
 call conda deactivate
