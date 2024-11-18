@@ -9,12 +9,13 @@ from dataclasses import dataclass
 from datargs import parse
 from pathlib import Path
 
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = "D:\PhD\Data per camp\DetectionDataset\hard_samples"
 
 @dataclass
 class Args:
 
-    path_to_weights:str=r"C:\Users\FADELCO\OneDrive\Bureau\datalabeling\models\best_openvino_model"
+    path_to_weights:str
+    
     confidence_threshold:float=0.1
     overlap_ratio:float=0.1
     tilesize:int=1280
@@ -22,17 +23,17 @@ class Args:
     device:str="cpu"
     is_yolo_obb:bool=False
 
-    data_config_yaml:str=os.path.join(CUR_DIR,r"..\data\dataset_labeler.yaml")
+    data_config_yaml:str=r"..\data\dataset_labeler.yaml"
     split:str="train"
 
-    pred_results_dir:str=os.path.join(CUR_DIR,r"..\data\hard_samples")
+    pred_results_dir:str=DATA_DIR
     load_results:bool=False
 
     map_thrs:float=0.3
     score_thrs:float=0.7
-    save_path_samples:str=  os.path.join(CUR_DIR,r"..\data\hard_samples\hard_samples.txt")
+    save_path_samples:str=  os.path.join(DATA_DIR,'hard_samples.txt')
     data_config_root:str="D:\\"
-    save_data_config_yaml:str= os.path.join(CUR_DIR,r"..\data\hard_samples\hard_samples.yaml")
+    save_data_config_yaml:str= os.path.join(DATA_DIR,'hard_samples.yaml')
 
 
 if __name__ == "__main__":
