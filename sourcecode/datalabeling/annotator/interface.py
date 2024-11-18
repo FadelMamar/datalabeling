@@ -86,7 +86,7 @@ class Annotator(object):
         
 
     def predict(self, image:bytearray) -> dict:
-        """Sliced prediction using Sahi
+        """prediction using Sahi or not depending on self.use_sliding_window
 
         Args:
             image (bytearray): object of PIL.Image.open
@@ -199,8 +199,8 @@ class Annotator(object):
         # Upload predictions for each task
         # for task in tasks:
         for image_path in Path(path_img_dir).glob(pattern):
-            img_path_as_posix = image_path.relative_to(Path(root)).as_posix()
-            img_path_as_url = quote(img_path_as_posix)
+            img_path_as_bytes = bytes(image_path.relative_to(Path(root))) #.as_posix()
+            img_path_as_url = quote(img_path_as_bytes)
             # task_id = task['id']
             # img_url = task['data']['image']
             img_url = f"/data/local-files/?d={img_path_as_url}"
