@@ -39,8 +39,8 @@ if __name__ == '__main__':
             version = client.get_model_version_by_alias(name=name,
                                                         alias=alias).version
             modelURI = f'models:/{name}/{version}'
-            args.path_weights = mlflow.pyfunc.load_model(modelURI).unwrap_python_model().detection_model.model_path
-            logging.info(f"Loading model registered with alias: {alias}")            
+            args.path_weights = mlflow.pyfunc.load_model(modelURI).unwrap_python_model().detection_model.detection_model.model.ckpt_path
+            logging.info(f"Loading model {modelURI} registered with alias: {alias}")            
 
         with wandb.init(project=args.project_name,
                     config=args,

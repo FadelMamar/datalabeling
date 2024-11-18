@@ -157,8 +157,7 @@ def select_hard_samples(df_results_per_img:pd.DataFrame,
 
     # save image paths in data_config yaml
     if save_path_samples is not None:
-        df_hard_negatives['image_paths'].to_csv(save_path_samples,
-                                                sep=" ",index=False,header=False)
+        df_hard_negatives['image_paths'].to_csv(save_path_samples,index=False,header=False)
     if save_data_yaml is not None:
         cfg_dict = {'path':root,
                     'names': {0: 'wildlife'},
