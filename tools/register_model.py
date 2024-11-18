@@ -1,7 +1,7 @@
 """Creates/gets an MLflow experiment and registers a detection model to the Model Registry.
 """
 
-import argparse
+# import argparse
 import cloudpickle
 import mlflow
 from sys import version_info
@@ -12,9 +12,9 @@ from datargs import parse
 @dataclass
 class Args:
 
-    name:str="" # MLflow experiment name
-    model:str="" # Path to saved PyTorch model
-    model_name:str="" # Registered model name
+    exp_name:str # MLflow experiment name
+    model:str # Path to saved PyTorch model
+    model_name:str # Registered model name
 
     mlflow_tracking_uri:str="http://localhost:5000"
 
@@ -74,7 +74,7 @@ def main():
                             is_yolo_obb=args.is_yolo_obb,
                             sahi_postprocess='NMS')
 
-    exp_id = get_experiment_id(args.name)
+    exp_id = get_experiment_id(args.exp_name)
 
     cloudpickle.register_pickle_by_value(model_wrapper)
 
