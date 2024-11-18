@@ -14,7 +14,8 @@ from label_studio_sdk import Client
 from tqdm import tqdm
 import os
 import logging
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
+import traceback
 
 class Annotator(object):
 
@@ -23,16 +24,20 @@ class Annotator(object):
                 path_to_weights:str=None,
                 mlflow_model_alias:str="start",
                 mlflow_model_name:str="detector",
-                mlflow_model_version:str=None,
+                tilesize:int=640,
+                overlapratio:float=0.1,
+                device:str=None,
+                use_sliding_window:bool=True,
                 is_yolo_obb:bool=False,
-                confidence_threshold:float=0.1):
+                confidence_threshold:float=0.1,
+                tag_to_append:str=""
+                ):
         """_summary_
 
         Args:
             path_to_weights (str, optional): path to weights. Defaults to None.
             mlflow_model_alias (str, optional): mflow registered model alias. Defaults to "start".
             mlflow_model_name (str, optional): model name. Defaults to "detector".
-            mlflow_model_version (str, optional): registered model version. Defaults to None.
             confidence_threshold (float, optional): Detection threshold. Defaults to 0.35.
         """
 
@@ -47,8 +52,8 @@ class Annotator(object):
             logging.warning(msg="Pass argument `dotenv_path` to access label studio API")
 
         ## Load model from path
-        self.tilesize=640
-        self.overlapratio=0.1
+        self.tilesize=tilesize
+        self.overlapratio=overlapratio
         self.sahi_prostprocess='NMS'
 
         self.path_to_weights = path_to_weights
@@ -59,25 +64,26 @@ class Annotator(object):
             name = mlflow_model_name
             alias = mlflow_model_alias
             version = client.get_model_version_by_alias(name=name,alias=alias).version
-            self.modelversion = f'{name}:{version}'
+            self.modelversion = f'{name}:{version}' + tag_to_append
             self.modelURI = f'models:/{name}/{version}'
             self.model = mlflow.pyfunc.load_model(self.modelURI)
             # print('Device:',self.model.detection_model.device)
         else:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            # device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model = Detector(path_to_weights=path_to_weights,
                                   confidence_threshold=confidence_threshold,
                                   overlap_ratio=self.overlapratio,
                                   tilesize=self.tilesize,
+                                  device=device,
+                                  use_sliding_window=use_sliding_window,
                                   is_yolo_obb=is_yolo_obb)
-            self.modelversion = Path(path_to_weights).stem
+            self.modelversion = Path(path_to_weights).stem + tag_to_append
             # print('Device:', device)
         # LS label config
         self.from_name = "label"
         self.to_name = "image"
         self.label_type = "rectanglelabels"
-        if mlflow_model_version is not None:
-            self.modelversion = mlflow_model_version
+        
 
     def predict(self, image:bytearray) -> dict:
         """Sliced prediction using Sahi
@@ -126,13 +132,13 @@ class Annotator(object):
         }
         return template
 
-    def upload_predictions(self,project_id:int,top_n:int=None)->None:
+    def upload_predictions(self,project_id:int,top_n:int=0)->None:
         """Uploads predictions using label studio API.
         Make sure to set the API key and url inside .env
 
         Args:
             project_id (int): project id from Label studio
-            top_n (int): top n tasks to be uploaded in descending order of task_id.
+            top_n (int): top n tasks to be uploaded in descending order of task_id. Default 0 which disables the feature.
         """
         # Select project
         project = self.labelstudio_client.get_project(id=project_id)
@@ -144,10 +150,14 @@ class Annotator(object):
         for task in tqdm(tasks,desc="Uploading predictions"):
             task_id = task['id']
             img_url = task['data']['image']
+
             try:
-                img_path = get_local_path(img_url)
-            except:
-                img_path = get_local_path(unquote(img_url))
+                # using unquote to deal with special characters
+                img_path = get_local_path(unquote(img_url),download_resources=False)
+            except Exception as e :
+                traceback.print_exc()
+                img_path = get_local_path(img_url,download_resources=False)
+
             img = Image.open(img_path)
             prediction = self.predict(img)
             img_width, img_height = img.size
@@ -190,9 +200,10 @@ class Annotator(object):
         # for task in tasks:
         for image_path in Path(path_img_dir).glob(pattern):
             img_path_as_posix = image_path.relative_to(Path(root)).as_posix()
+            img_path_as_url = quote(img_path_as_posix)
             # task_id = task['id']
             # img_url = task['data']['image']
-            img_url = f"/data/local-files/?d={img_path_as_posix}"
+            img_url = f"/data/local-files/?d={img_path_as_url}"
             pred = {
                         "data": {"image" : img_url},
                         "predictions":[],

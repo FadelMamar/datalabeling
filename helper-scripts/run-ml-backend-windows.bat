@@ -1,6 +1,4 @@
-
-call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
-call conda activate label-backend
+call .\activate_label-backend_env.bat
 
 call conda env config vars set LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=D:\
 call conda env config vars set LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true

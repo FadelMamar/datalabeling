@@ -5,14 +5,19 @@ from sahi.utils.import_utils import check_requirements
 from sahi.models.base import DetectionModel
 from sahi.predict import get_sliced_prediction
 # from label_studio_ml.utils import (get_env, get_local_path)
+from tqdm import tqdm
 from PIL import Image
 from ultralytics import YOLO
+import ultralytics
 import torch
+import json
 from pathlib import Path
 import logging
 from typing import Any, List, Optional
 import numpy as np
+import pandas as pd
 import torch
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +185,8 @@ class Detector(object):
                 confidence_threshold:float=0.1,
                 overlap_ratio:float=0.1,
                 tilesize:int=1280,
+                device:str=None,
+                use_sliding_window:bool=True,
                 is_yolo_obb:bool=False):
         """
 
@@ -187,14 +194,16 @@ class Detector(object):
             path_to_weights (str): path to the weights to be loaded
             confidence_threshold (float, optional): confidence threshold for detection. Defaults to 0.1.
         """
-        
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tilesize=tilesize
         self.overlapratio=overlap_ratio
         self.sahi_prostprocess='NMS'
+        self.use_sliding_window = use_sliding_window
+        self.is_yolo_obb = is_yolo_obb
         logger.info( f"Computing device: {device}")
         if is_yolo_obb:
-            self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='detect'),
+            self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='obb'),
                                                             confidence_threshold=confidence_threshold,
                                                             image_size=self.tilesize,
                                                             device=device)
@@ -205,7 +214,7 @@ class Detector(object):
                                                         device=device,
                                                         )
 
-    def predict(self, image:Image):
+    def predict(self, image:Image,return_coco:bool=True,nms_iou:float=0.5):
         """Run sliced predictions
 
         Args:
@@ -222,31 +231,113 @@ class Detector(object):
         #     S3.download_fileobj(bucket_name, filename, f)
         #     image = Image.open(f)
 
-        result = get_sliced_prediction(image,
-                                        self.detection_model,
-                                        slice_height=self.tilesize,
-                                        slice_width=self.tilesize,
-                                        overlap_height_ratio=self.overlapratio,
-                                        overlap_width_ratio=self.overlapratio,
-                                        postprocess_type=self.sahi_prostprocess,
-                                        )
+        if self.use_sliding_window:
+            result = get_sliced_prediction(image,
+                                            self.detection_model,
+                                            slice_height=self.tilesize,
+                                            slice_width=self.tilesize,
+                                            overlap_height_ratio=self.overlapratio,
+                                            overlap_width_ratio=self.overlapratio,
+                                            postprocess_type=self.sahi_prostprocess,
+                                            )
+            if return_coco:
+                return result.to_coco_annotations()
+        
+        else:
+            result = self.detection_model.model.predict(image,iou=nms_iou,
+                                                        imgsz=self.tilesize,
+                                                        save_crop=False,
+                                                        show_conf=False,
+                                                        show_labels=False,
+                                                        save=False)
+        
+            return self.yolo_results_to_coco(results=result[0],is_yolo_obb=self.is_yolo_obb)
 
-        return result.to_coco_annotations()
-    
-    def predict_directory(self,path_to_dir:str):
+
+    def yolo_results_to_coco(self,results:ultralytics.engine.results.Results,
+                             is_yolo_obb:bool=True):
+
+        if not is_yolo_obb:
+            raise NotImplementedError("Supports only yolo-obb")
+        
+        coordinates = results.obb.xyxy.cpu().numpy().tolist()
+        coco_results = list()
+
+        for (x_min,y_min,x_max,y_max) in coordinates:
+            
+            template = {'image_id': None,
+                    'bbox': [x_min, y_min, x_max-x_min, y_max-y_min], 
+                    'score': results.obb.conf[0].item(),
+                    'category_id': 0, 
+                    'category_name': 'wildlife', 
+                    'segmentation': [], 
+                    'iscrowd': 0, 
+                    'area': None}
+            coco_results.append(template)
+        
+        return coco_results
+
+
+    def predict_directory(self,path_to_dir:str,as_dataframe:bool=False,save_path:str=None):
         """Computes predictions on a directory
 
         Args:
             path_to_dir (str): path to directory with images
+            as_dataframe (bool): returns results as pd.DataFrame
+            save_path (str) : converts to dataframe and then save
 
         Returns:
             dict: a directory with the schema {image_path:prediction_coco_format}
         """
         results = {}
-        for image_path in Path(path_to_dir).iterdir():
-            pred = self.predict(Image.open(image_path))
+        for image_path in tqdm(Path(path_to_dir).iterdir()):
+            pred = self.predict(Image.open(image_path),return_coco=True)
             results.update({str(image_path):pred})
+        
+        # returns as df or save
+        if as_dataframe or (save_path is not None):
+            results = self.get_pred_results_as_dataframe(results)
+
+            if save_path is not None:
+                try:
+                    results.to_json(save_path,orient='records',indent=2)
+                except Exception as e:
+                    print('!!!Failed to save results as json!!!\n')
+                    traceback.print_exc()
+
+            return results
+                        
         return results
+
+    
+    def get_pred_results_as_dataframe(self,results:dict[str:list]):
+
+        df_results = pd.DataFrame.from_dict(results,orient='index')
+        dfs = list()
+        
+        for i in tqdm(range(len(df_results)),desc='pred results as df'):
+            df_i = pd.DataFrame.from_records(df_results.iloc[i,:].dropna().to_list())
+            df_i['image_path'] = df_results.index[i]
+            
+            dfs.append(df_i)
+
+        dfs = pd.concat(dfs,axis=0)
+        dfs['x_min'] = dfs['bbox'].apply(lambda x: x[0])
+        dfs['y_min'] = dfs['bbox'].apply(lambda x: x[1])
+        dfs['bbox_w'] = dfs['bbox'].apply(lambda x: x[2])
+        dfs['bbox_h'] = dfs['bbox'].apply(lambda x: x[3])
+        dfs['x_max'] = dfs['x_min'] + dfs['bbox_w']
+        dfs['y_max'] = dfs['y_min'] + dfs['bbox_h']
+
+        try:
+            dfs.drop(columns=['bbox','image_id','segmentation','iscrowd'],inplace=True)
+        except Exception as e:
+            print("Tried to drop columns: ['bbox','image_id','segmentation','iscrowd'].")
+            traceback.print_exc()
+            
+
+        return dfs
+
 
     def format_prediction(self,pred:dict,img_height:int,img_width:int):
         """Formatting the prediction to work with Label studio

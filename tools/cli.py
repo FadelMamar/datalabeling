@@ -16,7 +16,10 @@ if __name__ == '__main__':
         model.export(format=args.export_format,
                      imgsz=args.width,
                      nms=True,
+                     half=args.half,
+                     int8=args.int8,
                      batch=args.export_batch_size,
+                     dynamic=args.dynamic,
                      simplify=True)
     
     if args.start_training:
