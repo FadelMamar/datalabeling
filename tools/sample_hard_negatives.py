@@ -22,17 +22,17 @@ class Args:
     device:str="cpu"
     is_yolo_obb:bool=False
 
-    data_config_yaml:str
+    data_config_yaml:str=os.path.join(CUR_DIR,r"..\data\dataset_labeler.yaml")
     split:str="train"
 
-    pred_results_dir:str=os.path.join(CUR_DIR,r"..\data")
+    pred_results_dir:str=os.path.join(CUR_DIR,r"..\data\hard_samples")
     load_results:bool=False
 
     map_thrs:float=0.3
     score_thrs:float=0.7
-    save_path_samples:str=r"D:\hard_negative_samples\hard_samples.txt"
+    save_path_samples:str=  os.path.join(CUR_DIR,r"..\data\hard_samples\hard_samples.txt")
     data_config_root:str="D:\\"
-    save_data_config_yaml:str= os.path.join(CUR_DIR,r"..\data\hard_samples.yaml")
+    save_data_config_yaml:str= os.path.join(CUR_DIR,r"..\data\hard_samples\hard_samples.yaml")
 
 
 if __name__ == "__main__":
