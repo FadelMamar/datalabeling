@@ -184,23 +184,28 @@ class Detector(object):
                 path_to_weights:str,
                 confidence_threshold:float=0.1,
                 overlap_ratio:float=0.1,
-                tilesize:int=1280,
+                tilesize:int|None=1280,
                 imgsz:int=1280,
                 device:str=None,
                 use_sliding_window:bool=True,
                 is_yolo_obb:bool=False):
-        """
+        """_summary_
 
         Args:
-            path_to_weights (str): path to the weights to be loaded
-            confidence_threshold (float, optional): confidence threshold for detection. Defaults to 0.1.
+            path_to_weights (str): _description_
+            confidence_threshold (float, optional): _description_. Defaults to 0.1.
+            overlap_ratio (float, optional): _description_. Defaults to 0.1.
+            tilesize (int | None, optional): _description_. Defaults to 1280.
+            imgsz (int, optional): _description_. Defaults to 1280.
+            device (str, optional): _description_. Defaults to None.
+            use_sliding_window (bool, optional): _description_. Defaults to True.
+            is_yolo_obb (bool, optional): _description_. Defaults to False.
         """
         if device == None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tilesize=tilesize
         self.imgsz=imgsz
         self.overlapratio=overlap_ratio
-        self.sahi_prostprocess='NMS'
         self.use_sliding_window = use_sliding_window
         self.is_yolo_obb = is_yolo_obb
         logger.info( f"Computing device: {device}")
@@ -216,7 +221,12 @@ class Detector(object):
                                                         device=device,
                                                         )
 
-    def predict(self, image:Image,return_coco:bool=True,nms_iou:float=0.5):
+    def predict(self, image:Image,
+                return_coco:bool=True,
+                nms_iou:float=0.5,
+                sahi_prostprocess:float='NMS',
+                override_tilesize:int=None,
+                postprocess_match_threshold:float=0.7):
         """Run sliced predictions
 
         Args:
@@ -234,14 +244,16 @@ class Detector(object):
         #     image = Image.open(f)
 
         if self.use_sliding_window:
+            tilesize = override_tilesize if self.tilesize is None else self.tilesize
             result = get_sliced_prediction(image,
                                             self.detection_model,
-                                            slice_height=self.tilesize,
-                                            slice_width=self.tilesize,
+                                            slice_height=tilesize,
+                                            slice_width=tilesize,
                                             overlap_height_ratio=self.overlapratio,
                                             overlap_width_ratio=self.overlapratio,
-                                            postprocess_type=self.sahi_prostprocess,
+                                            postprocess_type=sahi_prostprocess,
                                             postprocess_match_metric="IOU",
+                                            postprocess_match_threshold=postprocess_match_threshold,
                                             )
             if return_coco:
                 return result.to_coco_annotations()
