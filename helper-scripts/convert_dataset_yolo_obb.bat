@@ -1,8 +1,6 @@
-@REM if (%CONDA_DEFAULT_ENV% == "label-backend")
-call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
-call conda activate label-backend
+call .\activate_label-backend_env.bat
 
-call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+call cd ..
 
 :: yolo to obb
 @REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_conversion.yaml" --skip
