@@ -175,6 +175,9 @@ def select_hard_samples(df_results_per_img:pd.DataFrame,
     mask_selected = mask_low_map * mask_high_scores 
     df_hard_negatives = df_results_per_img.loc[mask_selected]
 
+    # get relative paths
+    df_hard_negatives.loc[:,'image_paths'] = df_hard_negatives['image_paths'].apply(lambda x:  os.path.relpath(x,start=root))
+    
     # save image paths in data_config yaml
     if save_path_samples is not None:
         df_hard_negatives['image_paths'].to_csv(save_path_samples,index=False,header=False)
