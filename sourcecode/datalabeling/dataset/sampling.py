@@ -49,7 +49,7 @@ def load_groundtruth(images_dir:str)->tuple[pd.DataFrame,list]:
     return pd.concat(df_list,axis=0), col_names
 
 # get preds and targets
-def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detector,load_results:bool=False):
+def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detector,load_results:bool=False,save_tag:str=""):
 
     dfs_results = list()
     dfs_labels = list()
@@ -58,6 +58,7 @@ def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detect
     for image_dir in images_dirs:
 
         sfx = str(image_dir).split(":\\")[-1].replace("\\","_").replace("/","_")
+        sfx = sfx + save_tag
         save_path = os.path.join(pred_results_dir,f'predictions-{sfx}.json')
         
         # get prediction results
