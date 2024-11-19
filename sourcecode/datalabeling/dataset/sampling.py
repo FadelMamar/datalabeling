@@ -106,6 +106,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
     map_50s = list()
     maps_75s = list()
     max_scores = list()
+    all_scores = list()
     # image_paths = list()
     image_paths = df_results['image_path'].unique()
     for image_path in tqdm(image_paths):
@@ -122,6 +123,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
         pred_score = df_results.loc[mask_pred,'score'].to_numpy()
         classes = df_results.loc[mask_pred,'category_id'].to_numpy().astype(int)
         max_scores.append(pred_score.max())
+        all_scores.append(pred_score)
 
         # compute mAPs
         pred_list = [{'boxes':torch.from_numpy(pred),
@@ -137,6 +139,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
     results_per_img = {"map50":map_50s,
                         "map75":maps_75s,
                         "max_scores":max_scores,
+                        "all_scores":all_scores,
                         "image_paths":image_paths}
     df_results_per_img = pd.DataFrame.from_dict(results_per_img,orient='columns')
 
