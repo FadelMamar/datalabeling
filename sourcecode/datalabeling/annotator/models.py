@@ -185,6 +185,7 @@ class Detector(object):
                 confidence_threshold:float=0.1,
                 overlap_ratio:float=0.1,
                 tilesize:int=1280,
+                imgsz:int=1280,
                 device:str=None,
                 use_sliding_window:bool=True,
                 is_yolo_obb:bool=False):
@@ -197,6 +198,7 @@ class Detector(object):
         if device == None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tilesize=tilesize
+        self.imgsz=imgsz
         self.overlapratio=overlap_ratio
         self.sahi_prostprocess='NMS'
         self.use_sliding_window = use_sliding_window
@@ -205,12 +207,12 @@ class Detector(object):
         if is_yolo_obb:
             self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='obb'),
                                                             confidence_threshold=confidence_threshold,
-                                                            image_size=self.tilesize,
+                                                            image_size=self.imgsz,
                                                             device=device)
         else:
             self.detection_model = Yolov8DetectionModel(model=YOLO(path_to_weights,task='detect'),
                                                         confidence_threshold=confidence_threshold,
-                                                        image_size=self.tilesize,
+                                                        image_size=self.imgsz,
                                                         device=device,
                                                         )
 
@@ -239,13 +241,14 @@ class Detector(object):
                                             overlap_height_ratio=self.overlapratio,
                                             overlap_width_ratio=self.overlapratio,
                                             postprocess_type=self.sahi_prostprocess,
+                                            postprocess_match_metric="IOU",
                                             )
             if return_coco:
                 return result.to_coco_annotations()
         
         else:
             result = self.detection_model.model.predict(image,iou=nms_iou,
-                                                        imgsz=self.tilesize,
+                                                        imgsz=self.imgsz,
                                                         save_crop=False,
                                                         show_conf=False,
                                                         show_labels=False,
