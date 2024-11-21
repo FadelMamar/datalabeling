@@ -2,18 +2,19 @@ import logging
 import time
 from pathlib import Path
 import traceback
-
+from tqdm import tqdm
 from datalabeling.annotator import Detector
 import fiftyone as fo
 import numpy as np
 import pandas as pd
+from PIL import Image
 from sahi.postprocess.combine import (
     GreedyNMMPostprocess,
     LSNMSPostprocess,
     NMMPostprocess,
     NMSPostprocess,
 )
-from datalabeling.datasets.sampling import get_uncertainty
+from datalabeling.dataset.sampling import get_uncertainty, load_prediction_results
 
 from sahi.utils.import_utils import check_requirements
 
@@ -61,23 +62,43 @@ def load_groundtruth_fiftyone(target_path,is_yolo_obb:bool=True):
     gt = get_bbox(df.iloc[:,1:].to_numpy())
     gt_detections = []
     for i in range(gt.shape[0]):
-        gt[i,0]
         x1, y1, x2, y2 = gt[i,0], gt[i,1], gt[i,2], gt[i,3]
         rel_box = [x1 , y1 , (x2 - x1), (y2 - y1)]
         gt_detections.append(fo.Detection(label='wildlife', bounding_box=rel_box))
     
     return gt_detections
 
+def load_preds_fiftyone(path_to_results_json:str):
+
+    df_results = load_prediction_results(path_to_results_json)
+
+    pred_detections = dict()
+    for filepath, df in tqdm(df_results.groupby('image_path'),desc='Loading preds from file'):
+        width, height = Image.open(filepath).size
+        # normalize values
+        df['x_min'] = df['x_min']/width
+        df['y_min'] = df['y_min']/height
+        df['bbox_w'] = df['bbox_w']/width
+        df['bbox_h'] = df['bbox_h']/height
+        # create detections
+        cols = ['x_min','y_min','bbox_w','bbox_h']
+        detections = [fo.Detection(label='wildlife',
+                                   confidence=df['score'].iat[i],
+                                   bounding_box=df[cols].iloc[i,:].to_list()) for i in range(len(df)) ]
+        pred_detections[filepath] = detections
+
+    return pred_detections, set(df_results['image_path'])
 
 def predict_fiftyone(
     dataset_name:str,
-    images_paths:list[str],
+    images_paths:list[str]|None,
+    model_path: str,
     model_type: str = "mmdet",
-    model_path: str = None,
     model_confidence_threshold: float = 0.25,
     model_device: str = None,
     eval_iou:float=0.7,
     compute_preds:bool=True,
+    load_resuts_from_path:str|None=None,
     uncertainty_mode:str='entropy',
     use_sliding_window: bool = True,
     image_size: int = None,
@@ -147,11 +168,15 @@ def predict_fiftyone(
     """
     check_requirements(["fiftyone"])
 
-    
-
     # for profiling
     durations_in_seconds = dict()
 
+    if load_resuts_from_path is not None:
+        print('INFO: images_paths is deduced from load_resuts_from_path.')
+        assert not compute_preds, "compute_preds should be False"
+        df_results,images_paths = load_preds_fiftyone(load_resuts_from_path)
+
+    # create or load dataset
     if dataset_name in fo.list_datasets():
         dataset = fo.load_dataset(name=dataset_name)
     else:
@@ -170,15 +195,16 @@ def predict_fiftyone(
 
     # init model instance
     time_start = time.time()
-    detection_model = Detector(path_to_weights=model_path,
-                                confidence_threshold=model_confidence_threshold,
-                                overlap_ratio=overlap_ratio,
-                                tilesize=tilesize,
-                                imgsz=image_size,
-                                device=model_device,
-                                use_sliding_window=use_sliding_window,
-                                is_yolo_obb=True)
-    
+    if compute_preds:
+        detection_model = Detector(path_to_weights=model_path,
+                                    confidence_threshold=model_confidence_threshold,
+                                    overlap_ratio=overlap_ratio,
+                                    tilesize=tilesize,
+                                    imgsz=image_size,
+                                    device=model_device,
+                                    use_sliding_window=use_sliding_window,
+                                    is_yolo_obb=True)
+        
     # detection_model.load_model()
     time_end = time.time() - time_start
     durations_in_seconds["model_load"] = time_end
@@ -191,12 +217,17 @@ def predict_fiftyone(
     with fo.ProgressBar() as pb:
         for sample in pb(dataset):
 
+            if load_resuts_from_path is not None:
+                sample[model_type] = fo.Detections(detections=df_results[sample.filepath])
+                # print(df_results[sample.filepath])
+                # exit()
+
             if compute_preds:
                 # perform prediction
                 prediction_result = detection_model.predict(sample.filepath,
                                                             sahi_prostprocess=postprocess_type,
-                                                                postprocess_match_threshold=postprocess_match_threshold,
-                                                                return_coco=False)
+                                                            postprocess_match_threshold=postprocess_match_threshold,
+                                                            return_coco=False)
                 # Save predictions to dataset
                 sample[model_type] = fo.Detections(detections=prediction_result.to_fiftyone_detections())
                 durations_in_seconds["slice"] += prediction_result.durations_in_seconds["slice"]
@@ -262,18 +293,21 @@ if __name__ == "__main__":
 
     # model_path = r'D:\datalabeling\models\best.pt'
     imgsz=1280
-    model_path = rf'D:\datalabeling\models\best_openvino_model_imgsz-{imgsz}'
-    images_paths = Path(r"D:\general_dataset\original-data\val\images").iterdir()
-    dataset_name='original_val'
-    # images_paths = pd.read_csv(r"D:\general_dataset\tiled-data\results\hard_samples_val.txt",header=None).iloc[:,0].to_list()
     k=1.5
+    model_path = rf'D:\datalabeling\models\best_openvino_model_imgsz-{imgsz}'
+    # images_paths = Path(r"D:\general_dataset\original-data\val\images").iterdir()
+    dataset_name='original-train'
+    images_paths=None
+    load_resuts_from_path= r"D:\general_dataset\original-data\results\predictions-general_dataset_original-data_train_images_conf0.1-imgsz1280-tile2000-overlap0.1-sahiTrue.json"
+    # images_paths = pd.read_csv(r"D:\general_dataset\original-data\results\hard_samples_train.txt",header=None).iloc[:,0].to_list()
     use_sahi=True
     predict_fiftyone(model_type=f"yolov8-obb",
                      dataset_name=dataset_name,
                      model_path=model_path,
-                     compute_preds=True,
+                     compute_preds=False,
                      model_confidence_threshold=0.1,
                      images_paths=images_paths,
+                     load_resuts_from_path=load_resuts_from_path,
                      image_size=imgsz,
                      tilesize=int(k*imgsz),
                      eval_iou=0.5,
