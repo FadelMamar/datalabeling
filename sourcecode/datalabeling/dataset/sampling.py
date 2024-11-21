@@ -1,3 +1,4 @@
+import scipy.stats
 import yaml
 import pandas as pd
 import os
@@ -7,6 +8,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from datalabeling.annotator import Detector
+import scipy
 
 
 def load_prediction_results(path_result:str)->pd.DataFrame:
@@ -97,7 +99,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
 
     m_ap = MeanAveragePrecision(box_format="xyxy",iou_type="bbox",
                                 max_detection_thresholds=[1,10,100],
-                                iou_thresholds=[0.25,0.35,0.5,0.75,0.85,0.95]
+                                iou_thresholds=[0.15,0.25,0.35,0.5,0.75,0.85,0.95]
                                 )
 
     def get_bbox(gt:np.ndarray):
@@ -160,6 +162,23 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
 
     return df_results_per_img
 
+# compute uncertainty
+def get_uncertainty(df_results_per_img:pd.DataFrame,mode:str='entropy',reoder_ascending:bool=False):
+
+    if mode == 'entropy':
+        entropy_func = lambda x: -1*(np.log(x)*x).sum()
+        df_results_per_img['uncertainty'] = df_results_per_img['all_scores'].apply(entropy_func)
+        
+    elif mode == '1-p':
+        df_results_per_img['uncertainty'] = df_results_per_img['all_scores'].apply(lambda x: 1. - np.mean(x))
+    
+    else:
+        raise NotImplementedError('mode is not implemented yet. entropy or 1-p')
+
+    df_results_per_img.sort_values('uncertainty',axis=0,ascending=reoder_ascending,inplace=True)
+
+    return df_results_per_img
+
 # select images with low mAP@50 but high confidence
 def select_hard_samples(df_results_per_img:pd.DataFrame,
                         score_col:str='max_scores',
@@ -188,3 +207,6 @@ def select_hard_samples(df_results_per_img:pd.DataFrame,
             yaml.dump(cfg_dict,file)
 
     return df_hard_negatives
+
+
+

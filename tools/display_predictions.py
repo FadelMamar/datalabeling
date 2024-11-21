@@ -4,14 +4,16 @@ from pathlib import Path
 import traceback
 
 from datalabeling.annotator import Detector
-
+import fiftyone as fo
+import numpy as np
+import pandas as pd
 from sahi.postprocess.combine import (
     GreedyNMMPostprocess,
     LSNMSPostprocess,
     NMMPostprocess,
     NMSPostprocess,
 )
-from sahi.predict import get_sliced_prediction, get_prediction
+from datalabeling.datasets.sampling import get_uncertainty
 
 from sahi.utils.import_utils import check_requirements
 
@@ -22,33 +24,67 @@ POSTPROCESS_NAME_TO_CLASS = {
     "LSNMS": LSNMSPostprocess,
 }
 
+
 LOW_MODEL_CONFIDENCE = 0.1
 
 
 logger = logging.getLogger(__name__)
 
 
+def load_groundtruth_fiftyone(target_path,is_yolo_obb:bool=True):
+
+    def get_bbox(gt:np.ndarray):
+
+        # empty image case
+        if len(gt)<1:
+            return np.array([])
+        
+        if is_yolo_obb:
+            xs = [0,2,4,6]
+            ys = [1,3,5,7]
+            x_min = np.min(gt[:,xs],axis=1).reshape((-1,1))
+            x_max = np.max(gt[:,xs],axis=1).reshape((-1,1))
+            y_min = np.min(gt[:,ys],axis=1).reshape((-1,1))
+            y_max = np.max(gt[:,ys],axis=1).reshape((-1,1))
+        else:
+            raise NotImplementedError("Support only yolo-obb outputs.")
+        
+        return np.hstack([x_min,y_min,x_max,y_max])
+    
+    # load data
+    df = pd.read_csv(target_path,sep=' ',header=None)
+    if is_yolo_obb:
+        df.columns = ['category_id','x1','y1','x2','y2','x3','y3','x4','y4']
+    else:
+        df.columns = ['category_id','x','y','w','h']
+
+    gt = get_bbox(df.iloc[:,1:].to_numpy())
+    gt_detections = []
+    for i in range(gt.shape[0]):
+        gt[i,0]
+        x1, y1, x2, y2 = gt[i,0], gt[i,1], gt[i,2], gt[i,3]
+        rel_box = [x1 , y1 , (x2 - x1), (y2 - y1)]
+        gt_detections.append(fo.Detection(label='wildlife', bounding_box=rel_box))
+    
+    return gt_detections
+
+
 def predict_fiftyone(
+    dataset_name:str,
+    images_paths:list[str],
     model_type: str = "mmdet",
     model_path: str = None,
-    model_config_path: str = None,
     model_confidence_threshold: float = 0.25,
     model_device: str = None,
-    model_category_mapping: dict = None,
-    model_category_remapping: dict = None,
-    dataset_json_path: str = None,
-    image_dir: str = None,
+    eval_iou:float=0.7,
     compute_preds:bool=True,
-    no_sliced_prediction: bool = False,
+    uncertainty_mode:str='entropy',
+    use_sliding_window: bool = True,
     image_size: int = None,
-    slice_height: int = 256,
-    slice_width: int = 256,
-    overlap_height_ratio: float = 0.2,
-    overlap_width_ratio: float = 0.2,
+    tilesize: int = 640,
+    overlap_ratio: float = 0.15,
     postprocess_type: str = "GREEDYNMM",
-    postprocess_match_metric: str = "IOS",
     postprocess_match_threshold: float = 0.5,
-    postprocess_class_agnostic: bool = False,
     verbose: int = 1,
 ):
     """
@@ -111,21 +147,21 @@ def predict_fiftyone(
     """
     check_requirements(["fiftyone"])
 
-    from sahi.utils.fiftyone import create_fiftyone_dataset_from_coco_file, fo
+    
 
     # for profiling
     durations_in_seconds = dict()
 
-    # dataset = create_fiftyone_dataset_from_coco_file(image_dir, dataset_json_path)
-    
-    dataset_name = Path(image_dir).parent.name+"-"+Path(image_dir).name
     if dataset_name in fo.list_datasets():
         dataset = fo.load_dataset(name=dataset_name)
     else:
         dataset = fo.Dataset(name=dataset_name)
         samples = []
-        for filepath in Path(image_dir).iterdir():
+        for filepath in images_paths:
             sample = fo.Sample(filepath=filepath)
+            target_path = str(sample.filepath).replace('images','labels')
+            target_path = Path(target_path).with_suffix('.txt')
+            sample['gt'] = fo.Detections(detections=load_groundtruth_fiftyone(target_path,is_yolo_obb=True))
             samples.append(sample)
         dataset.add_samples(samples)
         dataset.save()
@@ -136,12 +172,12 @@ def predict_fiftyone(
     time_start = time.time()
     detection_model = Detector(path_to_weights=model_path,
                                 confidence_threshold=model_confidence_threshold,
-                                overlap_ratio=overlap_height_ratio,
-                                tilesize=min(slice_height,slice_width),
+                                overlap_ratio=overlap_ratio,
+                                tilesize=tilesize,
                                 imgsz=image_size,
                                 device=model_device,
-                                use_sliding_window=True,
-                                is_yolo_obb=True).detection_model
+                                use_sliding_window=use_sliding_window,
+                                is_yolo_obb=True)
     
     # detection_model.load_model()
     time_end = time.time() - time_start
@@ -155,42 +191,22 @@ def predict_fiftyone(
     with fo.ProgressBar() as pb:
         for sample in pb(dataset):
 
-            if not compute_preds:
-                break
-            # perform prediction
-            if not no_sliced_prediction:
-                # get sliced prediction
-                prediction_result = get_sliced_prediction(
-                    image=sample.filepath,
-                    detection_model=detection_model,
-                    slice_height=slice_height,
-                    slice_width=slice_width,
-                    overlap_height_ratio=overlap_height_ratio,
-                    overlap_width_ratio=overlap_width_ratio,
-                    perform_standard_pred=True,
-                    postprocess_type=postprocess_type,
-                    postprocess_match_threshold=postprocess_match_threshold,
-                    postprocess_match_metric=postprocess_match_metric,
-                    postprocess_class_agnostic=postprocess_class_agnostic,
-                    verbose=verbose,
-                )
+            if compute_preds:
+                # perform prediction
+                prediction_result = detection_model.predict(sample.filepath,
+                                                            sahi_prostprocess=postprocess_type,
+                                                                postprocess_match_threshold=postprocess_match_threshold,
+                                                                return_coco=False)
+                # Save predictions to dataset
+                sample[model_type] = fo.Detections(detections=prediction_result.to_fiftyone_detections())
                 durations_in_seconds["slice"] += prediction_result.durations_in_seconds["slice"]
-            else:
-                # get standard prediction
-                prediction_result = get_prediction(
-                    image=sample.filepath,
-                    detection_model=detection_model,
-                    shift_amount=[0, 0],
-                    full_shape=None,
-                    postprocess=None,
-                    verbose=0,
-                )
-                durations_in_seconds["prediction"] += prediction_result.durations_in_seconds["prediction"]
 
-            # Save predictions to dataset
-            sample[model_type] = fo.Detections(detections=prediction_result.to_fiftyone_detections())
-            sample.save()
+            #TODO: add uncertainty to samples
+            if uncertainty_mode:
+                # get_uncertainty()
+                pass
             
+            sample.save()
         
         dataset.save()
 
@@ -213,47 +229,56 @@ def predict_fiftyone(
         )
 
     # visualize results
-    _ = fo.launch_app(dataset=dataset)
-    # Evaluate the predictions
-    # results = dataset.evaluate_detections(
-    #     model_type,
-    #     gt_field="ground_truth",
-    #     eval_key="eval",
-    #     iou=postprocess_match_threshold,
-    #     compute_mAP=True,
-    # )
-    # # Get the 10 most common classes in the dataset
-    # counts = dataset.count_values("ground_truth.detections.label")
-    # classes_top10 = sorted(counts, key=counts.get, reverse=True)[:10]
-    # # Print a classification report for the top-10 classes
-    # results.print_report(classes=classes_top10)
-    # # Load the view on which we ran the `eval` evaluation
-    # eval_view = dataset.load_evaluation_view("eval")
-    # # Show samples with most false positives
-    # session.view = eval_view.sort_by("eval_fp", reverse=True)
+    session = fo.launch_app(dataset=dataset)
+
+    if compute_preds:
+        # Evaluate the predictions
+        results = dataset.evaluate_detections(
+            gt_field="gt",
+            pred_field=model_type,
+            classes=['wildlife'],
+            eval_key="eval",
+            iou=eval_iou,
+            compute_mAP=True,
+        )
+        # Get the 10 most common classes in the dataset
+        counts = dataset.count_values("gt.detections.label")
+        classes_top10 = sorted(counts, key=counts.get, reverse=True)[:10]
+        # Print a classification report for the top-10 classes
+        results.print_report(classes=classes_top10)
+        # Load the view on which we ran the `eval` evaluation
+        eval_view = dataset.load_evaluation_view("eval")
+        # Show samples with most false positives
+        session.view = eval_view.sort_by("eval_fp", reverse=True)
     while 1:
         time.sleep(3)
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+    import pandas as pd
 
     load_dotenv(r"../.env")
 
-    use_sahi=False
-    model_path = r'D:\datalabeling\models\best.pt'
-    # model_path = r'D:\datalabeling\models\best_openvino_model'
-    predict_fiftyone(model_type="yolov8-obb"+Path(model_path).stem,
+    # model_path = r'D:\datalabeling\models\best.pt'
+    imgsz=1280
+    model_path = rf'D:\datalabeling\models\best_openvino_model_imgsz-{imgsz}'
+    images_paths = Path(r"D:\general_dataset\original-data\val\images").iterdir()
+    dataset_name='original_val'
+    # images_paths = pd.read_csv(r"D:\general_dataset\tiled-data\results\hard_samples_val.txt",header=None).iloc[:,0].to_list()
+    k=1.5
+    use_sahi=True
+    predict_fiftyone(model_type=f"yolov8-obb",
+                     dataset_name=dataset_name,
                      model_path=model_path,
-                     image_dir=r"D:\general_dataset\tiled-data\val\images",
-                     postprocess_match_metric='IOU',
-                     image_size=640,
-                     slice_height=1280,
-                     slice_width=1280,
                      compute_preds=True,
-                     no_sliced_prediction = not use_sahi,
-                    #  dataset_json_path=r"D:\general_dataset\tiled-data\val\sahi_preds.json",
-                     postprocess_match_threshold=0.7,
+                     model_confidence_threshold=0.1,
+                     images_paths=images_paths,
+                     image_size=imgsz,
+                     tilesize=int(k*imgsz),
+                     eval_iou=0.5,
+                     use_sliding_window=use_sahi,
+                     postprocess_match_threshold=0.5,
                      postprocess_type='NMS'
                     )
     
