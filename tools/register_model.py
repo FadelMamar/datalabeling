@@ -20,7 +20,8 @@ class Args:
 
     confidence_threshold:float=0.1
     overlap_ratio:float=0.1
-    tilesize:int=1280
+    tilesize:int=2000
+    imgsz:int=1280
     nms_iou:float=0.5 # used when use_sliding_window=False
 
     use_sliding_window:bool=False
@@ -71,6 +72,7 @@ def main():
                             overlap_ratio=args.overlap_ratio,
                             use_sliding_window=args.use_sliding_window,
                             nms_iou=args.nms_iou,
+                            imgsz=args.imgsz,
                             is_yolo_obb=args.is_yolo_obb,
                             sahi_postprocess='NMS')
 

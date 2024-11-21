@@ -10,6 +10,7 @@ class DetectorWrapper(mlflow.pyfunc.PythonModel):
     def __init__(self,tilesize:int=640,
                  confidence_threshold:float=0.1,
                  overlap_ratio:float=0.1,
+                 imgsz:int=640,
                  use_sliding_window:bool=True,
                  nms_iou:bool=0.5,
                  is_yolo_obb:bool=False,
@@ -26,6 +27,7 @@ class DetectorWrapper(mlflow.pyfunc.PythonModel):
         self.tilesize=tilesize
         self.confidence_threshold=confidence_threshold
         self.overlapratio=overlap_ratio
+        self.imgsz = imgsz
         self.sahi_postprocess=sahi_postprocess
         self.use_sliding_window=use_sliding_window
         self.nms_iou=nms_iou
@@ -39,6 +41,7 @@ class DetectorWrapper(mlflow.pyfunc.PythonModel):
         self.detection_model = Detector(path_to_weights=context.artifacts['path'],
                                         confidence_threshold=self.confidence_threshold,
                                         overlap_ratio=self.overlapratio,
+                                        imgsz=self.imgsz,
                                         tilesize=self.tilesize,
                                         device=device,
                                         use_sliding_window=self.use_sliding_window,
