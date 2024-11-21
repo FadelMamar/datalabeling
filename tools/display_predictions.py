@@ -262,7 +262,7 @@ def predict_fiftyone(
     # visualize results
     session = fo.launch_app(dataset=dataset)
 
-    if compute_preds:
+    try:
         # Evaluate the predictions
         results = dataset.evaluate_detections(
             gt_field="gt",
@@ -281,6 +281,10 @@ def predict_fiftyone(
         eval_view = dataset.load_evaluation_view("eval")
         # Show samples with most false positives
         session.view = eval_view.sort_by("eval_fp", reverse=True)
+    
+    except Exception as e:
+        traceback.print_exc()
+        
     while 1:
         time.sleep(3)
 
@@ -298,7 +302,7 @@ if __name__ == "__main__":
     # images_paths = Path(r"D:\general_dataset\original-data\val\images").iterdir()
     dataset_name='original-train'
     images_paths=None
-    load_resuts_from_path= r"D:\general_dataset\original-data\results\predictions-general_dataset_original-data_train_images_conf0.1-imgsz1280-tile2000-overlap0.1-sahiTrue.json"
+    load_resuts_from_path= None #r"D:\general_dataset\original-data\results\predictions-general_dataset_original-data_train_images_conf0.1-imgsz1280-tile2000-overlap0.1-sahiTrue.json"
     # images_paths = pd.read_csv(r"D:\general_dataset\original-data\results\hard_samples_train.txt",header=None).iloc[:,0].to_list()
     use_sahi=True
     predict_fiftyone(model_type=f"yolov8-obb",
