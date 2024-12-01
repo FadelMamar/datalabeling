@@ -287,6 +287,7 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
 def sample_data(coco_dict_slices:dict,
                 img_dir:str,
                 empty_ratio:float=3.,
+                save_all:bool=False,
                 out_csv_path:str=None,
                 labels_to_discard:list=None,
                 sample_only_empty:bool=False)->pd.DataFrame:
@@ -308,6 +309,7 @@ def sample_data(coco_dict_slices:dict,
     """
     
     assert empty_ratio >= 0.,'Provide appropriate value'
+    assert (save_all + sample_only_empty)<2, "Both cannot be true."
 
     def get_parent_image(file_name:str):
         ext = '.jpg' 
@@ -377,7 +379,7 @@ def sample_data(coco_dict_slices:dict,
     df_annot.set_index('id',inplace=True)
     df_annot['labels'] = df_annot['label_id'].map(label_map)
     for col in ['x_min','y_min','width','height']:
-        df_annot[col] = df_annot[col].apply(math.floor)
+        df_annot.loc[:,col] = df_annot[col].apply(math.floor)
 
     # join dataframes
     df = df_limits.join(df_annot,how='outer') 
@@ -403,10 +405,11 @@ def sample_data(coco_dict_slices:dict,
         non_empty_num = df_non_empty['images'].unique().shape[0]
         empty_num =  math.floor(non_empty_num*empty_ratio) 
         empty_num = min(empty_num,len(df_empty))
-        df_empty = df_empty.sample(n=empty_num,
+        frac = 1.0 if save_all else empty_num/len(df_empty)
+        df_empty = df_empty.sample(frac=frac,
                                 random_state=41,
                                 replace=False)
-        print(f'Sampling {empty_num} empty images, and {non_empty_num} non-empty images.')
+        print(f'Sampling {len(df_empty)} empty images, and {non_empty_num} non-empty images.')
 
         # concat dfs
         df = pd.concat([df_empty,df_non_empty],axis=0)
@@ -505,7 +508,7 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
         assert df_annotation[col].isna().sum()<1,'there are NaN values. Check out.'
 
     for col in cols[1:]:
-        df_annotation[col] = df_annotation[col].apply(float)
+        df_annotation.loc[:,col] = df_annotation[col].apply(float)
 
     # normalize values
     df_annotation.loc[:,'x'] = df_annotation['x'].apply(lambda x: x/slice_width)
@@ -547,7 +550,8 @@ def build_yolo_dataset(args:Dataprepconfigs):
         map_imgdir_cocopath = load_coco_annotations(dest_dir_coco=args.coco_json_dir)
     else:
         map_imgdir_cocopath = convert_json_annotations_to_coco(input_dir=args.ls_json_dir,
-                                                           dest_dir_coco=args.coco_json_dir)
+                                                           dest_dir_coco=args.coco_json_dir,
+                                                           parse_ls_config=args.parse_ls_config)
 
     # load label map
     if not args.is_detector:
@@ -566,13 +570,14 @@ def build_yolo_dataset(args:Dataprepconfigs):
                                 overlap_height_ratio=args.overlap_ratio,
                                 overlap_width_ratio=args.overlap_ratio,
                                 min_area_ratio=args.min_visibility,
-                                ignore_negative_samples=args.empty_ratio<1e-8, # equivalent to args.empty_ratio == 0.0
+                                ignore_negative_samples= (args.empty_ratio<1e-8 and not args.save_all), # equivalent to args.empty_ratio == 0.0
                                 )
             # sample tiles
             df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
                                     empty_ratio=args.empty_ratio,
-                                    out_csv_path=ALL_CSV,
+                                    out_csv_path=Path(args.dest_path_images).with_name("gt.csv"),
                                     img_dir=img_dir,
+                                    save_all=args.save_all,
                                     labels_to_discard=args.discard_labels,
                                     sample_only_empty=args.save_only_empty
                                     )
