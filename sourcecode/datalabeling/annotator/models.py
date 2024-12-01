@@ -3,7 +3,7 @@ from sahi.prediction import ObjectPrediction
 from sahi.utils.compatibility import fix_full_shape_list, fix_shift_amount_list
 from sahi.utils.import_utils import check_requirements
 from sahi.models.base import DetectionModel
-from sahi.predict import get_sliced_prediction
+from sahi.predict import get_sliced_prediction, get_prediction
 # from label_studio_ml.utils import (get_env, get_local_path)
 from tqdm import tqdm
 from PIL import Image
@@ -223,10 +223,9 @@ class Detector(object):
 
     def predict(self, image:Image,
                 return_coco:bool=True,
-                nms_iou:float=0.5,
                 sahi_prostprocess:float='NMS',
                 override_tilesize:int=None,
-                postprocess_match_threshold:float=0.7):
+                postprocess_match_threshold:float=0.5):
         """Run sliced predictions
 
         Args:
@@ -244,7 +243,7 @@ class Detector(object):
         #     image = Image.open(f)
 
         if self.use_sliding_window:
-            tilesize = override_tilesize if self.tilesize is None else self.tilesize
+            tilesize = override_tilesize if (self.tilesize is None) else self.tilesize
             result = get_sliced_prediction(image,
                                             self.detection_model,
                                             slice_height=tilesize,
@@ -253,20 +252,24 @@ class Detector(object):
                                             overlap_width_ratio=self.overlapratio,
                                             postprocess_type=sahi_prostprocess,
                                             postprocess_match_metric="IOU",
+                                            verbose=1,
                                             postprocess_match_threshold=postprocess_match_threshold,
                                             )
-            if return_coco:
-                return result.to_coco_annotations()
-        
         else:
-            result = self.detection_model.model.predict(image,iou=nms_iou,
-                                                        imgsz=self.imgsz,
-                                                        save_crop=False,
-                                                        show_conf=False,
-                                                        show_labels=False,
-                                                        save=False)
+            result = get_prediction(
+                    image=image,
+                    detection_model=self.detection_model,
+                    shift_amount=[0, 0],
+                    full_shape=None,
+                    postprocess=None,
+                    verbose=1,
+                )
+            # return self.yolo_results_to_coco(results=result[0],is_yolo_obb=self.is_yolo_obb)
+    
+        if return_coco:
+            return result.to_coco_annotations()
         
-            return self.yolo_results_to_coco(results=result[0],is_yolo_obb=self.is_yolo_obb)
+        return result
 
 
     def yolo_results_to_coco(self,results:ultralytics.engine.results.Results,
