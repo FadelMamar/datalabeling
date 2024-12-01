@@ -87,20 +87,21 @@ class Arguments:
 class Dataprepconfigs:
     # data preparation arguments
     root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
-    dest_path_images:str=os.path.join(CUR_DIR,'../../../data/train/images')
-    dest_path_labels:str=os.path.join(CUR_DIR,'../../../data/train/labels')
-    height:int = 640
-    width:int = 640
-    overlap:int=80
-    min_visibility:float=0.1
+    dest_path_images:str=None #os.path.join(CUR_DIR,'../../../data/train/images')
+    dest_path_labels:str=None #os.path.join(CUR_DIR,'../../../data/train/labels')
+    height:int=640
+    width:int=640
+    # overlap:int=80
+    min_visibility:float=0.5
     save_all:bool=False
-    overlap_ratio:float=0.2
+    overlap_ratio:float=0.1
     empty_ratio:float=0.1
-    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')
+    data_config_yaml:str=None #os.path.join(CUR_DIR,'../../../data/data_config.yaml')
 
     # annotations paths
-    coco_json_dir:str=""
-    ls_json_dir:str=""
+    coco_json_dir:str=None
+    ls_json_dir:str=None
+    parse_ls_config:bool=False
 
     # convert dataset formats
     yolo_to_obb:bool=False
