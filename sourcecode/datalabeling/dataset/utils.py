@@ -17,6 +17,8 @@ import os
 import math
 from tqdm import tqdm
 from label_studio_converter import Converter
+from label_studio_sdk import Client
+
 
 
 
@@ -40,7 +42,7 @@ def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH)->tuple[list,list]:
 
     return ls_annotations,paths
 
-def convert_json_to_df(json_data:List[Dict])->pd.DataFrame:
+def convert_lsjsonmin_to_df(json_data:List[Dict])->pd.DataFrame:
     """Converts Label studio (LS) annotations from json to DataFrames
 
     Args:
@@ -102,7 +104,7 @@ def convert_json_to_df(json_data:List[Dict])->pd.DataFrame:
 
     return df
 
-def convert_json_annotations_to_csv(rewrite_existing=True)->None:
+def convert_lsjsonmin_annotations_to_csv(rewrite_existing=True)->None:
     """Converts LS json-min annotations to csv and saves to the same directory
 
     Args:
@@ -116,13 +118,13 @@ def convert_json_annotations_to_csv(rewrite_existing=True)->None:
         save_path = os.path.join(CSV_DIR_PATH,path.name.replace('.json','.csv'))
         if Path(save_path).exists() :
             if rewrite_existing:
-                df = convert_json_to_df(json_data=annotation)
+                df = convert_lsjsonmin_to_df(json_data=annotation)
                 df.to_csv(save_path,index=False)
         else:
-            df = convert_json_to_df(json_data=annotation)
+            df = convert_lsjsonmin_to_df(json_data=annotation)
             df.to_csv(save_path,index=False)
 
-def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
+def convert_json_to_coco(input_file:str,out_file_name:str=None,parsed_config:dict=None)->Dict:
     """Converts LS json annotations to coco format
 
     Args:
@@ -136,13 +138,17 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
     # load converter
     with io.open(LABELSTUDIOCONFIG) as f:
         config_str = f.read()
+    if parsed_config is not None:
+        config_str = parsed_config
     handler = Converter(config=config_str,
                         project_dir=None,
-                        download_resources=False)
+                        download_resources=False
+                        )
     handler.convert_to_coco(input_data=input_file,
                             output_dir=TEMP,
                             output_image_dir=os.path.join(TEMP,'images'),
-                            is_dir=False)
+                            is_dir=False
+                            )
     # load and update image paths
     coco_json_path = os.path.join(TEMP,'result.json')
     coco_annotations = load_json(coco_json_path)
@@ -164,7 +170,8 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
 
     return coco_annotations
 
-def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH)->dict:
+def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH,
+                                     parse_ls_config:bool=False,dotenv_path:str=None,ls_client:Client=None)->dict:
     """Converts directory with LS json files to coco format.
 
     Args:
@@ -179,11 +186,36 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
         directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
         assert len(directory)==1,'There should be one upload directory per annotation project'
         return directory.pop() 
+    
+    def get_ls_parsed_config(ls_json_path:str):
 
+        if dotenv_path is not None:
+            from dotenv import load_dotenv
+            load_dotenv(dotenv_path)
+        
+        labelstudio_client = ls_client    
+        if ls_client is None:
+            # Connect to the Label Studio API and check the connection
+            LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL')
+            API_KEY = os.getenv("LABEL_STUDIO_API_KEY")
+            labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
+
+        with open(ls_json_path,'r') as f:
+            ls_annotation = json.load(fp=f)
+        ids = set([annot['project'] for annot in ls_annotation])
+        assert len(ids)==1, "annotations come from different project. Not allowed!"
+        project_id = ids.pop()
+        project = labelstudio_client.get_project(id=project_id)
+
+        return project.parsed_label_config
+    
     upload_img_dirs,coco_paths = list(),list()
     for path in Path(input_dir).glob('*.json'):
         coco_path = os.path.join(dest_dir_coco,path.name)
-        annot = convert_json_to_coco(path,out_file_name=coco_path)
+        parsed_config = None
+        if parse_ls_config:
+            parsed_config = get_ls_parsed_config(path)
+        annot = convert_json_to_coco(path,out_file_name=coco_path,parsed_config=parsed_config)
         upload_img_dirs.append(get_upload_img_dir(coco_annotation=annot))
         coco_paths.append(coco_path)
 
