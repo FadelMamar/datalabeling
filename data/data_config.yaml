@@ -1,18 +1,16 @@
-path: D:\PhD\Data per camp\DetectionDataset # dataset root dir
+path: C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data # dataset root dir
 
 train: 
- - delplanque_tiled_data\train_tiled\images
- - delplanque_tiled_data\val_tiled\images
- - WAID\images\valid
+ - train-wildai
 
- 
 val :  
- - delplanque_tiled_data\test_tiled\images
+ - train-wildai
 
 # test:  # test images (optional)
 
 # Classes
 nc: 1  # number of classes
+
 names:
   0: wildlife
   
