@@ -1,6 +1,6 @@
 call .\activate_label-backend_env.bat
 
-call cd ..
+call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
 :: set to 'offline' when having issues with internet, otherwise use 'online'
 call wandb offline
@@ -57,13 +57,13 @@ call wandb offline
 @REM      --project-name "wildAI-detection"^
 @REM      --tag "dataset-2"
 
- call python tools\cli.py --start-training --batchsize 64  --epochs 50 --lr0 0.0005 --lrf 0.01 --patience 20 --is-detector^
-     --scale 0.0 --weight-decay 0.0005^
-     --data-config-yaml "data\dataset_2.yaml"^
-     --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolo11s-obb.pt"^
-     --run-name "yolo11s-obb"^
-     --project-name "wildAI-detection"^
-     --tag "dataset-2"
+@REM  call python tools\cli.py --start-training --batchsize 64  --epochs 50 --lr0 0.0005 --lrf 0.01 --patience 20 --is-detector^
+@REM      --scale 0.0 --weight-decay 0.0005^
+@REM      --data-config-yaml "data\dataset_2.yaml"^
+@REM      --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\yolo11s-obb.pt"^
+@REM      --run-name "yolo11s-obb"^
+@REM      --project-name "wildAI-detection"^
+@REM      --tag "dataset-2"
 
 @REM call python tools\cli.py --start-training --batchsize 64  --epochs 50 --lr0 0.0005 --lrf 0.01 --patience 20 --is-detector^
 @REM     --scale 0.0 --weight-decay 0.0005^
@@ -121,13 +121,38 @@ call wandb offline
 @REM     --run-name "yolov8m-obb" --project-name "wildAI-detection"^
 @REM     --tag "dataset-v3"^
 
-@REM :: Transfer learning from a model registered on mlflow
-@REM call python tools\cli.py --start-training --batchsize 128  --epochs 20 --lr0 0.0001 --lrf 0.01 --patience 5 --is-detector^
-@REM     --scale 0.0 --weight-decay 0.0005 --freeze 21^
+:: Transfer learning from a model registered on mlflow
+@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
+@REM     --scale 0.5 --mosaic 0.3 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
+@REM     --height 640 --width 640^
 @REM     --mlflow-model-alias "last"^
-@REM     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
-@REM     --run-name "detector" --project-name "wildAI-detection"^
-@REM     --tag "dataset-v4" "transferlearning"^ 
+@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
+@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
+@REM     --tag "hard_samples" "transfer-learning"
+
+@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
+@REM     --scale 0.5 --mosaic 0.3 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
+@REM     --height 640 --width 640^
+@REM     --mlflow-model-alias "last"^
+@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
+@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
+@REM     --tag "hard_samples" "transfer-learning"
+
+@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
+@REM     --scale 0.8 --mosaic 1. --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.3^
+@REM     --height 640 --width 640^
+@REM     --mlflow-model-alias "last"^
+@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
+@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
+@REM     --tag "hard_samples" "transfer-learning"
+
+@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
+@REM     --scale 0.8 --mosaic 1. --copy-paste 0.5 --mixup 0.0 --rotation-degree 45. --erasing 0.3^
+@REM     --height 640 --width 640^
+@REM     --mlflow-model-alias "last"^
+@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
+@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
+@REM     --tag "hard_samples" "transfer-learning"
 
 @REM :: Finetuning from a model registered on mlflow
 @REM call python tools\cli.py --start-training --batchsize 32  --epochs 20 --lr0 0.0001 --lrf 0.01 --patience 5 --is-detector^

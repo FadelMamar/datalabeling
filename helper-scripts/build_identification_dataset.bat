@@ -1,6 +1,6 @@
 call .\activate_label-backend_env.bat
 
-call cd ..\tools
+call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools"
 
 :: add --clear-yolo-dir to clear data in ./data/train
 :: --dest-path-labels
