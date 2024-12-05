@@ -49,6 +49,6 @@ class DetectorWrapper(mlflow.pyfunc.PythonModel):
         
 
     def predict(self, context, img):
-        return self.detection_model.predict(img,return_coco=True,nms_iou=self.nms_iou)
+        return self.detection_model.predict(img,return_coco=True,postprocess_match_threshold=self.nms_iou)
 
     

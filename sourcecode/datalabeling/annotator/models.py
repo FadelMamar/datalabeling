@@ -225,7 +225,9 @@ class Detector(object):
                 return_coco:bool=True,
                 sahi_prostprocess:float='NMS',
                 override_tilesize:int=None,
-                postprocess_match_threshold:float=0.5):
+                postprocess_match_threshold:float=0.5,
+                nms_iou:float=None
+                ):
         """Run sliced predictions
 
         Args:
@@ -253,7 +255,7 @@ class Detector(object):
                                             postprocess_type=sahi_prostprocess,
                                             postprocess_match_metric="IOU",
                                             verbose=1,
-                                            postprocess_match_threshold=postprocess_match_threshold,
+                                            postprocess_match_threshold=postprocess_match_threshold or nms_iou,
                                             )
         else:
             result = get_prediction(
