@@ -45,6 +45,14 @@ class Arguments:
     device:str= 0
     patience:int=10
 
+    # continual learning flags
+    use_continual_learning:bool=False
+    cl_ratios:Sequence[float]=(1.0,) # ratio = num_empty/num_non_empty
+    cl_epochs:Sequence[int]=(20,)
+    cl_freeze:Sequence[int]=(0,)
+    cl_lr0s:Sequence[float]=(1e-5,)
+    cl_save_dir:str=None # should be given!
+
     # regularization
     dropout:float=0.
     weight_decay:float=5e-4
