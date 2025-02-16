@@ -189,7 +189,22 @@ def select_hard_samples(df_results_per_img:pd.DataFrame,
                         uncertainty_method:str="entropy",
                         uncertainty_thrs:float=4,
                         save_data_yaml:str=None):
-    
+    """_summary_
+
+    Args:
+        df_results_per_img (pd.DataFrame): _description_
+        score_col (str, optional): _description_. Defaults to 'max_scores'.
+        map_thrs (float, optional): _description_. Defaults to 0.3.
+        score_thrs (float, optional): _description_. Defaults to 0.7.
+        save_path_samples (str, optional): _description_. Defaults to None.
+        root (_type_, optional): _description_. Defaults to 'D:\'.
+        uncertainty_method (str, optional): _description_. Defaults to "entropy".
+        uncertainty_thrs (float, optional): _description_. Defaults to 4.
+        save_data_yaml (str, optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
 
     df_results_per_img = get_uncertainty(df_results_per_img=df_results_per_img,mode=uncertainty_method)
 
