@@ -186,12 +186,17 @@ def select_hard_samples(df_results_per_img:pd.DataFrame,
                         score_thrs:float=0.7,
                         save_path_samples:str=None,
                         root:str='D:\\',
+                        uncertainty_method:str="entropy",
+                        uncertainty_thrs:float=4,
                         save_data_yaml:str=None):
     
+
+    df_results_per_img = get_uncertainty(df_results_per_img=df_results_per_img,mode=uncertainty_method)
+
     mask_low_map = (df_results_per_img['map50']<map_thrs) * (df_results_per_img['map75']<map_thrs)
     mask_high_scores = df_results_per_img[score_col]>score_thrs
-
-    mask_selected = mask_low_map * mask_high_scores 
+    mask_low_scores =  df_results_per_img[score_col]< (1-score_thrs)
+    mask_selected = mask_low_map * mask_high_scores + mask_low_map * mask_low_scores + (df_results_per_img['uncertainty']>uncertainty_thrs)
     df_hard_negatives = df_results_per_img.loc[mask_selected]
 
     # save image paths in data_config yaml

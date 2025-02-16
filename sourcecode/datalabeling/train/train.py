@@ -113,8 +113,8 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
         _type_: _description_
     """
 
-    from datalabeling.annotator import Detector
-    from datalabeling.dataset.sampling import (get_preds_targets, compute_detector_performance)
+    from ..annotator import Detector
+    from ..dataset.sampling import (get_preds_targets, compute_detector_performance,get_uncertainty)
     
     tilesize=min(args.height,args.width)
     split="train"
@@ -140,20 +140,20 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
         yolo_config = yaml.load(file,Loader=yaml.FullLoader)
 
     images_path = [os.path.join(yolo_config['path'],yolo_config[split][i]) for i in range(len(yolo_config[split]))]
-    # labels_path = [p.replace('images','labels') for p in images_path]
     df_results, df_labels, col_names = get_preds_targets(images_dirs=images_path,
                                                         pred_results_dir=pred_results_dir,
                                                         detector=model,
                                                         load_results=load_results
                                                     )
     df_results_per_img = compute_detector_performance(df_results,df_labels,col_names)
-
+    df_results_per_img = get_uncertainty(df_results_per_img=df_results_per_img,mode=args.hn_uncertainty_method)
+    
     ### save hard samples. Those with low mAP and high or low confidence score
     score_col="max_scores"
     mask_low_map = (df_results_per_img['map50']<args.hn_map_thrs) * (df_results_per_img['map75']<args.hn_map_thrs)
     mask_high_scores = df_results_per_img[score_col]>args.hn_score_thrs
     mask_low_scores =  df_results_per_img[score_col]< (1-args.hn_score_thrs)
-    mask_selected = mask_low_map * mask_high_scores + mask_low_map * mask_low_scores
+    mask_selected = mask_low_map * mask_high_scores + mask_low_map * mask_low_scores + (df_results_per_img['uncertainty']>args.hn_uncertainty_thrs)
     df_hard_negatives = df_results_per_img.loc[mask_selected]
 
     # save image paths in data_config yaml
