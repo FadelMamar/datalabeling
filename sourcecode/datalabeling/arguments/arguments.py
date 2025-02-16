@@ -53,6 +53,22 @@ class Arguments:
     cl_lr0s:Sequence[float]=(1e-5,)
     cl_save_dir:str=None # should be given!
 
+    # hard negative data sampling learning mode
+    use_hn_learning:bool=False
+    hn_save_dir:str=None
+    hn_num_epochs:int=10
+    hn_freeze:int=None
+    hn_lr0:float=1e-4
+    hn_lrf:float=1e-2
+    hn_batch_size:int=32
+    hn_is_yolo_obb:bool=False
+    hn_use_sliding_window:bool=True
+    hn_overlap_ratio:float=0.2
+    hn_map_thrs:float=0.3 # mAP threshold. lower than it is considered hard sample
+    hn_score_thrs:float=0.7
+    hn_confidence_threshold:float=0.25
+    hn_ratio:int=20 # ratio = num_empty/num_non_empty. Higher allows to look at all saved empty images
+
     # regularization
     dropout:float=0.
     weight_decay:float=5e-4

@@ -8,6 +8,16 @@ import math
 
 
 def sample_pos_neg(images_paths:list,ratio:float,seed:int=41):
+    """_summary_
+
+    Args:
+        images_paths (list): _description_
+        ratio (float): _description_
+        seed (int, optional): _description_. Defaults to 41.
+
+    Returns:
+        _type_: _description_
+    """
 
     # build dataframe
     is_empty = [1 - Path(str(p).replace('images','labels')).with_suffix('.txt').exists() for p in images_paths]
@@ -29,6 +39,21 @@ def sample_pos_neg(images_paths:list,ratio:float,seed:int=41):
 
 
 def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,seed:int=41,split:str='train'):
+    """_summary_
+
+    Args:
+        ratio (float): _description_
+        data_config_yaml (str): _description_
+        cl_save_dir (str): _description_
+        seed (int, optional): _description_. Defaults to 41.
+        split (str, optional): _description_. Defaults to 'train'.
+
+    Raises:
+        NotImplementedError: _description_
+
+    Returns:
+        _type_: _description_
+    """
 
     with open(data_config_yaml,'r') as file:
         yolo_config = yaml.load(file,Loader=yaml.FullLoader)
@@ -46,7 +71,6 @@ def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,s
                        )
         sampled_imgs_paths = sampled_imgs_paths + paths
 
-    
     # save selected images in txt file
     save_path_samples = os.path.join(cl_save_dir,f"{split}_ratio_{ratio}-seed_{seed}.txt")
     pd.Series(sampled_imgs_paths).to_csv(save_path_samples,
@@ -78,11 +102,79 @@ def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,s
     return str(save_path_cfg)
 
 
-def training_routine(model:YOLO,args:Arguments,data_cfg:str|None=None,num_epochs:int=None,resume:bool=False):
+def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
+    """_summary_
+
+    Args:
+        args (Arguments): _description_
+        data_config_yaml (str): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    from datalabeling.annotator import Detector
+    from datalabeling.dataset.sampling import (get_preds_targets, compute_detector_performance)
+    
+    tilesize=min(args.height,args.width)
+    split="train"
+    pred_results_dir=args.hn_save_dir
+    load_results=False
+     # configence score threshold. we taken those higher
+    save_path_samples= os.path.join(args.hn_save_dir,'hard_samples.txt')
+    data_config_root="D:\\"
+    save_data_config_yaml=os.path.join(args.hn_save_dir,'hard_samples.yaml')       
+
+    # Define detector
+    model = Detector(path_to_weights=args.path_weights,
+                    confidence_threshold=args.hn_confidence_threshold,
+                    overlap_ratio=args.hn_overlap_ratio,
+                    tilesize=tilesize,
+                    use_sliding_window=args.hn_use_sliding_window,
+                    device=args.device,
+                    is_yolo_obb=args.hn_is_yolo_obb
+            )
+
+    # data config yaml
+    with open(data_config_yaml,'r') as file:
+        yolo_config = yaml.load(file,Loader=yaml.FullLoader)
+
+    images_path = [os.path.join(yolo_config['path'],yolo_config[split][i]) for i in range(len(yolo_config[split]))]
+    # labels_path = [p.replace('images','labels') for p in images_path]
+    df_results, df_labels, col_names = get_preds_targets(images_dirs=images_path,
+                                                        pred_results_dir=pred_results_dir,
+                                                        detector=model,
+                                                        load_results=load_results
+                                                    )
+    df_results_per_img = compute_detector_performance(df_results,df_labels,col_names)
+
+    ### save hard samples. Those with low mAP and high or low confidence score
+    score_col="max_scores"
+    mask_low_map = (df_results_per_img['map50']<args.hn_map_thrs) * (df_results_per_img['map75']<args.hn_map_thrs)
+    mask_high_scores = df_results_per_img[score_col]>args.hn_score_thrs
+    mask_low_scores =  df_results_per_img[score_col]< (1-args.hn_score_thrs)
+    mask_selected = mask_low_map * mask_high_scores + mask_low_map * mask_low_scores
+    df_hard_negatives = df_results_per_img.loc[mask_selected]
+
+    # save image paths in data_config yaml
+    df_hard_negatives['image_paths'].to_csv(save_path_samples,index=False,header=False)
+    cfg_dict = {    'path':  data_config_root,
+                    'names': yolo_config['names'],
+                    'train': os.path.relpath(save_path_samples, start=data_config_root),
+                    'val':   os.path.relpath(os.path.join(yolo_config['path'],yolo_config['val']), start=data_config_root),
+                    'nc':    yolo_config['nc'],
+                }
+    with open(save_data_config_yaml,'w') as file:
+        yaml.dump(cfg_dict,file)
+    
+    return str(save_data_config_yaml)
+    
+
+def training_routine(model:YOLO,args:Arguments,data_cfg:str|None=None,resume:bool=False):
 
     # Train the model
     model.train(data=data_cfg or args.data_config_yaml,
-                epochs=num_epochs or args.epochs,
+                epochs=args.epochs,
                 imgsz=min(args.height,args.width),
                 device=args.device,
                 freeze=args.freeze,
@@ -153,14 +245,13 @@ def start_training(args:Arguments):
         # print(e)
         traceback.print_exc()
 
-    # Continual learning strategy
-
-    # check arguments
+    # Continual learning strategy    
     if args.use_continual_learning:
+        # check arguments
         for flag in (args.cl_ratios,args.cl_epochs,args.cl_freeze):
             assert len(flag) == len(args.cl_lr0s), "all args.cl_* flags should have the same length."
-
-        # get data_cfg files for CL runs
+        # get yaml data_cfg files for CL runs
+        count = 0
         for lr, ratio, num_epochs,freeze in zip(args.cl_lr0s,args.cl_ratios,args.cl_epochs,args.cl_freeze):
             cl_cfg_path = get_data_cfg_paths_for_cl(ratio=ratio,
                                                     data_config_yaml=args.data_config_yaml,
@@ -171,11 +262,36 @@ def start_training(args:Arguments):
             # freeze layer. see ultralytics docs :)
             args.freeze = freeze
             args.lr0 = lr
+            args.epochs = num_epochs
             training_routine(model=model,
-                             args=args,
-                             data_cfg=cl_cfg_path,
-                             num_epochs=num_epochs
-                            )
+                            args=args,
+                            data_cfg=cl_cfg_path,
+                            resume= count>0
+                        )
+            count += 1
+
+    # hard negative sampling learning strategy
+    if args.use_hn_learning:
+        assert args.hn_save_dir is not None, "Provide --hn-save-dir"
+        cfg_path = get_data_cfg_paths_for_cl(ratio=args.hn_ratio,
+                                            data_config_yaml=args.data_config_yaml,
+                                            cl_save_dir=args.hn_save_dir,
+                                            seed=args.seed,
+                                            split='train'
+                                        )
+        hn_cfg_path = get_data_cfg_paths_for_HN(args=args,
+                                                data_config_yaml=cfg_path
+                                            )
+        args.lr0 = args.hn_lr0
+        args.lrf = args.hn_lrf
+        args.freeze = args.hn_freeze
+        args.batchsize = args.hn_batch_size
+        args.epochs = args.hn_num_epochs
+        training_routine(model=model,
+                        args=args,
+                        data_cfg=hn_cfg_path,
+                        resume=True
+                    )
     
     else:
         training_routine(model=model,args=args)
