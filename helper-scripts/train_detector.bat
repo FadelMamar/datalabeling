@@ -105,8 +105,31 @@ call wandb offline
 @REM     --project-name "wildAI-detection"^
 @REM     --tag "dataset-4"
 
+@REM    use_continual_learning:bool=False
+@REM     cl_ratios:Sequence[float]=(1.0,)
+@REM     cl_epochs:Sequence[int]=(20,)
+@REM     cl_freeze:Sequence[int]=(None,)
+@REM     cl_lr0s:Sequence[float]=(1e-5,)
+@REM     cl_save_dir:str=None # should be given!
 
 @REM :: obb
+
+call wandb online
+call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.001 --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.9 --lrf 0.1 --patience 10 --is-detector^
+    --scale 0.5 --mosaic 0.0 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
+    --height 1280 --width 1280^
+     ^
+    --path-weights "base_models_weights\yolov8s-obb.pt" ^
+    --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_cl.yaml"^
+    --run-name "obb-detector-cl" --project-name "wildAI-detection"^
+    --tag "CL" "dataset-cl" ^
+    --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
+    --cl-ratios 0 0.5 1 2.5 5 7.5 ^
+    --cl-epochs 5 5 5 5 5 5 ^
+    --cl-freeze 0 5 10 15 20 21 ^
+    --cl-lr0s 0.001 0.0005 0.0001 0.00001 0.00001 0.00001
+
+
 @REM call python tools\cli.py --start-training --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.01 --patience 10 --is-detector^
 @REM     --scale 0.0 --weight-decay 0.0005^
 @REM     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^

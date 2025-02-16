@@ -89,12 +89,13 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools"
 @REM     --height 1280 --width 1280
 
 @REM @REM :: Bushriver data
-@REM call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 10. --parse-ls-config --is-detector --min-visibility 0.8^
+@REM call python  build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 10. --parse-ls-config --is-detector --min-visibility 0.8 ^
 @REM     --dest-path-labels "D:\PhD\Data per camp\DetectionDataset\bushriver\labels"  --ls-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\bushriver-extra\labelstudio" ^
 @REM     --dest-path-images "D:\PhD\Data per camp\DetectionDataset\bushriver\images" --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 1\bushriver-extra\coco-format" ^
+@REM     --height 1280 --width 1280
 
 
 
 call conda deactivate
 
-shutdown -s
+@REM shutdown -s
