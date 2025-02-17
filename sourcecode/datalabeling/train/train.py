@@ -277,7 +277,7 @@ def hard_negative_strategy_run(model:YOLO, args:Arguments):
     args.freeze = args.hn_freeze
     args.batchsize = args.hn_batch_size
     args.epochs = args.hn_num_epochs
-    resume = args.use_pretraining or args.use_continual_learning
+    resume = False #args.use_pretraining or args.use_continual_learning
     training_routine(model=model,
                         args=args,
                         data_cfg=hn_cfg_path,
@@ -309,7 +309,7 @@ def continual_learning_run(model:YOLO,args:Arguments):
         args.freeze = freeze
         args.lr0 = lr
         args.epochs = num_epochs
-        resume = args.use_pretraining or (count>0)
+        resume = False #args.use_pretraining or (count>0)
         training_routine(model=model,
                         args=args,
                         data_cfg=cl_cfg_path,
