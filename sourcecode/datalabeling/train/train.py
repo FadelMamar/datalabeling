@@ -170,7 +170,7 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     return str(save_data_config_yaml)
     
 
-def training_routine(model:YOLO,args:Arguments,imgsz:int=None,data_cfg:str|None=None,resume:bool=False):
+def training_routine(model:YOLO,args:Arguments,imgsz:int=None,batchsize:int=None,data_cfg:str|None=None,resume:bool=False):
 
     # Train the model
     model.train(data=data_cfg or args.data_config_yaml,
@@ -185,7 +185,7 @@ def training_routine(model:YOLO,args:Arguments,imgsz:int=None,data_cfg:str|None=
                 momentum=args.optimizer_momentum,
                 weight_decay=args.weight_decay,
                 dropout=args.dropout,
-                batch=args.batchsize,
+                batch=batchsize or args.batchsize,
                 val=True,
                 plots=True,
                 cos_lr=args.cos_annealing,
@@ -242,7 +242,6 @@ def pretraining_run(model:YOLO, args:Arguments):
     remove_label_cache(args.ptr_data_config_yaml)
 
     # set parameters
-    args.batchsize = args.ptr_batchsize
     args.epochs = args.ptr_epochs
     args.lr0 = args.ptr_lr0
     args.lrf = args.ptr_lrf
@@ -250,6 +249,7 @@ def pretraining_run(model:YOLO, args:Arguments):
     training_routine(model=model,
                         args=args,
                         imgsz=args.ptr_tilesize,
+                        batchsize=args.ptr_batchsize,
                         data_cfg=args.ptr_data_config_yaml,
                         resume=False
                 )
@@ -275,11 +275,11 @@ def hard_negative_strategy_run(model:YOLO, args:Arguments):
     args.lr0 = args.hn_lr0
     args.lrf = args.hn_lrf
     args.freeze = args.hn_freeze
-    args.batchsize = args.hn_batch_size
     args.epochs = args.hn_num_epochs
     resume = False #args.use_pretraining or args.use_continual_learning
     training_routine(model=model,
                         args=args,
+                        batchsize=args.hn_batch_size,
                         data_cfg=hn_cfg_path,
                         resume=resume
                     )
@@ -313,6 +313,7 @@ def continual_learning_run(model:YOLO,args:Arguments):
         training_routine(model=model,
                         args=args,
                         data_cfg=cl_cfg_path,
+                        batchsize=args.cl_batch_size,
                         resume=resume
                     )
         count += 1

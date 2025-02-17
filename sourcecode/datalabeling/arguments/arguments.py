@@ -63,6 +63,7 @@ class Arguments:
     cl_lr0s:Sequence[float]=(1e-5,)
     cl_save_dir:str=None # should be given!
     cl_data_config_yaml:str=None
+    cl_batch_size:int=16
 
     # hard negative data sampling learning mode
     use_hn_learning:bool=False
@@ -72,7 +73,7 @@ class Arguments:
     hn_freeze:int=20
     hn_lr0:float=1e-4
     hn_lrf:float=1e-2
-    hn_batch_size:int=32
+    hn_batch_size:int=16
     hn_is_yolo_obb:bool=False
     hn_use_sliding_window:bool=True
     hn_overlap_ratio:float=0.2
