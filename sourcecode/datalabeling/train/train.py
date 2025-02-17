@@ -252,7 +252,7 @@ def start_training(args:Arguments):
     if args.use_pretraining:
         # check arguments
         assert os.path.exists(args.ptr_data_config_yaml), "provide --ptr-data-config-yaml"
-
+        print("\n\n------------ Pretraining ----------",end="\n\n")
         # remove cache
         remove_label_cache(args.ptr_data_config_yaml)
 
@@ -273,7 +273,7 @@ def start_training(args:Arguments):
     if args.use_continual_learning:
         # check arguments
         assert os.path.exists(args.cl_data_config_yaml), "Provide --cl-data-config-yaml"
-
+        print("\n\n------------ Continual learning ----------",end="\n\n")
         # remove cache
         remove_label_cache(args.cl_data_config_yaml)
 
@@ -306,7 +306,7 @@ def start_training(args:Arguments):
     if args.use_hn_learning:
         # check  arguments
         assert args.hn_save_dir is not None, "Provide --hn-save-dir"
-
+        print("\n\n------------ hard negative sampling learning strategy ----------",end="\n\n")
         # remove cache
         remove_label_cache(args.hn_data_config_yaml)
         
