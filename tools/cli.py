@@ -48,8 +48,25 @@ if __name__ == '__main__':
                     tags=args.tag):
         
             # log data_config file
-            with open(args.data_config_yaml,'r') as file:
-                data_config = yaml.load(file,Loader=yaml.FullLoader)
-                wandb.log(data_config)
+            if args.ptr_data_config_yaml:
+                with open(args.ptr_data_config_yaml,'r') as file:
+                    data_config = yaml.load(file,Loader=yaml.FullLoader)
+                    data_config["mode"] = "pretraining"
+                    wandb.log(data_config)
+            if args.use_continual_learning: 
+                with open(args.cl_data_config_yaml,'r') as file:
+                    data_config = yaml.load(file,Loader=yaml.FullLoader)
+                    data_config["mode"] = "continuous_learning"
+                    wandb.log(data_config)
+            if args.use_hn_learning: 
+                with open(args.ptr_data_config_yaml,'r') as file:
+                    data_config = yaml.load(file,Loader=yaml.FullLoader)
+                    data_config["mode"] = "hard negative learning"
+                    wandb.log(data_config)
+            if not (args.ptr_data_config_yaml or args.use_continual_learning or args.use_hn_learning):
+                with open(args.data_config_yaml,'r') as file:
+                    data_config = yaml.load(file,Loader=yaml.FullLoader)
+                    data_config["mode"] = "standard"
+                    wandb.log(data_config)
 
             start_training(args)

@@ -26,7 +26,7 @@ class Arguments:
     mlflow_model_alias:str=None
 
     # training data
-    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')    
+    data_config_yaml:str=None #os.path.join(CUR_DIR,'../../../data/data_config.yaml')    
 
     # labels to discard
     discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
@@ -34,7 +34,7 @@ class Arguments:
     # training flags
     height:int = 640
     width:int = 640
-    path_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
+    path_weights:str=None #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-4
     lrf:float=1e-2
     batchsize:int=32
@@ -45,6 +45,16 @@ class Arguments:
     device:str= 0
     patience:int=10
 
+    # pretraining
+    use_pretraining:bool=False
+    ptr_data_config_yaml:str=None
+    ptr_tilesize:int=640
+    ptr_batchsize:int=32
+    ptr_epochs:int=10
+    ptr_lr0:float=1e-4
+    ptr_lrf:float=1e-2
+    ptr_freeze:int=None
+
     # continual learning flags
     use_continual_learning:bool=False
     cl_ratios:Sequence[float]=(1.0,) # ratio = num_empty/num_non_empty
@@ -52,10 +62,12 @@ class Arguments:
     cl_freeze:Sequence[int]=(0,)
     cl_lr0s:Sequence[float]=(1e-5,)
     cl_save_dir:str=None # should be given!
+    cl_data_config_yaml:str=None
 
     # hard negative data sampling learning mode
     use_hn_learning:bool=False
     hn_save_dir:str=None
+    hn_data_config_yaml:str=None
     hn_num_epochs:int=10
     hn_freeze:int=20
     hn_lr0:float=1e-4
@@ -64,7 +76,7 @@ class Arguments:
     hn_is_yolo_obb:bool=False
     hn_use_sliding_window:bool=True
     hn_overlap_ratio:float=0.2
-    hn_map_thrs:float=0.3 # mAP threshold. lower than it is considered sample of interest
+    hn_map_thrs:float=0.35 # mAP threshold. lower than it is considered sample of interest
     hn_score_thrs:float=0.7
     hn_confidence_threshold:float=0.1
     hn_ratio:int=20 # ratio = num_empty/num_non_empty. Higher allows to look at all saved empty images

@@ -120,7 +120,7 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     split="train"
     pred_results_dir=args.hn_save_dir
     load_results=False
-     # configence score threshold. we taken those higher
+    # configence score threshold. we taken those higher
     save_path_samples= os.path.join(args.hn_save_dir,'hard_samples.txt')
     data_config_root="D:\\"
     save_data_config_yaml=os.path.join(args.hn_save_dir,'hard_samples.yaml')       
@@ -170,12 +170,12 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     return str(save_data_config_yaml)
     
 
-def training_routine(model:YOLO,args:Arguments,data_cfg:str|None=None,resume:bool=False):
+def training_routine(model:YOLO,args:Arguments,imgsz:int=None,data_cfg:str|None=None,resume:bool=False):
 
     # Train the model
     model.train(data=data_cfg or args.data_config_yaml,
                 epochs=args.epochs,
-                imgsz=min(args.height,args.width),
+                imgsz=imgsz or min(args.height,args.width),
                 device=args.device,
                 freeze=args.freeze,
                 name=args.run_name,
@@ -216,6 +216,23 @@ def training_routine(model:YOLO,args:Arguments,data_cfg:str|None=None,resume:boo
             )
 
 
+def remove_label_cache(data_config_yaml:str):
+
+     # Remove labels.cache
+    try:
+        with open(data_config_yaml,'r') as file:
+            yolo_config = yaml.load(file,Loader=yaml.FullLoader)
+        root = yolo_config["path"]
+        for p in yolo_config["train"] + yolo_config["val"]:
+            path = os.path.join(root,p,"../labels.cache")
+            if os.path.exists(path):
+                os.remove(path)
+                print(f"Removing: {os.path.join(root,p,"../labels.cache")}")
+    except Exception as e:
+        # print(e)
+        traceback.print_exc()
+
+
 def start_training(args:Arguments):
     """Trains a YOLO model using ultralytics. By defaults, it will compile new 'labels.cache' files.
 
@@ -231,30 +248,44 @@ def start_training(args:Arguments):
     # Display model information (optional)
     model.info()    
 
-    # Remove labels.cache
-    try:
-        with open(args.data_config_yaml,'r') as file:
-            yolo_config = yaml.load(file,Loader=yaml.FullLoader)
-        root = yolo_config["path"]
-        for p in yolo_config["train"] + yolo_config["val"]:
-            path = os.path.join(root,p,"../labels.cache")
-            if os.path.exists(path):
-                os.remove(path)
-                logger.info(f"Removing: {os.path.join(root,p,"../labels.cache")}")
-    except Exception as e:
-        # print(e)
-        traceback.print_exc()
+    # pretraining
+    if args.use_pretraining:
+        # check arguments
+        assert os.path.exists(args.ptr_data_config_yaml), "provide --ptr-data-config-yaml"
+
+        # remove cache
+        remove_label_cache(args.ptr_data_config_yaml)
+
+        # set parameters
+        args.batchsize = args.ptr_batchsize
+        args.epochs = args.ptr_epochs
+        args.lr0 = args.ptr_lr0
+        args.lrf = args.ptr_lrf
+        args.freeze = args.ptr_freeze
+        training_routine(model=model,
+                        args=args,
+                        imgsz=args.ptr_tilesize,
+                        data_cfg=args.ptr_data_config_yaml,
+                        resume=False
+                    )
 
     # Continual learning strategy    
     if args.use_continual_learning:
         # check arguments
+        assert os.path.exists(args.cl_data_config_yaml), "Provide --cl-data-config-yaml"
+
+        # remove cache
+        remove_label_cache(args.cl_data_config_yaml)
+
+        # check flags
         for flag in (args.cl_ratios,args.cl_epochs,args.cl_freeze):
             assert len(flag) == len(args.cl_lr0s), "all args.cl_* flags should have the same length."
+        
         # get yaml data_cfg files for CL runs
         count = 0
         for lr, ratio, num_epochs,freeze in zip(args.cl_lr0s,args.cl_ratios,args.cl_epochs,args.cl_freeze):
             cl_cfg_path = get_data_cfg_paths_for_cl(ratio=ratio,
-                                                    data_config_yaml=args.data_config_yaml,
+                                                    data_config_yaml=args.cl_data_config_yaml,
                                                     cl_save_dir=args.cl_save_dir,
                                                     seed=args.seed,
                                                     split='train'
@@ -263,18 +294,24 @@ def start_training(args:Arguments):
             args.freeze = freeze
             args.lr0 = lr
             args.epochs = num_epochs
+            resume = args.use_pretraining or (count>0)
             training_routine(model=model,
                             args=args,
                             data_cfg=cl_cfg_path,
-                            resume= count>0
+                            resume=resume
                         )
             count += 1
 
     # hard negative sampling learning strategy
     if args.use_hn_learning:
+        # check  arguments
         assert args.hn_save_dir is not None, "Provide --hn-save-dir"
+
+        # remove cache
+        remove_label_cache(args.hn_data_config_yaml)
+        
         cfg_path = get_data_cfg_paths_for_cl(ratio=args.hn_ratio,
-                                            data_config_yaml=args.data_config_yaml,
+                                            data_config_yaml=args.hn_data_config_yaml,
                                             cl_save_dir=args.hn_save_dir,
                                             seed=args.seed,
                                             split='train'
@@ -287,13 +324,15 @@ def start_training(args:Arguments):
         args.freeze = args.hn_freeze
         args.batchsize = args.hn_batch_size
         args.epochs = args.hn_num_epochs
+        resume = args.use_pretraining or args.use_continual_learning
         training_routine(model=model,
                         args=args,
                         data_cfg=hn_cfg_path,
-                        resume=True
+                        resume=resume
                     )
-    
-    else:
+
+    # standard training routine
+    if not (args.ptr_data_config_yaml or args.use_continual_learning or args.use_hn_learning):
         training_routine(model=model,args=args)
 
     
