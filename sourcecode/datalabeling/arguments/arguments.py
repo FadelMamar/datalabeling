@@ -83,6 +83,7 @@ class Arguments:
     hn_ratio:int=20 # ratio = num_empty/num_non_empty. Higher allows to look at all saved empty images
     hn_uncertainty_thrs:float=5 # helps to select those with high uncertainty
     hn_uncertainty_method:str="entropy"
+    hn_load_results:bool=False
 
     # regularization
     dropout:float=0.

@@ -221,6 +221,7 @@ class Detector(object):
                                                         device=device,
                                                         )
 
+    # TODO: batch predictions
     def predict(self, image:Image,
                 return_coco:bool=True,
                 sahi_prostprocess:float='NMS',
@@ -298,20 +299,24 @@ class Detector(object):
         return coco_results
 
 
-    def predict_directory(self,path_to_dir:str,as_dataframe:bool=False,save_path:str=None):
+    def predict_directory(self,path_to_dir:str=None,images_paths:list[str]=None,as_dataframe:bool=False,save_path:str=None):
         """Computes predictions on a directory
 
         Args:
-            path_to_dir (str): path to directory with images
+            path_to_dir (str): path to directory with images. Defaults to None
+            images_list (list): paths of images to run the detection on
             as_dataframe (bool): returns results as pd.DataFrame
             save_path (str) : converts to dataframe and then save
 
         Returns:
             dict: a directory with the schema {image_path:prediction_coco_format}
         """
+
+        assert (path_to_dir is None) + (images_paths is None) < 2, "Both should not be given."
         results = {}
-        for image_path in tqdm(Path(path_to_dir).iterdir()):
-            pred = self.predict(Image.open(image_path),return_coco=True)
+        paths = images_paths or Path(path_to_dir).iterdir()
+        for image_path in tqdm(paths):
+            pred = self.predict(Image.open(image_path), return_coco=True)
             results.update({str(image_path):pred})
         
         # returns as df or save
@@ -389,6 +394,7 @@ class Detector(object):
         }
 
         return template
+
 
     def train(self, dataloader):
        raise NotImplementedError('Not implemented.')

@@ -15,12 +15,16 @@ def load_prediction_results(path_result:str)->pd.DataFrame:
     return pd.read_json(path_result,orient='records')
 
 # load groundtruth
-def load_groundtruth(images_dir:str)->tuple[pd.DataFrame,list]:
+def load_groundtruth(images_dir:str=None,images_paths:list[str]=None)->tuple[pd.DataFrame,list]:
     
     df_list = list()
     col_names = None
     num_empty = 0
-    for image_path in Path(images_dir).glob('*'):
+    paths = images_paths or Path(images_dir).glob('*')
+    for image_path in paths:
+
+        # as Path object
+        image_path = Path(image_path)
 
         # read label file and check if yolo or yolo-obb
         label_path = str(image_path.with_suffix('.txt')).replace('images','labels')
@@ -55,17 +59,32 @@ def load_groundtruth(images_dir:str)->tuple[pd.DataFrame,list]:
         
         df_list.append(df)
     
-    print(f"There are {num_empty} empty images in {images_dir}.")
+    print(f"Loading groundtruth: there are {num_empty} empty images.")
 
     return pd.concat(df_list,axis=0), col_names
 
 # get preds and targets
-def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detector,load_results:bool=False,save_tag:str=""):
+def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detector,images_paths:list[str]=None,load_results:bool=False,save_tag:str=""):
 
-    dfs_results = list()
-    dfs_labels = list()
+    
+    # when providing a list of images
+    if images_paths is not None:
+        assert images_dirs is None, "images_dirs should be None!"
+        sfx = save_tag
+        save_path = os.path.join(pred_results_dir,f'predictions-{sfx}.json')
+        # get prediction results
+        if load_results:
+            df_results = load_prediction_results(save_path)
+        else:
+            df_results = detector.predict_directory(path_to_dir=None,images_paths=images_paths,
+                                                    as_dataframe=True,save_path=save_path)
+        df_labels, col_names = load_groundtruth(images_dir=None,images_paths=images_paths)
+        return df_results, df_labels, col_names
+
+    # when providing directories of images
+    df_results = list()
+    df_labels = list()
     features_names = None
-
     for image_dir in images_dirs:
 
         sfx = str(image_dir).split(":\\")[-1].replace("\\","_").replace("/","_")
@@ -76,12 +95,13 @@ def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detect
         if load_results:
             results = load_prediction_results(save_path)
         else:
-            results = detector.predict_directory(image_dir,as_dataframe=True,save_path=save_path)
-        dfs_results.append(results)
+            results = detector.predict_directory(path_to_dir=image_dir,images_paths=None,
+                                                 as_dataframe=True,save_path=save_path)
+        df_results.append(results)
 
         # get targets
-        df_labels, col_names = load_groundtruth(images_dir=image_dir)
-        dfs_labels.append(df_labels)
+        labels, col_names = load_groundtruth(images_dir=image_dir,images_paths=None)
+        df_labels.append(labels)
 
         # update and check for changes
         if features_names is None:
@@ -90,7 +110,7 @@ def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detect
             check_changes = len(set(features_names).intersection(set(col_names))) == len(features_names)
             assert check_changes, "groundtruth labels aren't all similar."
     
-    return pd.concat(dfs_results,axis=0), pd.concat(dfs_labels,axis=0),features_names
+    return pd.concat(df_results,axis=0), pd.concat(df_labels,axis=0),features_names
 
 # compute mAP@50
 def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,col_names:list[str]):
@@ -126,7 +146,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
     all_scores = list()
     # image_paths = list()
     image_paths = df_results['image_path'].unique()
-    for image_path in tqdm(image_paths):
+    for image_path in tqdm(image_paths,desc="Computing metrics"):
 
         # get gt
         mask_gt = df_labels['image_path'] == image_path

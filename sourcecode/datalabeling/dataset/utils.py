@@ -426,7 +426,7 @@ def sample_data(coco_dict_slices:dict,
     return df
 
 def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=False)->None:
-    """Saves tiles (or slices of images)
+    """Saves tiles (or slices of images) as .jpg files
 
     Args:
         df_tiles (pd.DataFrame): provides tiles boundaries. Computed from .utils.sample_data
@@ -450,7 +450,7 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         y1 = int(df_tiles.at[idx,'y1'])
         img_path = df_tiles.at[idx,'parent_images']
         tile_name = df_tiles.at[idx,'images']
-        save_path = os.path.join(out_img_dir,tile_name)
+        save_path = str(Path(os.path.join(out_img_dir,tile_name)).with_suffix(".jpg"))
         img = imread(img_path)
         tile = img[y0:y1,x0:x1,:]
         imsave(fname=save_path,arr=tile,check_contrast=False)

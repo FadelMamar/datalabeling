@@ -38,7 +38,7 @@ def sample_pos_neg(images_paths:list,ratio:float,seed:int=41):
     return sampled_data['image_paths'].to_list()
 
 
-def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,seed:int=41,split:str='train'):
+def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,seed:int=41,split:str='train',pattern_glob:str="*"):
     """_summary_
 
     Args:
@@ -65,7 +65,7 @@ def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,s
     sampled_imgs_paths = []
     for dir_images in train_dirs_images:
         print(f"Sampling positive and negative samples from {dir_images}")
-        paths = sample_pos_neg(images_paths=list(Path(dir_images).iterdir()),
+        paths = sample_pos_neg(images_paths=list(Path(dir_images).glob(pattern_glob)),
                        ratio=ratio,
                        seed=seed
                        )
@@ -93,7 +93,7 @@ def get_data_cfg_paths_for_cl(ratio:float,data_config_yaml:str,cl_save_dir:str,s
                 }
     else:
         raise NotImplementedError
-    save_path_cfg = Path(save_path_samples).with_suffix('.yml')
+    save_path_cfg = Path(save_path_samples).with_suffix('.yaml')
     with open(save_path_cfg,'w') as file:
         yaml.dump(cfg_dict,file)
 
@@ -119,11 +119,9 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     tilesize=min(args.height,args.width)
     split="train"
     pred_results_dir=args.hn_save_dir
-    load_results=False
-    # configence score threshold. we taken those higher
     save_path_samples= os.path.join(args.hn_save_dir,'hard_samples.txt')
     data_config_root="D:\\"
-    save_data_config_yaml=os.path.join(args.hn_save_dir,'hard_samples.yaml')       
+    save_data_config_yaml=os.path.join(args.hn_save_dir,'hard_samples.yaml')      
 
     # Define detector
     model = Detector(path_to_weights=args.path_weights,
@@ -138,13 +136,18 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     # data config yaml
     with open(data_config_yaml,'r') as file:
         yolo_config = yaml.load(file,Loader=yaml.FullLoader)
-
-    images_path = [os.path.join(yolo_config['path'],yolo_config[split][i]) for i in range(len(yolo_config[split]))]
-    df_results, df_labels, col_names = get_preds_targets(images_dirs=images_path,
+    # get images_paths
+    images_paths = os.path.join(yolo_config['path'],yolo_config[split])
+    images_paths = pd.read_csv(images_paths,header=None,names=['paths'])['paths'].to_list()
+    # get predictions & targets
+    df_results, df_labels, col_names = get_preds_targets(images_dirs=None,
+                                                        images_paths=images_paths,
                                                         pred_results_dir=pred_results_dir,
                                                         detector=model,
-                                                        load_results=load_results
+                                                        load_results=args.hn_load_results,
+                                                        save_tag="hn-sampling"
                                                     )
+    # compute performance & uncertainty of model
     df_results_per_img = compute_detector_performance(df_results,df_labels,col_names)
     df_results_per_img = get_uncertainty(df_results_per_img=df_results_per_img,mode=args.hn_uncertainty_method)
     
@@ -161,7 +164,7 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     cfg_dict = {    'path':  data_config_root,
                     'names': yolo_config['names'],
                     'train': os.path.relpath(save_path_samples, start=data_config_root),
-                    'val':   os.path.relpath(os.path.join(yolo_config['path'],yolo_config['val']), start=data_config_root),
+                    'val':   [os.path.relpath(os.path.join(yolo_config['path'],p), start=data_config_root) for p in yolo_config['val']],
                     'nc':    yolo_config['nc'],
                 }
     with open(save_data_config_yaml,'w') as file:
@@ -190,6 +193,7 @@ def training_routine(model:YOLO,args:Arguments,imgsz:int=None,batchsize:int=None
                 plots=True,
                 cos_lr=args.cos_annealing,
                 deterministic=False,
+                cache=False, # saves images as *.npy
                 optimizer=args.optimizer,
                 project=args.project_name,
                 patience=args.patience,
@@ -255,7 +259,7 @@ def pretraining_run(model:YOLO, args:Arguments):
                 )
 
 
-def hard_negative_strategy_run(model:YOLO, args:Arguments):
+def hard_negative_strategy_run(model:YOLO, args:Arguments,img_glob_pattern:str="*"):
 
     # check  arguments
     assert args.hn_save_dir is not None, "Provide --hn-save-dir"
@@ -267,7 +271,8 @@ def hard_negative_strategy_run(model:YOLO, args:Arguments):
                                             data_config_yaml=args.hn_data_config_yaml,
                                             cl_save_dir=args.hn_save_dir,
                                             seed=args.seed,
-                                            split='train'
+                                            split='train',
+                                            pattern_glob=img_glob_pattern
                                         )
     hn_cfg_path = get_data_cfg_paths_for_HN(args=args,
                                                 data_config_yaml=cfg_path
@@ -285,7 +290,7 @@ def hard_negative_strategy_run(model:YOLO, args:Arguments):
                     )
 
 
-def continual_learning_run(model:YOLO,args:Arguments):
+def continual_learning_run(model:YOLO,args:Arguments,img_glob_pattern:str="*"):
 
     # check arguments
     assert os.path.exists(args.cl_data_config_yaml), "Provide --cl-data-config-yaml"
@@ -303,7 +308,8 @@ def continual_learning_run(model:YOLO,args:Arguments):
                                                 data_config_yaml=args.cl_data_config_yaml,
                                                 cl_save_dir=args.cl_save_dir,
                                                 seed=args.seed,
-                                                split='train'
+                                                split='train',
+                                                pattern_glob=img_glob_pattern
                                             )
         # freeze layer. see ultralytics docs :)
         args.freeze = freeze
