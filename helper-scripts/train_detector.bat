@@ -133,24 +133,36 @@ call wandb offline
 
 @REM :: obb
 
-call wandb online
-call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+call wandb offline
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 10 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
+@REM     --height 1280 --width 1280^
+@REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/1ae90d2390a944a8b1a05540e9daaa72/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov8s_obb-PTR-CL-HN" --project-name "wildAI-detection"^
+@REM     --tag "PTR" "CL" "HN" ^
+@REM     --ptr-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_pretraining.yaml" --use-pretraining ^
+@REM     --ptr-tilesize 640 --ptr-epochs 5^
+@REM     --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_cl.yaml" ^
+@REM     --cl-ratios 0 0.5 1 2.5 7.5 10 ^
+@REM     --cl-epochs 10 10 10 5 5 20 ^
+@REM     --cl-freeze 0 0 5 10 15 20 ^
+@REM     --cl-lr0s 0.0001 0.0001 0.0001 0.0001 0.0001 0.00001 ^
+@REM     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
+@REM     --hn-num-epochs 10 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_hn.yaml" ^
+@REM     --hn-is-yolo-obb --hn-use-sliding_window
+
+call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 10 --is-detector ^
     --scale 0.5 --mosaic 0.2 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
     --height 1280 --width 1280^
-    --path-weights "base_models_weights\yolov8s-obb.pt" ^
-    --run-name "obb-detector-cl" --project-name "wildAI-detection"^
-    --tag "PTR" "CL" "HN" ^
-    --ptr-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_pretraining.yaml" --use-pretraining ^
-    --ptr-tilesize 640 --ptr-epochs 10^
-    --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
-    --cl-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_cl.yaml" ^
-    --cl-ratios 0 0.5 1 2.5 5 7.5 ^
-    --cl-epochs 10 10 10 5 5 5 ^
-    --cl-freeze 0 0 5 10 15 20 ^
-    --cl-lr0s 0.0001 0.0001 0.0001 0.00001 0.00001 0.00001 ^
+    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/57daf3bcd99b4dd4b040cb4f8670960c/artifacts/weights/best.pt" ^
+    --run-name "yolov8s_obb-PTR-CL-HN" --project-name "wildAI-detection"^
+    --tag "HN" ^
     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
-    --hn-num-epochs 10 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_hn.yaml" ^
-    --hn-is-yolo-obb
+    --hn-num-epochs 5 --hn-freeze 22 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_hn.yaml" ^
+    --hn-tilesize 1280 --hn-imgsz 1280 --hn-lr0 0.0001 --hn-lrf 0.01 ^
+    --hn-is-yolo-obb --hn-load-results
 
 
 @REM call python tools\cli.py --start-training --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.01 --patience 10 --is-detector^

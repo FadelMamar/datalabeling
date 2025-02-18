@@ -116,7 +116,6 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     from ..annotator import Detector
     from ..dataset.sampling import (get_preds_targets, compute_detector_performance,get_uncertainty)
     
-    tilesize=min(args.height,args.width)
     split="train"
     pred_results_dir=args.hn_save_dir
     save_path_samples= os.path.join(args.hn_save_dir,'hard_samples.txt')
@@ -127,7 +126,8 @@ def get_data_cfg_paths_for_HN(args:Arguments, data_config_yaml:str):
     model = Detector(path_to_weights=args.path_weights,
                     confidence_threshold=args.hn_confidence_threshold,
                     overlap_ratio=args.hn_overlap_ratio,
-                    tilesize=tilesize,
+                    tilesize=args.hn_tilesize,
+                    imgsz=args.hn_imgsz,
                     use_sliding_window=args.hn_use_sliding_window,
                     device=args.device,
                     is_yolo_obb=args.hn_is_yolo_obb
@@ -284,6 +284,7 @@ def hard_negative_strategy_run(model:YOLO, args:Arguments,img_glob_pattern:str="
     resume = False #args.use_pretraining or args.use_continual_learning
     training_routine(model=model,
                         args=args,
+                        imgsz=args.hn_imgsz,
                         batchsize=args.hn_batch_size,
                         data_cfg=hn_cfg_path,
                         resume=resume

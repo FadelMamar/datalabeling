@@ -246,7 +246,7 @@ class Detector(object):
         #     image = Image.open(f)
 
         if self.use_sliding_window:
-            tilesize = override_tilesize if (self.tilesize is None) else self.tilesize
+            tilesize = override_tilesize or self.tilesize
             result = get_sliced_prediction(image,
                                             self.detection_model,
                                             slice_height=tilesize,

@@ -69,17 +69,19 @@ class Arguments:
     use_hn_learning:bool=False
     hn_save_dir:str=None
     hn_data_config_yaml:str=None
+    hn_imgsz:int = 1280 # used to resize the input image
+    hn_tilesize:int= 1280 # used for sliding window based detections
     hn_num_epochs:int=10
     hn_freeze:int=20
     hn_lr0:float=1e-4
     hn_lrf:float=1e-2
     hn_batch_size:int=16
     hn_is_yolo_obb:bool=False
-    hn_use_sliding_window:bool=True
+    hn_use_sliding_window=True # can't change thru cli
     hn_overlap_ratio:float=0.2
     hn_map_thrs:float=0.35 # mAP threshold. lower than it is considered sample of interest
     hn_score_thrs:float=0.7
-    hn_confidence_threshold:float=0.1
+    hn_confidence_threshold:float=0.25
     hn_ratio:int=20 # ratio = num_empty/num_non_empty. Higher allows to look at all saved empty images
     hn_uncertainty_thrs:float=5 # helps to select those with high uncertainty
     hn_uncertainty_method:str="entropy"
