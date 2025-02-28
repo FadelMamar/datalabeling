@@ -170,6 +170,18 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None,parsed_config:dic
 
     return coco_annotations
 
+def get_upload_img_dir(coco_annotation:dict):
+        directory = list(set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']]))
+
+        if len(directory) > 1:
+            print(f'There should be one upload directory per annotation project. There are {len(directory)}={directory}. Attempting to fix it through os.path.commonprefix. Not guaranteed to work.')
+            return os.path.commonprefix(directory)
+        
+        if len(directory)==0:
+            raise NotImplementedError("There are no labels")
+
+        return directory.pop() 
+
 def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH,
                                      parse_ls_config:bool=False,dotenv_path:str=None,ls_client:Client=None)->dict:
     """Converts directory with LS json files to coco format.
@@ -182,10 +194,7 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
         dict: the schema is {uploaded_image_dir:coco_annotation_path}
     """
 
-    def get_upload_img_dir(coco_annotation:dict):
-        directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
-        assert len(directory)==1,'There should be one upload directory per annotation project'
-        return directory.pop() 
+    
     
     def get_ls_parsed_config(ls_json_path:str):
 
@@ -231,10 +240,6 @@ def load_coco_annotations(dest_dir_coco:str=COCO_DIR_PATH)->dict:
         dict: the schema is {uploaded_image_dir:coco_annotation_path}
     """
 
-    def get_upload_img_dir(coco_annotation:dict):
-        directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
-        assert len(directory)==1,'There should be one upload directory per annotation project'
-        return directory.pop()
     
     coco_paths = list(Path(dest_dir_coco).glob('*.json'))
     upload_img_dirs = [get_upload_img_dir(coco_annotation=load_json(coco_path)) for coco_path in coco_paths]
