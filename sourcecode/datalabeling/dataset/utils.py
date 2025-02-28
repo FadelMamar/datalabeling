@@ -514,6 +514,7 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
 
     for col in cols[1:]:
         df_annotation.loc[:,col] = df_annotation[col].apply(float)
+    df_annotation.loc[:,"label_id"] = df_annotation["label_id"].apply(int)
 
     # normalize values
     df_annotation.loc[:,'x'] = df_annotation['x'].apply(lambda x: x/slice_width)

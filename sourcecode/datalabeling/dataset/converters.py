@@ -132,5 +132,8 @@ def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str,skip:bool=True)->None:
         assert df[names[1:]].all().max() <=1., "max value <= 1"
         assert df[names[1:]].all().min() >= 0., "min value >=0"
 
+        # make sure id is int
+        df.loc[:,'id'] = df['id'].astype(int)
+
         # save file
         df[cols].to_csv(Path(output_dir)/label_path.name,sep=' ',index=False,header=False)
