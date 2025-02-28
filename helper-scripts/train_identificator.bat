@@ -44,7 +44,7 @@ call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.0005 -
     --cl-ratios 0 1 2.5 7.5 10 ^
     --cl-epochs 10 15 15 20 20 ^
     --cl-freeze 0 0 10 15 15 ^
-    --cl-lr0s 0.0001 0.0001 0.00005 0.00001 0.00001 ^
+    --cl-lr0s 0.0001 0.0001 0.00005 0.00005 0.00005 ^
     --hn-save-dir "D:\PhD\Data per camp\IdentificationDataset\hard_samples" --use-hn-learning ^
     --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_identification.yaml" ^
     --hn-is-yolo-obb

@@ -62,7 +62,7 @@ def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str,skip:bool=True)->None
 
         for col in names[1:]:
             df[col] = df[col].astype(float)
-        df['id'] = df['id'].astype(int)
+        df = df.astype({'id':'int32'})
 
         df['w'] = 0.5*df['w']
         df['h'] = 0.5*df['h']
@@ -133,7 +133,7 @@ def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str,skip:bool=True)->None:
         assert df[names[1:]].all().min() >= 0., "min value >=0"
 
         # make sure id is int
-        df.loc[:,'id'] = df['id'].astype(int)
+        df = df.astype({'id':'int32'})
 
         # save file
         df[cols].to_csv(Path(output_dir)/label_path.name,sep=' ',index=False,header=False)

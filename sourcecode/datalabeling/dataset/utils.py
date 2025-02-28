@@ -512,9 +512,11 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     for col in cols:
         assert df_annotation[col].isna().sum()<1,'there are NaN values. Check out.'
 
+    # change type
     for col in cols[1:]:
         df_annotation.loc[:,col] = df_annotation[col].apply(float)
     df_annotation.loc[:,"label_id"] = df_annotation["label_id"].apply(int)
+    df_annotation = df_annotation.astype({'label_id':'int32'})
 
     # normalize values
     df_annotation.loc[:,'x'] = df_annotation['x'].apply(lambda x: x/slice_width)
@@ -525,9 +527,7 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     # check value range
     assert df_annotation[cols[1:]].all().max() <=1., "max value <= 1"
     assert df_annotation[cols[1:]].all().min() >= 0., "min value >=0"
-
-    # change type
-    df_annotation.loc[:,'label_id'] = df_annotation.loc[:,'label_id'].astype(int)
+    
     
     for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
@@ -581,7 +581,7 @@ def build_yolo_dataset(args:Dataprepconfigs):
             # sample tiles
             df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
                                     empty_ratio=args.empty_ratio,
-                                    out_csv_path=Path(args.dest_path_images).with_name("gt.csv"),
+                                    out_csv_path= None, #Path(args.dest_path_images).with_name("gt.csv"),
                                     img_dir=img_dir,
                                     save_all=args.save_all,
                                     labels_to_discard=args.discard_labels,

@@ -74,7 +74,7 @@ class Arguments:
     hn_tilesize:int= 1280 # used for sliding window based detections
     hn_num_epochs:int=10
     hn_freeze:int=20
-    hn_lr0:float=1e-5
+    hn_lr0:float=5e-5
     hn_lrf:float=1e-1
     hn_batch_size:int=16
     hn_is_yolo_obb:bool=False
