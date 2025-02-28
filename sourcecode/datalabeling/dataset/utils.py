@@ -472,23 +472,23 @@ def load_label_map(path:str,label_to_discard:list)->dict:
     label_map = dict(zip(range(len(names)),names))
     return label_map
 
-def update_yolo_data_cfg(args:Dataprepconfigs):
-    """Updates yolo data config yaml file using args.label_map
+def update_yolo_data_cfg(data_config_yaml,label_map:dict):
+    """Updates yolo data config yaml file "names" and "nc" fields.
 
     Args:
         args (Dataprepconfigs): configs
     """
 
-    assert args.label_map is not None, 'Provide path to label mapping.'
+    # assert args.label_map is not None, 'Provide path to label mapping.'
 
     # load yaml
-    with open(args.data_config_yaml,'r') as file:
+    with open(data_config_yaml,'r') as file:
         yolo_config = yaml.load(file,Loader=yaml.FullLoader)
     # load label mapping
-    label_map = load_label_map(args.label_map,args.discard_labels)
+    # label_map = load_label_map(args.label_map,args.discard_labels)
     # updaate yaml and save
     yolo_config.update({'names':label_map,'nc':len(label_map)})
-    with open(args.data_config_yaml,'w') as file:
+    with open(data_config_yaml,'w') as file:
         yaml.dump(yolo_config,file,default_flow_style=False, sort_keys=False)
 
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
@@ -555,8 +555,8 @@ def build_yolo_dataset(args:Dataprepconfigs):
 
     # load label map
     if not args.is_detector:
-        update_yolo_data_cfg(args=args)
         label_map = load_label_map(path=args.label_map,label_to_discard=args.discard_labels)
+        update_yolo_data_cfg(args.data_config_yaml, label_map=label_map)
         name_id_map = {val:key for key,val in label_map.items()}
         
     # slice coco annotations and save tiles
