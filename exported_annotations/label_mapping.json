@@ -1,0 +1,79 @@
+[{
+    "id": 0,
+    "name": "Waterbuck"
+  },
+  {
+    "id": 1,
+    "name": "buffalo"
+  },
+  {
+    "id": 2,
+    "name": "bushbuck"
+  },
+  {
+    "id": 3,
+    "name": "duiker"
+  },
+  {
+    "id": 4,
+    "name": "giraffe"
+  },
+  {
+    "id": 5,
+    "name": "impala"
+  },
+  {
+    "id": 6,
+    "name": "kudu"
+  },
+  {
+    "id": 8,
+    "name": "nyala"
+  },
+  {
+    "id": 9,
+    "name": "nyala(m)"
+  },
+  {
+    "id": 11,
+    "name": "other animal"
+  },
+  {
+    "id": 12,
+    "name": "reedbuck"
+  },
+  {
+    "id": 13,
+    "name": "roan"
+  },
+  {
+    "id": 14,
+    "name": "rocks"
+  },
+  {
+    "id": 15,
+    "name": "sable"
+  },
+  {
+    "id": 18,
+    "name": "warthog"
+  },
+  {
+    "id": 19,
+    "name": "wildebeest"
+  },
+  {
+    "id": 20,
+    "name": "zebra"
+  },
+  {
+    "id": 21,
+    "name": "colour impala"
+  },
+  {"id": 22,
+  "name": "lechwe"
+  },
+  {"id": 23,
+  "name": "Tsessebe"
+  }
+]
