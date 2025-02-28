@@ -1,0 +1,26 @@
+path: D:\PhD\Data per camp\IdentificationDataset
+train:
+- train\images
+val:
+- val\images
+nc: 19
+names:
+  0: Waterbuck
+  1: buffalo
+  2: bushbuck
+  3: duiker
+  4: giraffe
+  5: impala
+  6: kudu
+  7: nyala
+  8: nyala(m)
+  9: other animal
+  10: reedbuck
+  11: roan
+  12: sable
+  13: warthog
+  14: wildebeest
+  15: zebra
+  16: colour impala
+  17: lechwe
+  18: Tsessebe
