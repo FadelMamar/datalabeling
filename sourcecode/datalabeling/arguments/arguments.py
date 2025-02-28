@@ -37,6 +37,7 @@ class Arguments:
     path_weights:str=None #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-4
     lrf:float=1e-2
+    warmup_epochs:int=3
     batchsize:int=32
     epochs:int=50
     seed=41
@@ -73,8 +74,8 @@ class Arguments:
     hn_tilesize:int= 1280 # used for sliding window based detections
     hn_num_epochs:int=10
     hn_freeze:int=20
-    hn_lr0:float=1e-4
-    hn_lrf:float=1e-2
+    hn_lr0:float=1e-5
+    hn_lrf:float=1e-1
     hn_batch_size:int=16
     hn_is_yolo_obb:bool=False
     hn_use_sliding_window=True # can't change thru cli

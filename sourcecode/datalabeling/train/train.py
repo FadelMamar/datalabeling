@@ -187,6 +187,7 @@ def training_routine(model:YOLO,args:Arguments,imgsz:int=None,batchsize:int=None
                 lrf=args.lrf,
                 momentum=args.optimizer_momentum,
                 weight_decay=args.weight_decay,
+                warmup_epochs=args.warmup_epochs,
                 dropout=args.dropout,
                 batch=batchsize or args.batchsize,
                 val=True,
