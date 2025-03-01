@@ -51,7 +51,7 @@ if __name__ == '__main__':
         save_path = Path(args.dest_path_images).parent / "dataset_configs.json"
         with open(save_path,'w') as file:
             configs = ['is_detector',
-                       'discard_labels','ls_json_dir',
+                       'discard_labels','ls_json_dir','keep_labels',
                        'coco_json_dir','dest_path_images',
                        'dest_path_labels','clear_yolo_dir',
                        'height','width','overlap_ratio',
