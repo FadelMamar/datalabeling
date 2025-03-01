@@ -4,7 +4,6 @@ path: D:\PhD\Data per camp\DetectionDataset
 train: 
  - WAID\images\valid
  - WAID\images\test
- - WAID\images\train
  - delplanque_tiled_data\train_tiled\images
  - delplanque_tiled_data\val_tiled\images
  - delplanque_tiled_data\test_tiled\images
