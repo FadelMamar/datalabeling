@@ -18,6 +18,7 @@ import math
 from tqdm import tqdm
 from label_studio_converter import Converter
 from label_studio_sdk import Client
+import traceback
 
 
 
@@ -390,32 +391,36 @@ def sample_data(coco_dict_slices:dict,
         df_annot.loc[:,col] = df_annot[col].apply(math.floor)
 
     # join dataframes
-    df = df_limits.join(df_annot,how='outer') 
+    df = df_limits.join(df_annot,how='outer')
+
+    # get non-empty
+    df_empty = df[df['x_min'].isna()].copy()
+    df_empty.drop_duplicates(subset='images',inplace=True)
 
     # discard non-animal labels
     if labels_to_discard is not None:
         df = df[~df.labels.isin(labels_to_discard)].copy()
+        df_non_empty = df[~df['x_min'].isna()].copy()
     elif labels_to_keep is not None:
-        df = df[df.labels.isin(labels_to_keep)].copy()
+        df_non_empty = df[df.labels.isin(labels_to_keep)].copy()
+
+    # get number of images to sample
+    non_empty_num = df_non_empty['images'].unique().shape[0]
+    empty_num =  math.floor(non_empty_num*empty_ratio) 
+    empty_num = min(empty_num,len(df_empty))
+    frac = 1.0 if save_all else empty_num/len(df_empty)
 
     # get empty df and tiles
-    df_empty = df[df['x_min'].isna()].copy()
-    df_empty.drop_duplicates(subset='images',inplace=True)
     if sample_only_empty:
-        df = df_empty.sample(frac=empty_ratio)
+        df = df_empty.sample(frac=empty_num/len(df_empty))
         df.reset_index(inplace=True)
         # create x_center and y_center
         df['x'] = np.nan
         df['y'] = np.nan
         df['width'] = np.nan
         df['height'] = np.nan
-
     else:
-        df_non_empty = df[~df['x_min'].isna()].copy()
-        non_empty_num = df_non_empty['images'].unique().shape[0]
-        empty_num =  math.floor(non_empty_num*empty_ratio) 
-        empty_num = min(empty_num,len(df_empty))
-        frac = 1.0 if save_all else empty_num/len(df_empty)
+        
         df_empty = df_empty.sample(frac=frac,
                                 random_state=41,
                                 replace=False)
@@ -477,12 +482,12 @@ def load_label_map(path:str,label_to_discard:list=None, labels_to_keep:list=None
         dict: label map {index:name}
     """
 
-    assert (labels_to_keep is None) + (label_to_discard is None) == 1, "Exactly one should be None."
+    assert (labels_to_keep is not None) + (label_to_discard is not None) == 1, "Exactly one should be None."
 
     # load label mapping
     with open(path,'r') as file:
         label_map = json.load(file)
-    if labels_to_keep is None:
+    if label_to_discard is not None:
         names = [p['name'] for p in label_map if p['name'] not in label_to_discard]
     else:
         names = [p['name'] for p in label_map if p['name'] in labels_to_keep]
@@ -572,7 +577,8 @@ def build_yolo_dataset(args:Dataprepconfigs):
 
     # load label map
     if not args.is_detector:
-        label_map = load_label_map(path=args.label_map,label_to_discard=args.discard_labels,
+        label_map = load_label_map(path=args.label_map,
+                                   label_to_discard=args.discard_labels,
                                    labels_to_keep=args.keep_labels)
         update_yolo_data_cfg(args.data_config_yaml, label_map=label_map)
         name_id_map = {val:key for key,val in label_map.items()}
@@ -620,5 +626,6 @@ def build_yolo_dataset(args:Dataprepconfigs):
                     out_img_dir=args.dest_path_images,
                     clear_out_img_dir=False)
         except Exception as e:
-            print(e)
+            traceback.print_exc()
+            # print(e)
             print(f"Failed for {img_dir} \n {cocopath}")
