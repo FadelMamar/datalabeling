@@ -575,7 +575,7 @@ def build_yolo_dataset(args:Dataprepconfigs):
                                                            dest_dir_coco=args.coco_json_dir,
                                                            parse_ls_config=args.parse_ls_config)
 
-    # load label map
+    # load label map and update yolo data_cfg_yaml file
     if not args.is_detector:
         label_map = load_label_map(path=args.label_map,
                                    label_to_discard=args.discard_labels,
