@@ -403,6 +403,9 @@ def sample_data(coco_dict_slices:dict,
         df_non_empty = df[~df['x_min'].isna()].copy()
     elif labels_to_keep is not None:
         df_non_empty = df[df.labels.isin(labels_to_keep)].copy()
+    else:
+        df = df[~df.labels.isin(labels_to_discard)].copy()
+        print("sample_data function: No label is discarded, they are all kept",end="\n")
 
     # get number of images to sample
     non_empty_num = df_non_empty['images'].unique().shape[0]
@@ -626,6 +629,7 @@ def build_yolo_dataset(args:Dataprepconfigs):
                     out_img_dir=args.dest_path_images,
                     clear_out_img_dir=False)
         except Exception as e:
+            print("--"*25,end="\n")
             traceback.print_exc()
-            # print(e)
-            print(f"Failed for {img_dir} \n {cocopath}")
+            print("--"*25)
+            print(f"Failed to build yolo dataset for for {img_dir} -- {cocopath}\n\n")
