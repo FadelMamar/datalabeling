@@ -295,6 +295,7 @@ def sample_data(coco_dict_slices:dict,
                 save_all:bool=False,
                 out_csv_path:str=None,
                 labels_to_discard:list=None,
+                labels_to_keep:list=None,
                 sample_only_empty:bool=False)->pd.DataFrame:
     """Sample annotations from sliced coco annotations
 
@@ -304,6 +305,7 @@ def sample_data(coco_dict_slices:dict,
         empty_ratio (float, optional): ratio negative samples (i.e. empty images) to positive samples. Defaults to 3. It loads 3 times more empty tiles than non-empty.
         out_csv_path (str, optional): if given, it saves the sampled annotations to the path. Defaults to None.
         labels_to_discard (list, optional): labels to discard. Defaults to None.
+        labels_to_keep (list, optional): labels to keep. Defaults.
         sample_only_empty (bool, optional): states if only negative samples should be saved. It is useful for hard negative sample mining. Defaults to False.
 
     Raises:
@@ -315,6 +317,7 @@ def sample_data(coco_dict_slices:dict,
     
     assert empty_ratio >= 0.,'Provide appropriate value'
     assert (save_all + sample_only_empty)<2, "Both cannot be true."
+    assert (labels_to_discard is not None) + (labels_to_keep is not None) <= 1, "At most one should be given!"
 
     def get_parent_image(file_name:str):
         ext = '.jpg' 
@@ -392,6 +395,8 @@ def sample_data(coco_dict_slices:dict,
     # discard non-animal labels
     if labels_to_discard is not None:
         df = df[~df.labels.isin(labels_to_discard)].copy()
+    elif labels_to_keep is not None:
+        df = df[df.labels.isin(labels_to_keep)].copy()
 
     # get empty df and tiles
     df_empty = df[df['x_min'].isna()].copy()
@@ -460,20 +465,27 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         tile = img[y0:y1,x0:x1,:]
         imsave(fname=save_path,arr=tile,check_contrast=False)
 
-def load_label_map(path:str,label_to_discard:list)->dict:
+def load_label_map(path:str,label_to_discard:list=None, labels_to_keep:list=None)->dict:
     """Loads label map. The map should be a json mapping class index to class name.
 
     Args:
         path (str): path to json file
         label_to_discard (list): labels to discard. If none, proide an empty list
+        label_to_keep (list): should be given when label_to_discard is not
 
     Returns:
         dict: label map {index:name}
     """
+
+    assert (labels_to_keep is None) + (label_to_discard is None) == 1, "Exactly one should be None."
+
     # load label mapping
     with open(path,'r') as file:
         label_map = json.load(file)
-    names = [p['name'] for p in label_map if p['name'] not in label_to_discard]
+    if labels_to_keep is None:
+        names = [p['name'] for p in label_map if p['name'] not in label_to_discard]
+    else:
+        names = [p['name'] for p in label_map if p['name'] in labels_to_keep]
     label_map = dict(zip(range(len(names)),names))
     return label_map
 
@@ -490,7 +502,6 @@ def update_yolo_data_cfg(data_config_yaml,label_map:dict):
     with open(data_config_yaml,'r') as file:
         yolo_config = yaml.load(file,Loader=yaml.FullLoader)
     # load label mapping
-    # label_map = load_label_map(args.label_map,args.discard_labels)
     # updaate yaml and save
     yolo_config.update({'names':label_map,'nc':len(label_map)})
     with open(data_config_yaml,'w') as file:
@@ -561,7 +572,8 @@ def build_yolo_dataset(args:Dataprepconfigs):
 
     # load label map
     if not args.is_detector:
-        label_map = load_label_map(path=args.label_map,label_to_discard=args.discard_labels)
+        label_map = load_label_map(path=args.label_map,label_to_discard=args.discard_labels,
+                                   labels_to_keep=args.keep_labels)
         update_yolo_data_cfg(args.data_config_yaml, label_map=label_map)
         name_id_map = {val:key for key,val in label_map.items()}
         
@@ -585,6 +597,7 @@ def build_yolo_dataset(args:Dataprepconfigs):
                                     img_dir=img_dir,
                                     save_all=args.save_all,
                                     labels_to_discard=args.discard_labels,
+                                    labels_to_keep=args.keep_labels,
                                     sample_only_empty=args.save_only_empty
                                     )
             

@@ -29,7 +29,8 @@ class Arguments:
     data_config_yaml:str=None #os.path.join(CUR_DIR,'../../../data/data_config.yaml')    
 
     # labels to discard
-    discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
+    discard_labels:Sequence[str] = None #('other','rocks','vegetation','detection','termite mound','label')
+    keep_labels:Sequence[str] = None
 
     # training flags
     height:int = 640
@@ -53,7 +54,7 @@ class Arguments:
     ptr_batchsize:int=32
     ptr_epochs:int=10
     ptr_lr0:float=1e-4
-    ptr_lrf:float=1e-2
+    ptr_lrf:float=1e-1
     ptr_freeze:int=None
 
     # continual learning flags
@@ -61,7 +62,7 @@ class Arguments:
     cl_ratios:Sequence[float]=(1.0,) # ratio = num_empty/num_non_empty
     cl_epochs:Sequence[int]=(20,)
     cl_freeze:Sequence[int]=(0,)
-    cl_lr0s:Sequence[float]=(1e-5,)
+    cl_lr0s:Sequence[float]=(5e-5,)
     cl_save_dir:str=None # should be given!
     cl_data_config_yaml:str=None
     cl_batch_size:int=16
@@ -163,7 +164,8 @@ class Dataprepconfigs:
     load_coco_annotations:bool=False
 
     # labels to discard
-    discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
+    discard_labels:Sequence[str] = None # ('other','rocks','vegetation','detection','termite mound','label')
+    keep_labels:Sequence[str] = None
 
     # label mapping for identification dataset
     label_map:str = None
