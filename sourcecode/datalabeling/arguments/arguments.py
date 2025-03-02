@@ -26,17 +26,19 @@ class Arguments:
     mlflow_model_alias:str=None
 
     # training data
-    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')    
+    data_config_yaml:str=None #os.path.join(CUR_DIR,'../../../data/data_config.yaml')    
 
     # labels to discard
-    discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
+    discard_labels:Sequence[str] = None #('other','rocks','vegetation','detection','termite mound','label')
+    keep_labels:Sequence[str] = None
 
     # training flags
     height:int = 640
     width:int = 640
-    path_weights:str=os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
+    path_weights:str=None #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8m.pt") #os.path.join(CUR_DIR,"../../../base_models_weights/yolov8.kaza.pt")
     lr0:float=1e-4
     lrf:float=1e-2
+    warmup_epochs:int=3
     batchsize:int=32
     epochs:int=50
     seed=41
@@ -44,6 +46,48 @@ class Arguments:
     optimizer_momentum:float=0.99
     device:str= 0
     patience:int=10
+
+    # pretraining
+    use_pretraining:bool=False
+    ptr_data_config_yaml:str=None
+    ptr_tilesize:int=640
+    ptr_batchsize:int=32
+    ptr_epochs:int=10
+    ptr_lr0:float=1e-4
+    ptr_lrf:float=1e-1
+    ptr_freeze:int=None
+
+    # continual learning flags
+    use_continual_learning:bool=False
+    cl_ratios:Sequence[float]=(1.0,) # ratio = num_empty/num_non_empty
+    cl_epochs:Sequence[int]=(20,)
+    cl_freeze:Sequence[int]=(0,)
+    cl_lr0s:Sequence[float]=(5e-5,)
+    cl_save_dir:str=None # should be given!
+    cl_data_config_yaml:str=None
+    cl_batch_size:int=16
+
+    # hard negative data sampling learning mode
+    use_hn_learning:bool=False
+    hn_save_dir:str=None
+    hn_data_config_yaml:str=None
+    hn_imgsz:int = 1280 # used to resize the input image
+    hn_tilesize:int= 1280 # used for sliding window based detections
+    hn_num_epochs:int=10
+    hn_freeze:int=20
+    hn_lr0:float=5e-5
+    hn_lrf:float=1e-1
+    hn_batch_size:int=16
+    hn_is_yolo_obb:bool=False
+    hn_use_sliding_window=True # can't change thru cli
+    hn_overlap_ratio:float=0.2
+    hn_map_thrs:float=0.35 # mAP threshold. lower than it is considered sample of interest
+    hn_score_thrs:float=0.7
+    hn_confidence_threshold:float=0.25
+    hn_ratio:int=20 # ratio = num_empty/num_non_empty. Higher allows to look at all saved empty images
+    hn_uncertainty_thrs:float=5 # helps to select those with high uncertainty
+    hn_uncertainty_method:str="entropy"
+    hn_load_results:bool=False
 
     # regularization
     dropout:float=0.
@@ -87,20 +131,21 @@ class Arguments:
 class Dataprepconfigs:
     # data preparation arguments
     root_path:str = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
-    dest_path_images:str=os.path.join(CUR_DIR,'../../../data/train/images')
-    dest_path_labels:str=os.path.join(CUR_DIR,'../../../data/train/labels')
-    height:int = 640
-    width:int = 640
-    overlap:int=80
-    min_visibility:float=0.1
+    dest_path_images:str=None #os.path.join(CUR_DIR,'../../../data/train/images')
+    dest_path_labels:str=None #os.path.join(CUR_DIR,'../../../data/train/labels')
+    height:int=640
+    width:int=640
+    # overlap:int=80
+    min_visibility:float=0.5
     save_all:bool=False
-    overlap_ratio:float=0.2
+    overlap_ratio:float=0.1
     empty_ratio:float=0.1
-    data_config_yaml:str=os.path.join(CUR_DIR,'../../../data/data_config.yaml')
+    data_config_yaml:str=None #os.path.join(CUR_DIR,'../../../data/data_config.yaml')
 
     # annotations paths
-    coco_json_dir:str=""
-    ls_json_dir:str=""
+    coco_json_dir:str=None
+    ls_json_dir:str=None
+    parse_ls_config:bool=False
 
     # convert dataset formats
     yolo_to_obb:bool=False
@@ -119,7 +164,8 @@ class Dataprepconfigs:
     load_coco_annotations:bool=False
 
     # labels to discard
-    discard_labels:Sequence[str] = ('other','rocks','vegetation','detection','termite mound','label')
+    discard_labels:Sequence[str] = None # ('other','rocks','vegetation','detection','termite mound','label')
+    keep_labels:Sequence[str] = None
 
     # label mapping for identification dataset
     label_map:str = None

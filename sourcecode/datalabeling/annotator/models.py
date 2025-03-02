@@ -221,11 +221,14 @@ class Detector(object):
                                                         device=device,
                                                         )
 
+    # TODO: batch predictions
     def predict(self, image:Image,
                 return_coco:bool=True,
                 sahi_prostprocess:float='NMS',
                 override_tilesize:int=None,
-                postprocess_match_threshold:float=0.5):
+                postprocess_match_threshold:float=0.5,
+                nms_iou:float=None
+                ):
         """Run sliced predictions
 
         Args:
@@ -243,7 +246,7 @@ class Detector(object):
         #     image = Image.open(f)
 
         if self.use_sliding_window:
-            tilesize = override_tilesize if (self.tilesize is None) else self.tilesize
+            tilesize = override_tilesize or self.tilesize
             result = get_sliced_prediction(image,
                                             self.detection_model,
                                             slice_height=tilesize,
@@ -253,7 +256,7 @@ class Detector(object):
                                             postprocess_type=sahi_prostprocess,
                                             postprocess_match_metric="IOU",
                                             verbose=1,
-                                            postprocess_match_threshold=postprocess_match_threshold,
+                                            postprocess_match_threshold=postprocess_match_threshold or nms_iou,
                                             )
         else:
             result = get_prediction(
@@ -296,20 +299,24 @@ class Detector(object):
         return coco_results
 
 
-    def predict_directory(self,path_to_dir:str,as_dataframe:bool=False,save_path:str=None):
+    def predict_directory(self,path_to_dir:str=None,images_paths:list[str]=None,as_dataframe:bool=False,save_path:str=None):
         """Computes predictions on a directory
 
         Args:
-            path_to_dir (str): path to directory with images
+            path_to_dir (str): path to directory with images. Defaults to None
+            images_list (list): paths of images to run the detection on
             as_dataframe (bool): returns results as pd.DataFrame
             save_path (str) : converts to dataframe and then save
 
         Returns:
             dict: a directory with the schema {image_path:prediction_coco_format}
         """
+
+        assert (path_to_dir is None) + (images_paths is None) < 2, "Both should not be given."
         results = {}
-        for image_path in tqdm(Path(path_to_dir).iterdir()):
-            pred = self.predict(Image.open(image_path),return_coco=True)
+        paths = images_paths or Path(path_to_dir).iterdir()
+        for image_path in tqdm(paths):
+            pred = self.predict(Image.open(image_path), return_coco=True)
             results.update({str(image_path):pred})
         
         # returns as df or save
@@ -387,6 +394,7 @@ class Detector(object):
         }
 
         return template
+
 
     def train(self, dataloader):
        raise NotImplementedError('Not implemented.')

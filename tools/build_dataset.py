@@ -7,6 +7,7 @@ import yaml
 import os
 import logging
 import traceback
+from dotenv import load_dotenv
 
 def load_datasets(data_config_yaml:str)->list[str]:
 
@@ -35,9 +36,13 @@ def load_datasets(data_config_yaml:str)->list[str]:
 
 if __name__ == '__main__':
 
+    load_dotenv(r"..\.env")
+
     logger = logging.getLogger(__name__)
 
     args = parse(Dataprepconfigs)
+
+    # print(args)
 
     # creates a yolo dataset given args and saves dataset creation configs
     if args.build_yolo_dataset:
@@ -46,10 +51,11 @@ if __name__ == '__main__':
         save_path = Path(args.dest_path_images).parent / "dataset_configs.json"
         with open(save_path,'w') as file:
             configs = ['is_detector',
-                       'discard_labels','ls_json_dir',
+                       'discard_labels','ls_json_dir','keep_labels',
                        'coco_json_dir','dest_path_images',
                        'dest_path_labels','clear_yolo_dir',
                        'height','width','overlap_ratio',
+                       'save_all','parse_ls_config',
                        'min_visibility','empty_ratio']
             configs = dict(zip(configs,[args.__dict__[k] for k in configs]))
             json.dump(configs,file,indent=2)

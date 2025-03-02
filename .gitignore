@@ -35,3 +35,6 @@ src/helper.py
 mlruns/0/meta.yaml
 *.db
 *.DS_Store
+yolov8-obb
+*.tmp
+*.pth

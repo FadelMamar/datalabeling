@@ -17,6 +17,9 @@ import os
 import math
 from tqdm import tqdm
 from label_studio_converter import Converter
+from label_studio_sdk import Client
+import traceback
+
 
 
 
@@ -40,7 +43,7 @@ def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH)->tuple[list,list]:
 
     return ls_annotations,paths
 
-def convert_json_to_df(json_data:List[Dict])->pd.DataFrame:
+def convert_lsjsonmin_to_df(json_data:List[Dict])->pd.DataFrame:
     """Converts Label studio (LS) annotations from json to DataFrames
 
     Args:
@@ -102,7 +105,7 @@ def convert_json_to_df(json_data:List[Dict])->pd.DataFrame:
 
     return df
 
-def convert_json_annotations_to_csv(rewrite_existing=True)->None:
+def convert_lsjsonmin_annotations_to_csv(rewrite_existing=True)->None:
     """Converts LS json-min annotations to csv and saves to the same directory
 
     Args:
@@ -116,13 +119,13 @@ def convert_json_annotations_to_csv(rewrite_existing=True)->None:
         save_path = os.path.join(CSV_DIR_PATH,path.name.replace('.json','.csv'))
         if Path(save_path).exists() :
             if rewrite_existing:
-                df = convert_json_to_df(json_data=annotation)
+                df = convert_lsjsonmin_to_df(json_data=annotation)
                 df.to_csv(save_path,index=False)
         else:
-            df = convert_json_to_df(json_data=annotation)
+            df = convert_lsjsonmin_to_df(json_data=annotation)
             df.to_csv(save_path,index=False)
 
-def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
+def convert_json_to_coco(input_file:str,out_file_name:str=None,parsed_config:dict=None)->Dict:
     """Converts LS json annotations to coco format
 
     Args:
@@ -136,13 +139,17 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
     # load converter
     with io.open(LABELSTUDIOCONFIG) as f:
         config_str = f.read()
+    if parsed_config is not None:
+        config_str = parsed_config
     handler = Converter(config=config_str,
                         project_dir=None,
-                        download_resources=False)
+                        download_resources=False
+                        )
     handler.convert_to_coco(input_data=input_file,
                             output_dir=TEMP,
                             output_image_dir=os.path.join(TEMP,'images'),
-                            is_dir=False)
+                            is_dir=False
+                            )
     # load and update image paths
     coco_json_path = os.path.join(TEMP,'result.json')
     coco_annotations = load_json(coco_json_path)
@@ -164,7 +171,20 @@ def convert_json_to_coco(input_file:str,out_file_name:str=None)->Dict:
 
     return coco_annotations
 
-def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH)->dict:
+def get_upload_img_dir(coco_annotation:dict):
+        directory = list(set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']]))
+
+        if len(directory) > 1:
+            print(f'There should be one upload directory per annotation project. There are {len(directory)}={directory}. Attempting to fix it through os.path.commonprefix. Not guaranteed to work.')
+            return os.path.commonprefix(directory)
+        
+        if len(directory)==0:
+            raise NotImplementedError("There are no labels")
+
+        return directory.pop() 
+
+def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH,
+                                     parse_ls_config:bool=False,dotenv_path:str=None,ls_client:Client=None)->dict:
     """Converts directory with LS json files to coco format.
 
     Args:
@@ -175,15 +195,37 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
         dict: the schema is {uploaded_image_dir:coco_annotation_path}
     """
 
-    def get_upload_img_dir(coco_annotation:dict):
-        directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
-        assert len(directory)==1,'There should be one upload directory per annotation project'
-        return directory.pop() 
+    
+    
+    def get_ls_parsed_config(ls_json_path:str):
 
+        if dotenv_path is not None:
+            from dotenv import load_dotenv
+            load_dotenv(dotenv_path)
+        
+        labelstudio_client = ls_client    
+        if ls_client is None:
+            # Connect to the Label Studio API and check the connection
+            LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL')
+            API_KEY = os.getenv("LABEL_STUDIO_API_KEY")
+            labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
+
+        with open(ls_json_path,'r') as f:
+            ls_annotation = json.load(fp=f)
+        ids = set([annot['project'] for annot in ls_annotation])
+        assert len(ids)==1, "annotations come from different project. Not allowed!"
+        project_id = ids.pop()
+        project = labelstudio_client.get_project(id=project_id)
+
+        return project.parsed_label_config
+    
     upload_img_dirs,coco_paths = list(),list()
     for path in Path(input_dir).glob('*.json'):
         coco_path = os.path.join(dest_dir_coco,path.name)
-        annot = convert_json_to_coco(path,out_file_name=coco_path)
+        parsed_config = None
+        if parse_ls_config:
+            parsed_config = get_ls_parsed_config(path)
+        annot = convert_json_to_coco(path,out_file_name=coco_path,parsed_config=parsed_config)
         upload_img_dirs.append(get_upload_img_dir(coco_annotation=annot))
         coco_paths.append(coco_path)
 
@@ -199,10 +241,6 @@ def load_coco_annotations(dest_dir_coco:str=COCO_DIR_PATH)->dict:
         dict: the schema is {uploaded_image_dir:coco_annotation_path}
     """
 
-    def get_upload_img_dir(coco_annotation:dict):
-        directory = set([os.path.dirname(metadata['file_name']) for metadata in coco_annotation['images']])
-        assert len(directory)==1,'There should be one upload directory per annotation project'
-        return directory.pop()
     
     coco_paths = list(Path(dest_dir_coco).glob('*.json'))
     upload_img_dirs = [get_upload_img_dir(coco_annotation=load_json(coco_path)) for coco_path in coco_paths]
@@ -255,8 +293,10 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
 def sample_data(coco_dict_slices:dict,
                 img_dir:str,
                 empty_ratio:float=3.,
+                save_all:bool=False,
                 out_csv_path:str=None,
                 labels_to_discard:list=None,
+                labels_to_keep:list=None,
                 sample_only_empty:bool=False)->pd.DataFrame:
     """Sample annotations from sliced coco annotations
 
@@ -266,6 +306,7 @@ def sample_data(coco_dict_slices:dict,
         empty_ratio (float, optional): ratio negative samples (i.e. empty images) to positive samples. Defaults to 3. It loads 3 times more empty tiles than non-empty.
         out_csv_path (str, optional): if given, it saves the sampled annotations to the path. Defaults to None.
         labels_to_discard (list, optional): labels to discard. Defaults to None.
+        labels_to_keep (list, optional): labels to keep. Defaults.
         sample_only_empty (bool, optional): states if only negative samples should be saved. It is useful for hard negative sample mining. Defaults to False.
 
     Raises:
@@ -276,6 +317,8 @@ def sample_data(coco_dict_slices:dict,
     """
     
     assert empty_ratio >= 0.,'Provide appropriate value'
+    assert (save_all + sample_only_empty)<2, "Both cannot be true."
+    assert (labels_to_discard is not None) + (labels_to_keep is not None) <= 1, "At most one should be given!"
 
     def get_parent_image(file_name:str):
         ext = '.jpg' 
@@ -345,36 +388,46 @@ def sample_data(coco_dict_slices:dict,
     df_annot.set_index('id',inplace=True)
     df_annot['labels'] = df_annot['label_id'].map(label_map)
     for col in ['x_min','y_min','width','height']:
-        df_annot[col] = df_annot[col].apply(math.floor)
+        df_annot.loc[:,col] = df_annot[col].apply(math.floor)
 
     # join dataframes
-    df = df_limits.join(df_annot,how='outer') 
+    df = df_limits.join(df_annot,how='outer')
+
+    # get non-empty
+    df_empty = df[df['x_min'].isna()].copy()
+    df_empty.drop_duplicates(subset='images',inplace=True)
 
     # discard non-animal labels
     if labels_to_discard is not None:
         df = df[~df.labels.isin(labels_to_discard)].copy()
+        df_non_empty = df[~df['x_min'].isna()].copy()
+    elif labels_to_keep is not None:
+        df_non_empty = df[df.labels.isin(labels_to_keep)].copy()
+    else:
+        df = df[~df.labels.isin(labels_to_discard)].copy()
+        print("sample_data function: No label is discarded, they are all kept",end="\n")
+
+    # get number of images to sample
+    non_empty_num = df_non_empty['images'].unique().shape[0]
+    empty_num =  math.floor(non_empty_num*empty_ratio) 
+    empty_num = min(empty_num,len(df_empty))
+    frac = 1.0 if save_all else empty_num/len(df_empty)
 
     # get empty df and tiles
-    df_empty = df[df['x_min'].isna()].copy()
-    df_empty.drop_duplicates(subset='images',inplace=True)
     if sample_only_empty:
-        df = df_empty.sample(frac=empty_ratio)
+        df = df_empty.sample(frac=empty_num/len(df_empty))
         df.reset_index(inplace=True)
         # create x_center and y_center
         df['x'] = np.nan
         df['y'] = np.nan
         df['width'] = np.nan
         df['height'] = np.nan
-
     else:
-        df_non_empty = df[~df['x_min'].isna()].copy()
-        non_empty_num = df_non_empty['images'].unique().shape[0]
-        empty_num =  math.floor(non_empty_num*empty_ratio) 
-        empty_num = min(empty_num,len(df_empty))
-        df_empty = df_empty.sample(n=empty_num,
+        
+        df_empty = df_empty.sample(frac=frac,
                                 random_state=41,
                                 replace=False)
-        print(f'Sampling {empty_num} empty images, and {non_empty_num} non-empty images.')
+        print(f'Sampling {len(df_empty)} empty images, and {non_empty_num} non-empty images.')
 
         # concat dfs
         df = pd.concat([df_empty,df_non_empty],axis=0)
@@ -391,7 +444,7 @@ def sample_data(coco_dict_slices:dict,
     return df
 
 def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=False)->None:
-    """Saves tiles (or slices of images)
+    """Saves tiles (or slices of images) as .jpg files
 
     Args:
         df_tiles (pd.DataFrame): provides tiles boundaries. Computed from .utils.sample_data
@@ -415,45 +468,51 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         y1 = int(df_tiles.at[idx,'y1'])
         img_path = df_tiles.at[idx,'parent_images']
         tile_name = df_tiles.at[idx,'images']
-        save_path = os.path.join(out_img_dir,tile_name)
+        save_path = str(Path(os.path.join(out_img_dir,tile_name)).with_suffix(".jpg"))
         img = imread(img_path)
         tile = img[y0:y1,x0:x1,:]
         imsave(fname=save_path,arr=tile,check_contrast=False)
 
-def load_label_map(path:str,label_to_discard:list)->dict:
+def load_label_map(path:str,label_to_discard:list=None, labels_to_keep:list=None)->dict:
     """Loads label map. The map should be a json mapping class index to class name.
 
     Args:
         path (str): path to json file
         label_to_discard (list): labels to discard. If none, proide an empty list
+        label_to_keep (list): should be given when label_to_discard is not
 
     Returns:
         dict: label map {index:name}
     """
+
+    assert (labels_to_keep is not None) + (label_to_discard is not None) == 1, "Exactly one should be None."
+
     # load label mapping
     with open(path,'r') as file:
         label_map = json.load(file)
-    names = [p['name'] for p in label_map if p['name'] not in label_to_discard]
+    if label_to_discard is not None:
+        names = [p['name'] for p in label_map if p['name'] not in label_to_discard]
+    else:
+        names = [p['name'] for p in label_map if p['name'] in labels_to_keep]
     label_map = dict(zip(range(len(names)),names))
     return label_map
 
-def update_yolo_data_cfg(args:Dataprepconfigs):
-    """Updates yolo data config yaml file using args.label_map
+def update_yolo_data_cfg(data_config_yaml,label_map:dict):
+    """Updates yolo data config yaml file "names" and "nc" fields.
 
     Args:
         args (Dataprepconfigs): configs
     """
 
-    assert args.label_map is not None, 'Provide path to label mapping.'
+    # assert args.label_map is not None, 'Provide path to label mapping.'
 
     # load yaml
-    with open(args.data_config_yaml,'r') as file:
+    with open(data_config_yaml,'r') as file:
         yolo_config = yaml.load(file,Loader=yaml.FullLoader)
     # load label mapping
-    label_map = load_label_map(args.label_map,args.discard_labels)
     # updaate yaml and save
     yolo_config.update({'names':label_map,'nc':len(label_map)})
-    with open(args.data_config_yaml,'w') as file:
+    with open(data_config_yaml,'w') as file:
         yaml.dump(yolo_config,file,default_flow_style=False, sort_keys=False)
 
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
@@ -472,8 +531,11 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     for col in cols:
         assert df_annotation[col].isna().sum()<1,'there are NaN values. Check out.'
 
+    # change type
     for col in cols[1:]:
-        df_annotation[col] = df_annotation[col].apply(float)
+        df_annotation.loc[:,col] = df_annotation[col].apply(float)
+    df_annotation.loc[:,"label_id"] = df_annotation["label_id"].apply(int)
+    df_annotation = df_annotation.astype({'label_id':'int32'})
 
     # normalize values
     df_annotation.loc[:,'x'] = df_annotation['x'].apply(lambda x: x/slice_width)
@@ -484,9 +546,7 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     # check value range
     assert df_annotation[cols[1:]].all().max() <=1., "max value <= 1"
     assert df_annotation[cols[1:]].all().min() >= 0., "min value >=0"
-
-    # change type
-    df_annotation.loc[:,'label_id'] = df_annotation.loc[:,'label_id'].astype(int)
+    
     
     for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
@@ -515,12 +575,15 @@ def build_yolo_dataset(args:Dataprepconfigs):
         map_imgdir_cocopath = load_coco_annotations(dest_dir_coco=args.coco_json_dir)
     else:
         map_imgdir_cocopath = convert_json_annotations_to_coco(input_dir=args.ls_json_dir,
-                                                           dest_dir_coco=args.coco_json_dir)
+                                                           dest_dir_coco=args.coco_json_dir,
+                                                           parse_ls_config=args.parse_ls_config)
 
-    # load label map
+    # load label map and update yolo data_cfg_yaml file
     if not args.is_detector:
-        update_yolo_data_cfg(args=args)
-        label_map = load_label_map(path=args.label_map,label_to_discard=args.discard_labels)
+        label_map = load_label_map(path=args.label_map,
+                                   label_to_discard=args.discard_labels,
+                                   labels_to_keep=args.keep_labels)
+        update_yolo_data_cfg(args.data_config_yaml, label_map=label_map)
         name_id_map = {val:key for key,val in label_map.items()}
         
     # slice coco annotations and save tiles
@@ -534,14 +597,16 @@ def build_yolo_dataset(args:Dataprepconfigs):
                                 overlap_height_ratio=args.overlap_ratio,
                                 overlap_width_ratio=args.overlap_ratio,
                                 min_area_ratio=args.min_visibility,
-                                ignore_negative_samples=args.empty_ratio<1e-8, # equivalent to args.empty_ratio == 0.0
+                                ignore_negative_samples= (args.empty_ratio<1e-8 and not args.save_all), # equivalent to args.empty_ratio == 0.0
                                 )
             # sample tiles
             df_tiles = sample_data(coco_dict_slices=coco_dict_slices,
                                     empty_ratio=args.empty_ratio,
-                                    out_csv_path=ALL_CSV,
+                                    out_csv_path= None, #Path(args.dest_path_images).with_name("gt.csv"),
                                     img_dir=img_dir,
+                                    save_all=args.save_all,
                                     labels_to_discard=args.discard_labels,
+                                    labels_to_keep=args.keep_labels,
                                     sample_only_empty=args.save_only_empty
                                     )
             
@@ -564,5 +629,7 @@ def build_yolo_dataset(args:Dataprepconfigs):
                     out_img_dir=args.dest_path_images,
                     clear_out_img_dir=False)
         except Exception as e:
-            print(e)
-            print(f"Failed for {img_dir} \n {cocopath}")
+            print("--"*25,end="\n")
+            traceback.print_exc()
+            print("--"*25)
+            print(f"Failed to build yolo dataset for for {img_dir} -- {cocopath}\n\n")

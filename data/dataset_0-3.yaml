@@ -2,6 +2,7 @@
 path: D:\PhD\Data per camp\DetectionDataset 
 
 train: 
+ - Rep 3\train\images
  - Rep 2\train\images
  - Rep 1\train\images
  - Rep 1 - Wet\train\images

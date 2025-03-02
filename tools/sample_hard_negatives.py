@@ -34,6 +34,8 @@ class Args:
     save_path_samples:str=  os.path.join(DATA_DIR,'hard_samples.txt')
     data_config_root:str="D:\\"
     save_data_config_yaml:str= os.path.join(DATA_DIR,'hard_samples.yaml')
+    hn_uncertainty_thrs:float=4
+    hn_uncertainty_method:str='entropy'
 
 
 if __name__ == "__main__":
@@ -80,5 +82,7 @@ if __name__ == "__main__":
                                                 score_thrs=args.score_thrs,
                                                 save_path_samples=args.save_path_samples,
                                                 root=args.data_config_root,
-                                                save_data_yaml=args.save_data_config_yaml
+                                                save_data_yaml=args.save_data_config_yaml,
+                                                uncertainty_method=args.hn_uncertainty_method,
+                                                uncertainty_thrs=args.hn_uncertainty_thrs
                                             )
