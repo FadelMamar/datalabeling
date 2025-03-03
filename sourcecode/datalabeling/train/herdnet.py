@@ -137,7 +137,7 @@ class HerdnetData(L.LightningDataModule):
         # Get number of classes
         with open(data_config_yaml,'r') as file:
             data_config = yaml.load(file,Loader=yaml.FullLoader)
-            self.num_classes = data_config['nc']
+            self.num_classes = data_config['nc'] + 1
         
         if self.transforms is None:
             self.transforms = {}
@@ -170,10 +170,10 @@ class HerdnetData(L.LightningDataModule):
     
     @property
     def get_labels_weights(self,):
-        if self.num_classes < 2:
-            return [1.0,]
+        if self.num_classes == 2:
+            return [1.0,1.0]
         weights = 1/(self.df_train_labels_freq + 1e-6)
-        weights = weights.to_list()
+        weights = [1.0] + weights.to_list()
         assert len(weights) == self.num_classes, "Check for inconsistencies."
         return torch.Tensor(weights)
 
