@@ -278,7 +278,7 @@ class HerdnetTrainer(L.LightningModule):
         if stage == "train":
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
-            self.log(loss_dict)
+            self.log_dict(loss_dict)
             
         else:
             predictions, _ = self.model(images)
@@ -288,6 +288,7 @@ class HerdnetTrainer(L.LightningModule):
             output = self.herdet_evaluator.prepare_feeding(targets=targets, output=predictions)
             iter_metrics = self.metrics[stage]
             iter_metrics.feed(**output)
+            return None
             
         return loss
     
