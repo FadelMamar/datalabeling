@@ -173,7 +173,7 @@ class HerdnetData(L.LightningDataModule):
         weights = 1/(self.df_train_labels_freq + 1e-6)
         weights = weights.to_list()
         assert len(weights) == self.num_classes, "Check for inconsistencies."
-        return weights
+        return torch.Tensor(weights)
 
     def setup(self, stage: str):
 
@@ -277,6 +277,7 @@ class HerdnetTrainer(L.LightningModule):
         if stage == "train":
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
+            self.log(loss_dict)
             
         else:
             predictions, _ = self.model(images)
