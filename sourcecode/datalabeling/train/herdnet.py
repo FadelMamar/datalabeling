@@ -94,48 +94,16 @@ def get_groundtruth(yolo_labels_dir, save_path:str=None,load_gt_csv:str=None):
 
 
 def load_dataset(data_config_yaml:str,
-                 split:str='train',
-                 transforms:dict=None,
-                 down_ratio:int=2,
-                 num_classes = 6,
-                 patch_size:int=800):
-
-    
-    if transforms is None:
-        transforms = {}
-        transforms['train'] = ([    #A.Resize(patch_size,patch_size,p=1.0),
-                                    A.VerticalFlip(p=0.5), 
-                                    A.HorizontalFlip(p=0.5),
-                                    A.RandomRotate90(p=0.5),
-                                    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.2),
-                                    A.Blur(blur_limit=15, p=0.2),
-                                    A.Normalize(p=1.0)
-                                ], 
-                                [
-                                    MultiTransformsWrapper([
-                                    FIDT(num_classes=num_classes, down_ratio=down_ratio),
-                                    PointsToMask(radius=2, 
-                                                 num_classes=num_classes, 
-                                                 squeeze=True, 
-                                                 down_ratio=int(patch_size//(16*patch_size/512))
-                                                )
-                                ])
-                                ])
-        transforms['val'] = (
-                                [#A.Resize(patch_size,patch_size,p=1.0),
-                                 A.Normalize(p=1.0)],
-                                [DownSample(down_ratio=down_ratio, anno_type='point')]
-                            )
-        transforms['test'] = transforms['val']
-    
+                 split:str,
+                 transforms:dict):
 
     with open(data_config_yaml,'r') as file:
         data_config = yaml.load(file,Loader=yaml.FullLoader)
     datasets = list()
     df_gts = list()
     root = data_config['path']
-    for data in tqdm(data_config[split],desc="concatenating datasets"):
-        img_dir = os.path.join(root,data)
+    for img_dir in tqdm(data_config[split],desc="concatenating datasets"):
+        img_dir = os.path.join(root,img_dir)
         # path_to_csv = Path(img_dir).parent/"gt.csv"
         df = get_groundtruth(yolo_labels_dir=img_dir.replace("images","labels"), 
                              save_path=None,
@@ -155,7 +123,7 @@ def load_dataset(data_config_yaml:str,
 
 class HerdnetData(L.LightningDataModule):
 
-    def __init__(self, data_config_yaml:str, num_classes patch_size:int, down_ratio:int=2, batch_size: int = 32, transforms:dict[str,tuple]=None):
+    def __init__(self, data_config_yaml:str, patch_size:int, down_ratio:int=2, batch_size: int = 32, transforms:dict[str,tuple]=None):
 
         super().__init__()
         self.batch_size = batch_size
@@ -163,18 +131,49 @@ class HerdnetData(L.LightningDataModule):
         self.down_ratio = down_ratio
         self.data_config_yaml = data_config_yaml
         self.transforms = transforms
-        
+
         # Get number of classes
         with open(data_config_yaml,'r') as file:
             data_config = yaml.load(file,Loader=yaml.FullLoader)
             self.num_classes = data_config['nc']
+        
+        if self.transforms is None:
+            self.transforms = {}
+            self.transforms['train'] = ([    A.VerticalFlip(p=0.5), 
+                                        A.HorizontalFlip(p=0.5),
+                                        A.RandomRotate90(p=0.5),
+                                        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.2),
+                                        A.Blur(blur_limit=15, p=0.2),
+                                        A.Normalize(p=1.0)
+                                    ], 
+                                    [
+                                        MultiTransformsWrapper([
+                                        FIDT(num_classes=self.num_classes, down_ratio=down_ratio),
+                                        PointsToMask(radius=2, 
+                                                    num_classes=self.num_classes, 
+                                                    squeeze=True, 
+                                                    down_ratio=int(patch_size//(16*patch_size/512))
+                                                    )
+                                    ])]
+                                )
+            self.transforms['val'] = (
+                                        [#A.Resize(patch_size,patch_size,p=1.0),
+                                        A.Normalize(p=1.0)
+                                        ],
+                                        [
+                                        DownSample(down_ratio=down_ratio, anno_type='point'),
+                                        ]
+                                )
+            self.transforms['test'] = self.transforms['val']
     
     @property
     def get_labels_weights(self,):
+        if self.num_classes < 2:
+            return [1.0,]
         weights = 1/(self.df_train_labels_freq + 1e-6)
-        weights = weights.to_numpy()
+        weights = weights.to_list()
+        assert len(weights) == self.num_classes, "Check for inconsistencies."
         return weights
-
 
     def setup(self, stage: str):
 
@@ -182,41 +181,30 @@ class HerdnetData(L.LightningDataModule):
             # train
             self.train_dataset, df_train_labels = load_dataset(data_config_yaml=self.data_config_yaml,
                                                         split='train',
-                                                        down_ratio=self.down_ratio,
                                                         transforms=self.transforms,
-                                                        num_classes=self.num_classes,
-                                                        patch_size=self.patch_size
                                                     )
             self.df_train_labels_freq = df_train_labels['labels'].value_counts().sort_index()/len(df_train_labels)
             # val
             self.val_dataset, df_val_labels = load_dataset(data_config_yaml=self.data_config_yaml,
                                                         split='val',
-                                                        down_ratio=2,
                                                         transforms=self.transforms,
-                                                        num_classes=self.num_classes,
-                                                        patch_size=self.patch_size
                                                     )
             self.df_val_labels_freq = df_val_labels['labels'].value_counts().sort_index()/len(df_val_labels)
             
         elif stage == "test":
             self.test_dataset, _ = load_dataset(data_config_yaml=self.data_config_yaml,
                                                         split='test',
-                                                        down_ratio=2,
                                                         transforms=self.transforms,
-                                                        num_classes=self.num_classes,
-                                                        patch_size=self.patch_size
                         )
         
-    
-
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size,shuffle=True)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size,shuffle=True,collate_fn=None)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size,shuffle=False)
+        return DataLoader(self.val_dataset, batch_size=1,shuffle=False,collate_fn=None)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size,shuffle=False)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size,shuffle=False,collate_fn=None)
 
     def teardown(self, stage: str):
         # Used to clean-up when the run is finished
@@ -225,40 +213,40 @@ class HerdnetData(L.LightningDataModule):
 
 class HerdnetTrainer(L.LightningModule):
     def __init__(self,
-                 herdnet_model:HerdNet|None, 
-                 args:Arguments, 
-                 weights:np.ndarray,
-                 work_dir:str):
+                 herdnet_model_path:str, 
+                 args:Arguments,
+                 work_dir:str,
+                 ce_weight:list=None):
 
         super().__init__()
-
+        
+        self.args = args
+        self.work_dir = work_dir
+        
         # Get number of classes
         with open(self.args.data_config_yaml,'r') as file:
             data_config = yaml.load(file,Loader=yaml.FullLoader)
             num_classes = data_config['nc']
-
-        weight = Tensor(weights)
-
+        
+        ce_weight = torch.Tensor(ce_weight) if (ce_weight is not None) else None
         losses = [
                     {'loss': FocalLoss(reduction='mean'), 'idx': 0, 'idy': 0, 'lambda': 1.0, 'name': 'focal_loss'},
-                    {'loss': CrossEntropyLoss(reduction='mean', weight=weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
+                    {'loss': CrossEntropyLoss(reduction='mean', weight=ce_weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
                 ]
         
-        if herdnet_model is None:
-            herdnet_model = load_model(args.path_weights)
-            herdnet_model.reshape_classes(num_classes)
-
-        self.model = LossWrapper(herdnet_model, losses=losses, mode='both')
-        self.args = args
-        self.work_dir = work_dir
-        radius = 20
+        self.model = HerdNet(pretrained=False,down_ratio=2,num_classes=4)
+        self.model = LossWrapper(self.model, losses=losses,mode="both")
+        checkpoint = torch.load(herdnet_model_path, map_location="cpu",weights_only=True)
+        self.model.load_state_dict(checkpoint['model_state_dict'],strict=True)
+        self.model.model.reshape_classes(num_classes)
 
         # metrics
+        radius = 20
         self.metrics_train = PointsMetrics(radius=radius, num_classes=num_classes)
         self.metrics_val =  PointsMetrics(radius=radius, num_classes=num_classes)
         self.metrics_test =  PointsMetrics(radius=radius, num_classes=num_classes)
 
-        self.metrics = {'train':self.metrics_train, "val":self.metrics_val, "test":self.metrics_test}
+        self.metrics = {"val":self.metrics_val, "test":self.metrics_test}
 
         self.stitcher = None
         # self.stitcher = HerdNetStitcher(
@@ -272,19 +260,13 @@ class HerdnetTrainer(L.LightningModule):
 
         # work_dir
         self.herdet_evaluator = HerdNetEvaluator(
-            model=herdnet, 
+            model=self.model, 
             dataloader=DataLoader(dataset=[None,None],batch_size=1), 
             metrics=self.metrics_val, 
             stitcher=self.stitcher, 
             work_dir=self.work_dir, 
             header='validation'
             )
-
-    def training_step(self, batch, batch_idx):
-        
-        loss = self.shared_step("train",batch,batch_idx)
-
-        return loss
     
         
     def shared_step(self,stage, batch, batch_idx):
@@ -292,37 +274,61 @@ class HerdnetTrainer(L.LightningModule):
         images, targets = batch
 
         # compute losses
-        predictions, loss_dict = self.model(images, targets)
+        if stage == "train":
+            predictions, loss_dict = self.model(images, targets)
+            loss = sum(loss for loss in loss_dict.values())
+            
+        else:
+            predictions, _ = self.model(images)
+            loss = torch.zeros([1,]).to(images.device)
 
-        loss = sum(loss for loss in loss_dict.values())
-
-        # compute metrics
-        output = self.herdet_evaluator.prepare_feeding(targets=targets,output=predictions)
+            # compute metrics
+            output = self.herdet_evaluator.prepare_feeding(targets=targets, output=predictions)
+            iter_metrics = self.metrics[stage]
+            iter_metrics.feed(**output)
+            
+        return loss
+    
+    
+    def on_validation_epoch_end(self,):
+        stage="val"
         iter_metrics = self.metrics[stage]
-        iter_metrics.flush()
-        iter_metrics.feed(**output)
-        iter_metrics.aggregate()
-
+        iter_metrics.aggregate() # aggregate results
         self.log(f'{stage}_recall', round(iter_metrics.recall(),3))
         self.log(f'{stage}_precision', round(iter_metrics.precision(),3))
         self.log(f'{stage}_f1-score', round(iter_metrics.fbeta_score(),3))
         self.log(f'{stage}_MAE', round(iter_metrics.mae(),3))
         self.log(f'{stage}_MSE', round(iter_metrics.mse(),3))
         self.log(f'{stage}_RMSE', round(iter_metrics.rmse(),3))
+        
+    def on_test_epoch_end(self,):
+        stage = "test"
+        iter_metrics = self.metrics[stage]
+        iter_metrics.aggregate() # aggregate results
+        self.log(f'{stage}_recall', round(iter_metrics.recall(),3))
+        self.log(f'{stage}_precision', round(iter_metrics.precision(),3))
+        self.log(f'{stage}_f1-score', round(iter_metrics.fbeta_score(),3))
+        self.log(f'{stage}_MAE', round(iter_metrics.mae(),3))
+        self.log(f'{stage}_MSE', round(iter_metrics.mse(),3))
+        self.log(f'{stage}_RMSE', round(iter_metrics.rmse(),3))
+        
+    
+    def on_validation_epoch_start(self,):
+        self.metrics["val"].flush()
+    
+    def on_test_epoch_start(self,):
+        self.metrics["test"].flush()
 
+    def training_step(self, batch, batch_idx):
+        loss = self.shared_step("train", batch, batch_idx)
         return loss
-
-
+    
     def validation_step(self, batch, batch_idx):
-
         loss = self.shared_step("val", batch, batch_idx)
-
         return loss
     
     def test_step(self, batch, batch_idx):
-
         loss = self.shared_step("test",batch,batch_idx)
-
         return loss
 
     def configure_optimizers(self):
