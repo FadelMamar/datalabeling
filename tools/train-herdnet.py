@@ -22,13 +22,14 @@ def run_ligthning():
     args.lr0 = 3e-4
     args.epochs = 50
     args.imgsz = 800
-    args.batchsize = 8
+    args.batchsize = 32
     down_ratio = 2
+    precision = "16"
 
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
     args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
-    args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
-    args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
+    # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
     
     # loggers and callbacks
     mlf_logger = MLFlowLogger(experiment_name="Herdnet", 
@@ -64,7 +65,7 @@ def run_ligthning():
     trainer = L.Trainer(num_sanity_val_steps=10,
                     logger=mlf_logger,
                     max_epochs=args.epochs,
-                    precision="32",
+                    precision=precision,
                     callbacks=callbacks,
                     accelerator="gpu",
                     profiler=profiler
