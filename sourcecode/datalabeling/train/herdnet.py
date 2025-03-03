@@ -23,7 +23,6 @@ from animaloc.eval import PointsMetrics, HerdNetStitcher, HerdNetEvaluator
 from animaloc.utils.useful_funcs import mkdir
 from PIL import Image
 
-
 def check_label_format(loaded_df:pd.DataFrame)->str:
     """checks label format
 
@@ -137,7 +136,7 @@ class HerdnetData(L.LightningDataModule):
         # Get number of classes
         with open(data_config_yaml,'r') as file:
             data_config = yaml.load(file,Loader=yaml.FullLoader)
-            self.num_classes = data_config['nc']
+            self.num_classes = data_config['nc'] + 1
         
         if self.transforms is None:
             self.transforms = {}
@@ -170,8 +169,8 @@ class HerdnetData(L.LightningDataModule):
     
     @property
     def get_labels_weights(self,):
-        if self.num_classes < 2:
-            return [1.0,]
+        if self.num_classes == 2:
+            return [1.0,1.0]
         weights = 1/(self.df_train_labels_freq + 1e-6)
         weights = weights.to_list()
         assert len(weights) == self.num_classes, "Check for inconsistencies."
@@ -221,6 +220,7 @@ class HerdnetTrainer(L.LightningModule):
                  ce_weight:list=None):
 
         super().__init__()
+        self.save_hyperparameters()
         
         self.args = args
         self.work_dir = work_dir
@@ -269,6 +269,9 @@ class HerdnetTrainer(L.LightningModule):
             header='validation'
             )
     
+    def configure_model(self,):
+        self.model = torch.compile(self.model, fullgraph=True)
+    
         
     def shared_step(self,stage, batch, batch_idx):
 
@@ -278,7 +281,7 @@ class HerdnetTrainer(L.LightningModule):
         if stage == "train":
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
-            self.log(loss_dict)
+            self.log_dict(loss_dict)
             
         else:
             predictions, _ = self.model(images)
