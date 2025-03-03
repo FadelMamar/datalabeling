@@ -1,4 +1,4 @@
-from ultralytics import YOLO
+from ultralytics import YOLO, RTDETR
 import yaml
 from ..arguments import Arguments
 import os
@@ -187,7 +187,7 @@ def get_data_cfg_paths_for_HN(args: Arguments, data_config_yaml: str):
     return str(save_data_config_yaml)
 
 
-def training_routine(model: YOLO, args: Arguments, imgsz: int = None, batchsize: int = None, data_cfg: str | None = None, resume: bool = False):
+def training_routine(model: YOLO | RTDETR, args: Arguments, imgsz: int = None, batchsize: int = None, data_cfg: str | None = None, resume: bool = False):
 
     # Train the model
     model.train(data=data_cfg or args.data_config_yaml,
@@ -357,7 +357,10 @@ def start_training(args: Arguments):
     # logger = logging.getLogger(__name__)
 
     # Load a pre-trained model
-    model = YOLO(args.path_weights, task='detect', verbose=False)
+    try:
+        model = YOLO(args.path_weights, task='detect', verbose=False)
+    except Exception
+        model = RTDETR(args.path_weights, task='detect', verbose=False)
 
     # Display model information (optional)
     model.info()
