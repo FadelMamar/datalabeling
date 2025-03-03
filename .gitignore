@@ -1,4 +1,5 @@
 labelstudio
+lightning_logs
 *.bak
 label-studio-ml-backend
 my_ml_backend/data
