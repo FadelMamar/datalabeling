@@ -105,7 +105,6 @@ def load_dataset(data_config_yaml:str,
     root = data_config['path']
     for img_dir in tqdm(data_config[split],desc="concatenating datasets"):
         img_dir = os.path.join(root,img_dir)
-        # path_to_csv = Path(img_dir).parent/"gt.csv"
         df = get_groundtruth(yolo_labels_dir=img_dir.replace("images","labels"), 
                              save_path=None,
                              load_gt_csv=None # path_to_csv
@@ -136,7 +135,7 @@ class HerdnetData(L.LightningDataModule):
         # Get number of classes
         with open(data_config_yaml,'r') as file:
             data_config = yaml.load(file,Loader=yaml.FullLoader)
-            self.num_classes = data_config['nc'] + 1
+            self.num_classes = data_config['nc'] + 1 # accounting for background class
         
         if self.transforms is None:
             self.transforms = {}
@@ -145,7 +144,7 @@ class HerdnetData(L.LightningDataModule):
                                         A.RandomRotate90(p=0.5),
                                         A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.2),
                                         A.Blur(blur_limit=15, p=0.2),
-                                        A.Normalize(p=1.0)
+                                        A.Normalize(p=1.0,mean=(0.485, 0.456, 0.406),std=(0.229, 0.224, 0.225))
                                     ], 
                                     [
                                         MultiTransformsWrapper([
@@ -159,7 +158,7 @@ class HerdnetData(L.LightningDataModule):
                                 )
             self.transforms['val'] = (
                                         [#A.Resize(patch_size,patch_size,p=1.0),
-                                        A.Normalize(p=1.0)
+                                        A.Normalize(p=1.0,mean=(0.485, 0.456, 0.406),std=(0.229, 0.224, 0.225))
                                         ],
                                         [
                                         DownSample(down_ratio=down_ratio, anno_type='point'),
