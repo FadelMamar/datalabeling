@@ -226,7 +226,7 @@ class HerdnetTrainer(L.LightningModule):
         # Get number of classes
         with open(self.args.data_config_yaml,'r') as file:
             data_config = yaml.load(file,Loader=yaml.FullLoader)
-            num_classes = data_config['nc']
+            num_classes = data_config['nc'] + 1 # including a class for background
         
         ce_weight = torch.Tensor(ce_weight) if (ce_weight is not None) else None
         losses = [
@@ -242,7 +242,6 @@ class HerdnetTrainer(L.LightningModule):
 
         # metrics
         radius = 20
-        self.metrics_train = PointsMetrics(radius=radius, num_classes=num_classes)
         self.metrics_val =  PointsMetrics(radius=radius, num_classes=num_classes)
         self.metrics_test =  PointsMetrics(radius=radius, num_classes=num_classes)
 
@@ -301,7 +300,8 @@ class HerdnetTrainer(L.LightningModule):
         self.log(f'{stage}_MAE', round(iter_metrics.mae(),3))
         self.log(f'{stage}_MSE', round(iter_metrics.mse(),3))
         self.log(f'{stage}_RMSE', round(iter_metrics.rmse(),3))
-        
+
+
     def on_test_epoch_end(self,):
         stage = "test"
         iter_metrics = self.metrics[stage]
@@ -317,12 +317,15 @@ class HerdnetTrainer(L.LightningModule):
     def on_validation_epoch_start(self,):
         self.metrics["val"].flush()
     
+
     def on_test_epoch_start(self,):
         self.metrics["test"].flush()
+
 
     def training_step(self, batch, batch_idx):
         loss = self.shared_step("train", batch, batch_idx)
         return loss
+    
     
     def validation_step(self, batch, batch_idx):
         loss = self.shared_step("val", batch, batch_idx)
