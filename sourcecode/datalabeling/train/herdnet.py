@@ -87,6 +87,8 @@ def get_groundtruth(yolo_labels_dir, save_path:str=None,load_gt_csv:str=None):
         img.close()
     
     dfs = pd.concat(dfs)
+    assert dfs["labels"].min() == 0, "Check yolo label format."
+    dfs["labels"] = dfs["labels"] + 1 # shift to range [1,num_classes] instead of [0,num_classes[
     if save_path is not None:
         dfs.to_csv(save_path, index=False)
 
@@ -173,7 +175,7 @@ class HerdnetData(L.LightningDataModule):
         weights = 1/(self.df_train_labels_freq + 1e-6)
         weights = weights.to_list()
         assert len(weights) == self.num_classes, "Check for inconsistencies."
-        return weights
+        return torch.Tensor(weights)
 
     def setup(self, stage: str):
 
@@ -276,6 +278,7 @@ class HerdnetTrainer(L.LightningModule):
         if stage == "train":
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
+            self.log(loss_dict)
             
         else:
             predictions, _ = self.model(images)

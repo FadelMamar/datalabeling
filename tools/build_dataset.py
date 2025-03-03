@@ -16,18 +16,13 @@ def load_datasets(data_config_yaml:str)->list[str]:
 
     paths = list()
     root = data_config['path']
-    try:
-        for p in data_config['train']:
-            path = os.path.join(root,p)
-            paths.append(path)
-    except Exception as e:
-        print('Failed to load training datasets for conversion --> ',e)
-    try:
-        for p in data_config['val']:
-            path = os.path.join(root,p)
-            paths.append(path)
-    except Exception as e:
-        print('Failed to load validation datasets for conversion --> ',e)
+    for split in ['train','val','test']:
+        try:
+            for p in data_config[split]:
+                path = os.path.join(root,p)
+                paths.append(path)
+        except Exception as e:
+            print('Failed to load training datasets for conversion --> ',e)    
 
 
     return paths

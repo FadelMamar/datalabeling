@@ -223,19 +223,22 @@ def training_routine(model:YOLO,args:Arguments,imgsz:int=None,batchsize:int=None
 
 def remove_label_cache(data_config_yaml:str):
 
-     # Remove labels.cache
-    try:
-        with open(data_config_yaml,'r') as file:
-            yolo_config = yaml.load(file,Loader=yaml.FullLoader)
-        root = yolo_config["path"]
-        for p in yolo_config["train"] + yolo_config["val"]:
-            path = os.path.join(root,p,"../labels.cache")
-            if os.path.exists(path):
-                os.remove(path)
-                print(f"Removing: {os.path.join(root,p,"../labels.cache")}")
-    except Exception as e:
-        # print(e)
-        traceback.print_exc()
+    # Remove labels.cache
+    with open(data_config_yaml,'r') as file:
+        yolo_config = yaml.load(file,Loader=yaml.FullLoader)
+    root = yolo_config["path"]
+    for split in ['train','val','test']:
+        try:
+            for p in yolo_config[split]:
+                path = os.path.join(root,p,"../labels.cache")
+                if os.path.exists(path):
+                    os.remove(path)
+                    print(f"Removing: {os.path.join(root,p,"../labels.cache")}")
+                else:
+                    print(path, "does not exist.")
+        except Exception as e:
+            # print(e)
+            traceback.print_exc()
 
 
 def pretraining_run(model:YOLO, args:Arguments):

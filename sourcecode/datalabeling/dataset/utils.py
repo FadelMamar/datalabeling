@@ -587,7 +587,7 @@ def build_yolo_dataset(args:Dataprepconfigs):
         name_id_map = {val:key for key,val in label_map.items()}
         
     # slice coco annotations and save tiles
-    for img_dir,cocopath in map_imgdir_cocopath.items():
+    for img_dir,cocopath in tqdm(map_imgdir_cocopath.items(),desc="Building yolo dataset"):
         try:
             # slice annotations
             coco_dict_slices = get_slices(coco_annotation_file_path=cocopath,
