@@ -23,7 +23,6 @@ from animaloc.eval import PointsMetrics, HerdNetStitcher, HerdNetEvaluator
 from animaloc.utils.useful_funcs import mkdir
 from PIL import Image
 
-
 def check_label_format(loaded_df:pd.DataFrame)->str:
     """checks label format
 
@@ -221,6 +220,7 @@ class HerdnetTrainer(L.LightningModule):
                  ce_weight:list=None):
 
         super().__init__()
+        self.save_hyperparameters()
         
         self.args = args
         self.work_dir = work_dir
@@ -268,6 +268,9 @@ class HerdnetTrainer(L.LightningModule):
             work_dir=self.work_dir, 
             header='validation'
             )
+    
+    def configure_model(self,):
+        self.model = torch.compile(self.model, fullgraph=True)
     
         
     def shared_step(self,stage, batch, batch_idx):
