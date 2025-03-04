@@ -64,8 +64,6 @@ def herdnet_val():
         torch.set_float32_matmul_precision("high")
 
     args = Arguments()
-    args.lr0 = 3e-4
-    args.epochs = 15
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
@@ -75,12 +73,14 @@ def herdnet_val():
     # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=23-step=2040.ckpt"
     
     checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
+    
 
     # Example: load Prediction images
     with open(args.data_config_yaml, 'r') as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
-    images_path = os.path.join(data_config['path'],data_config['test'][0])
-    images_path = list(Path(images_path).glob('*'))
+    
+    num_classes = 7
+    
     
     # set model
     mlf_logger = MLFlowLogger(experiment_name="Herdnet",
@@ -90,7 +90,10 @@ def herdnet_val():
                             )
     herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                             args=args,
+                                                            loaded_weights_num_classes=num_classes,
                                                             ce_weight=None,
+                                                            map_location='cpu',
+                                                            strict=True,
                                                             work_dir='../.tmp')
 
     # Data
@@ -104,6 +107,8 @@ def herdnet_val():
     datamodule.setup('fit')
     
     # Predict
+    # images_path = os.path.join(data_config['path'],data_config['test'][0])
+    # images_path = list(Path(images_path).glob('*'))
     # datamodule.set_predict_dataset(images_path=images_path,batchsize=1)
     
     trainer = L.Trainer(accelerator="auto",profiler='simple',logger=mlf_logger)
