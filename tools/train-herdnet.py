@@ -12,25 +12,31 @@ from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
 from datalabeling.arguments import Arguments
 import lightning as L
 from lightning.pytorch.loggers import MLFlowLogger
-from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
-from lightning.pytorch.profilers import AdvancedProfiler
-from lightning.pytorch.callbacks import DeviceStatsMonitor
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 
 
 def run_ligthning():
 
+    # torch.set_float32_matmul_precision("high")
+
     args = Arguments()
     args.lr0 = 3e-4
-    args.epochs = 50
+    args.epochs = 15
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
     precision = "16"
+    # empty_ratio = 0.
+    args.patience = 10
+    cl_epochs = [3e-4, 5e-5, 5e-5]
+    empty_ratios = [1, 2.5, 7.5]
 
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth" # initialization
     args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
     # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    
+    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=23-step=2040.ckpt"
     
     # loggers and callbacks
     mlf_logger = MLFlowLogger(experiment_name="Herdnet",
@@ -45,36 +51,52 @@ def run_ligthning():
                                           save_top_k=1
                                           )
     lr_callback = LearningRateMonitor(logging_interval="epoch")
-    callbacks = [checkpoint_callback, lr_callback, DeviceStatsMonitor()]
-
-    # Data
-    datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
-                             patch_size=args.imgsz,
-                             batch_size=args.batchsize,
-                             down_ratio=down_ratio,
-                             train_empty_ratio=empty_ratio
-                             )
-
+    callbacks = [checkpoint_callback,
+                lr_callback,
+                EarlyStopping(monitor='val_f1-score',
+                              patience=args.patience,
+                              min_delta = 1e-4,
+                              mode="max")
+                ]
+    
     # Training logic
     herndet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
                                      args=args,
                                      ce_weight=None,
-                                     work_dir='../.tmp'
+                                     work_dir='../.tmp',
+                                     load_state_dict_strict=True, # set to False if pretrained weights are being loaded properly due to classification head
                                      )
-
-    # Trainer
-    profiler = AdvancedProfiler()
-    trainer = L.Trainer(num_sanity_val_steps=10,
-                    logger=mlf_logger,
-                    max_epochs=args.epochs,
-                    precision=precision,
-                    callbacks=callbacks,
-                    accelerator="gpu",
-                    profiler=profiler
-                )
-    trainer.fit(model=herndet_trainer,
-                datamodule=datamodule
-                )
+    if checkpoint_path is not None:
+        herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
+                                                              args=args,
+                                                              ce_weight=None,
+                                                              work_dir='../.tmp')
+        
+        print(f"\nLoading checkpoint at {checkpoint_path}\n")
+    
+    for empty_ratio, epochs in zip(empty_ratios, cl_epochs):
+        
+        args.epochs = epochs
+        
+        # Data
+        datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
+                                 patch_size=args.imgsz,
+                                 batch_size=args.batchsize,
+                                 down_ratio=down_ratio,
+                                 train_empty_ratio=empty_ratio
+                                 )
+    
+        # Trainer
+        trainer = L.Trainer(num_sanity_val_steps=10,
+                        logger=mlf_logger,
+                        max_epochs=args.epochs,
+                        precision=precision,
+                        callbacks=callbacks,
+                        accelerator="gpu",
+                    )
+        trainer.fit(model=herndet_trainer,
+                    datamodule=datamodule,
+                    )
 
 
 def run():
@@ -86,12 +108,14 @@ def run():
     args.batchsize = 16
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
     down_ratio = 2
+    empty_ratio = 0.
 
     # Data
     datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
                              patch_size=args.imgsz,
                              batch_size=args.batchsize,
-                             down_ratio=down_ratio
+                             down_ratio=down_ratio,
+                             train_empty_ratio=empty_ratio
                              )
 
     datamodule.setup("fit")
@@ -163,6 +187,9 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
-    # run_ligthning()
+
+    # run()
+
+    run_ligthning()
+
     pass
