@@ -330,7 +330,7 @@ class HerdnetData(L.LightningDataModule):
             validation DataLoader.
 
         """
-        return DataLoader(self.val_dataset, batch_size=1, shuffle=False, collate_fn=None)
+        return DataLoader(self.val_dataset, batch_size=1, shuffle=False, collate_fn=None, num_workers=8)
 
     def test_dataloader(self):
         """Test dataloader supports only batchsize=1.
@@ -342,7 +342,7 @@ class HerdnetData(L.LightningDataModule):
             test DataLoader.
 
         """
-        return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None)
+        return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None, num_workers=8)
 
     def predict_dataloader(self):
         return DataLoader(self.predict_dataset, batch_size=self.predict_batchsize, shuffle=False)
