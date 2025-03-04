@@ -546,12 +546,13 @@ class HerdnetTrainer(L.LightningModule):
                                      lr=self.args.lr0,
                                      weight_decay=self.args.weight_decay)
         
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-                                                                            T_0=self.args.epochs,
-                                                                            T_mult=1,
-                                                                            eta_min=self.args.lr0*self.args.lrf,
-                                                                        )
-        return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+        #                                                                     T_0=self.args.epochs,
+        #                                                                     T_mult=1,
+        #                                                                     eta_min=self.args.lr0*self.args.lrf,
+        #                                                                 )
+        # return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        return optimizer
      
         
 
