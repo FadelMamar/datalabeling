@@ -17,7 +17,14 @@ from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 
 def run_ligthning():
 
-    # torch.set_float32_matmul_precision("high")
+    import logging
+
+    logger = logging.getLogger("mlflow")
+    logger.setLevel(logging.DEBUG)
+
+    # lowering matrix multiplication precision
+    if torch.cuda.is_available():
+        torch.set_float32_matmul_precision("high")
 
     args = Arguments()
     args.lr0 = 3e-4
@@ -25,19 +32,20 @@ def run_ligthning():
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
-    precision = "16"
+    precision = "16-mixed"
     # empty_ratio = 0.
     args.patience = 10
-    cl_epochs = [3e-4, 5e-5, 5e-5]
+    cl_lr = [3e-4, 5e-5, 5e-5]
     empty_ratios = [1, 2.5, 7.5]
+    freeze_layers = [0., 0.5, 0.75]
 
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth" # initialization
+    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
     args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
     # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
-    
+
     checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=23-step=2040.ckpt"
-    
+
     # loggers and callbacks
     mlf_logger = MLFlowLogger(experiment_name="Herdnet",
                               run_name="herdnet",
@@ -52,32 +60,41 @@ def run_ligthning():
                                           )
     lr_callback = LearningRateMonitor(logging_interval="epoch")
     callbacks = [checkpoint_callback,
-                lr_callback,
-                EarlyStopping(monitor='val_f1-score',
-                              patience=args.patience,
-                              min_delta = 1e-4,
-                              mode="max")
-                ]
-    
+                 lr_callback,
+                 EarlyStopping(monitor='val_f1-score',
+                               patience=args.patience,
+                               min_delta=1e-4,
+                               mode="max")
+                 ]
+
     # Training logic
-    herndet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
+    herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
                                      args=args,
                                      ce_weight=None,
                                      work_dir='../.tmp',
-                                     load_state_dict_strict=True, # set to False if pretrained weights are being loaded properly due to classification head
+                                     # set to False if pretrained weights are being loaded properly due to classification head
+                                     load_state_dict_strict=True,
                                      )
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                               args=args,
                                                               ce_weight=None,
                                                               work_dir='../.tmp')
-        
+
         print(f"\nLoading checkpoint at {checkpoint_path}\n")
-    
-    for empty_ratio, epochs in zip(empty_ratios, cl_epochs):
-        
-        args.epochs = epochs
-        
+
+    for empty_ratio, lr, freeze_ratio in zip(empty_ratios, cl_lr, freeze_layers):
+
+        herdnet_trainer.args.lr0 = lr
+
+        # freeze params
+        num_layers = len(list(herdnet_trainer.parameters()))
+        for idx, param in enumerate(herdnet_trainer.parameters()):
+            if idx/num_layers < freeze_ratio:
+                param.requires_grad = False
+            else:
+                break
+
         # Data
         datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
                                  patch_size=args.imgsz,
@@ -85,16 +102,18 @@ def run_ligthning():
                                  down_ratio=down_ratio,
                                  train_empty_ratio=empty_ratio
                                  )
-    
+
         # Trainer
         trainer = L.Trainer(num_sanity_val_steps=10,
-                        logger=mlf_logger,
-                        max_epochs=args.epochs,
-                        precision=precision,
-                        callbacks=callbacks,
-                        accelerator="gpu",
-                    )
-        trainer.fit(model=herndet_trainer,
+                            logger=mlf_logger,
+                            max_epochs=args.epochs,
+                            accumulate_grad_batches=max(
+                                int(64/args.batchsize), 1),
+                            precision=precision,
+                            callbacks=callbacks,
+                            accelerator="gpu",
+                            )
+        trainer.fit(model=herdnet_trainer,
                     datamodule=datamodule,
                     )
 

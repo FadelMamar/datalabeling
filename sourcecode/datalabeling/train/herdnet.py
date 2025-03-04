@@ -15,6 +15,7 @@ from animaloc.models import HerdNet, load_model
 from torch import Tensor
 from animaloc.models import LossWrapper
 from animaloc.train.losses import FocalLoss
+from animaloc.eval.lmds import HerdNetLMDS
 from torch.nn import CrossEntropyLoss
 import numpy as np
 from animaloc.train import Trainer
@@ -50,9 +51,9 @@ def check_label_format(loaded_df: pd.DataFrame) -> str:
 def get_groundtruth(yolo_images_dir: str,
                     save_path: str = None,
                     load_gt_csv: str = None,
-                    empty_ratio: float|None = 0.,
-                    empty_frac: float|None = None):
-    
+                    empty_ratio: float | None = 0.,
+                    empty_frac: float | None = None):
+
     if empty_frac is not None:
         assert empty_frac >= 0. and empty_frac <= 1., "should be between 0 and 1."
     if empty_ratio is not None:
@@ -73,18 +74,18 @@ def get_groundtruth(yolo_images_dir: str,
         # load labels
         label_path = Path(str(image_path).replace(
             'images', 'labels')).with_suffix(".txt")
-        if label_path.exists(): 
+        if label_path.exists():
             # non-empty image
             df = pd.read_csv(label_path, sep=' ', header=None)
             img = Image.open(image_path)
             img_width, img_height = img.size
             img.close()
-        else:  
+        else:
             # empty image -> creating pseudo labels
             df = {'id': [-1], 'x': [0.], 'y': [0.], 'w': [0.], 'h': [0.]}
             df = pd.DataFrame.from_dict(df, orient='columns')
-            img_width, img_height = 0.,0.
-        
+            img_width, img_height = 0., 0.
+
         label_format = check_label_format(df)
         if label_format == 'yolo':
             df.columns = cols2
@@ -98,11 +99,10 @@ def get_groundtruth(yolo_images_dir: str,
             df['y'] = (df['y1'] + df['y4'])*img_height*0.5
             df['w'] = (df['x2'] - df['x1'])*img_width
             df['h'] = (df['y4'] - df['y1'])*img_height
-            
+
         df['images'] = str(image_path)
         df.rename(columns={'id': 'labels'}, inplace=True)
         dfs.append(df)
-        
 
     # concat dfs
     dfs = pd.concat(dfs)
@@ -110,7 +110,7 @@ def get_groundtruth(yolo_images_dir: str,
     assert dfs["labels"].min() >= -1, "Check yolo label format."
     # shift to range [0,num_classes] so that 0 is the background class for empty images
     dfs["labels"] = dfs["labels"] + 1
-    
+
     # sample empty images and non-empty
     # if there are
     if sum(dfs.labels < 1) > 0:
@@ -125,7 +125,7 @@ def get_groundtruth(yolo_images_dir: str,
         else:
             frac = empty_frac
         df_empty = df_empty.sample(frac=frac)
-        print(f"Sampling {len(df_empty)} empty images.",end="\n")
+        print(f"Sampling {len(df_empty)} empty images.", end="\n")
         # concatenate empty and non_empty
         dfs = pd.concat([df_empty, df_non_empty])
 
@@ -182,6 +182,9 @@ class HerdnetData(L.LightningDataModule):
         self.data_config_yaml = data_config_yaml
         self.transforms = transforms
         self.train_empty_ratio = train_empty_ratio
+
+        self.num_workers = 8
+        self.pin_memory = torch.cuda.is_available()
 
         # Get number of classes
         with open(data_config_yaml, 'r') as file:
@@ -264,28 +267,32 @@ class HerdnetData(L.LightningDataModule):
                                                 )
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, collate_fn=None)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size,
+                          shuffle=True, collate_fn=None,
+                          num_workers=self.num_workers,
+                          pin_memory=self.pin_memory
+                          )
 
     def val_dataloader(self):
         """Validation dataloader supports only batchsize=1.
-        
+
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        DataLoader
+            validation DataLoader.
 
         """
         return DataLoader(self.val_dataset, batch_size=1, shuffle=False, collate_fn=None)
 
     def test_dataloader(self):
         """Test dataloader supports only batchsize=1.
-        
+
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        DataLoader
+            test DataLoader.
 
         """
         return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None)
@@ -296,11 +303,12 @@ class HerdnetData(L.LightningDataModule):
 
 
 class HerdnetTrainer(L.LightningModule):
+
     def __init__(self,
                  herdnet_model_path: str,
                  args: Arguments,
                  work_dir: str,
-                 load_state_dict_strict:bool=True,
+                 load_state_dict_strict: bool = True,
                  ce_weight: list = None):
 
         super().__init__()
@@ -323,14 +331,15 @@ class HerdnetTrainer(L.LightningModule):
             {'loss': CrossEntropyLoss(
                 reduction='mean', weight=ce_weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
         ]
-        
-        self.model = HerdNet(pretrained=False, down_ratio=2,num_classes=4)
+
+        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=4)
         self.model = LossWrapper(self.model, losses=losses, mode="both")
         checkpoint = torch.load(
             herdnet_model_path, map_location="cpu", weights_only=True)
-        success = self.model.load_state_dict(checkpoint['model_state_dict'], strict=load_state_dict_strict)
+        success = self.model.load_state_dict(
+            checkpoint['model_state_dict'], strict=load_state_dict_strict)
         self.model.model.reshape_classes(num_classes)
-        print(f"Loading ckpt:",success)
+        print(f"Loading ckpt:", success)
 
         # metrics
         radius = 20
@@ -350,8 +359,7 @@ class HerdnetTrainer(L.LightningModule):
         #                 reduction='mean'
         #                 )
 
-        # work_dir
-        self.herdet_evaluator = HerdNetEvaluator(
+        self.herdnet_evaluator = HerdNetEvaluator(
             model=self.model,
             dataloader=DataLoader(dataset=[None, None], batch_size=1),
             metrics=self.metrics_val,
@@ -359,9 +367,39 @@ class HerdnetTrainer(L.LightningModule):
             work_dir=self.work_dir,
             header='validation'
         )
+        self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
 
     # def configure_model(self,):
     #     self.model = torch.compile(self.model, fullgraph=True)
+
+    def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
+        # copy and adapted from animaloc.eval.HerdnetEvaluator
+
+        gt = dict(loc=[[None, None]], labels=[None])
+        if targets is not None:
+            gt_coords = [p[::-1]
+                         for p in targets['points'].squeeze(0).tolist()]
+            gt_labels = targets['labels'].squeeze(0).tolist()
+
+            gt = dict(
+                loc=gt_coords,
+                labels=gt_labels
+            )
+
+        up = True
+        if self.stitcher is not None:
+            up = False
+
+        counts, locs, labels, scores, dscores = self.lmds(output)
+
+        preds = dict(
+            loc=locs[0],
+            labels=labels[0],
+            scores=scores[0],
+            dscores=dscores[0]
+        )
+
+        return dict(gt=gt, preds=preds, est_count=counts[0])
 
     def shared_step(self, stage, batch, batch_idx):
 
@@ -372,46 +410,52 @@ class HerdnetTrainer(L.LightningModule):
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
             self.log_dict(loss_dict)
+            return loss
 
         else:
             predictions, _ = self.model(images)
-            loss = torch.zeros([1,]).to(images.device)
 
             # compute metrics
-            output = self.herdet_evaluator.prepare_feeding(
+            output = self.prepare_feeding(
                 targets=targets, output=predictions)
-            if output['gt']['labels'][0] < 1: # labels = 0 -> background
-                output = {'gt':{'loc':[],'labels':[]},
-                          'preds':output['preds'],
-                          'est_count':output['est_count']
+            if output['gt']['labels'][0] < 1:  # labels = 0 -> background
+                output = {'gt': {'loc': [], 'labels': []},
+                          'preds': output['preds'],
+                          'est_count': output['est_count']
                           }
             iter_metrics = self.metrics[stage]
             iter_metrics.feed(**output)
             return None
 
-        return loss
+    def log_metrics(self, stage: str):
+
+        iter_metrics = self.metrics[stage]
+
+        # store for class level metrics computation
+        self.herdet_evaluator._stored_metrics = iter_metrics.copy()
+
+        # aggregate results
+        iter_metrics.aggregate()
+        self.log(f'{stage}_recall', round(iter_metrics.recall(), 3))
+        self.log(f'{stage}_precision', round(iter_metrics.precision(), 3))
+        self.log(f'{stage}_f1-score', round(iter_metrics.fbeta_score(), 3))
+        self.log(f'{stage}_MAE', round(iter_metrics.mae(), 3))
+        self.log(f'{stage}_MSE', round(iter_metrics.mse(), 3))
+        self.log(f'{stage}_RMSE', round(iter_metrics.rmse(), 3))
+
+        # log perclass metrics
+        per_class_metrics = self.herdnet_evaluator.results
+        metrics_cols = [
+            p for p in per_class_metrics.columns if p not in ['class',]]
+        for row in per_class_metrics.iterrows():
+            for col in metrics_cols:
+                self.log(row.loc['class'], row.loc[col])
 
     def on_validation_epoch_end(self,):
-        stage = "val"
-        iter_metrics = self.metrics[stage]
-        iter_metrics.aggregate()  # aggregate results
-        self.log(f'{stage}_recall', round(iter_metrics.recall(), 3))
-        self.log(f'{stage}_precision', round(iter_metrics.precision(), 3))
-        self.log(f'{stage}_f1-score', round(iter_metrics.fbeta_score(), 3))
-        self.log(f'{stage}_MAE', round(iter_metrics.mae(), 3))
-        self.log(f'{stage}_MSE', round(iter_metrics.mse(), 3))
-        self.log(f'{stage}_RMSE', round(iter_metrics.rmse(), 3))
+        self.log_metrics(stage='val')
 
     def on_test_epoch_end(self,):
-        stage = "test"
-        iter_metrics = self.metrics[stage]
-        iter_metrics.aggregate()  # aggregate results
-        self.log(f'{stage}_recall', round(iter_metrics.recall(), 3))
-        self.log(f'{stage}_precision', round(iter_metrics.precision(), 3))
-        self.log(f'{stage}_f1-score', round(iter_metrics.fbeta_score(), 3))
-        self.log(f'{stage}_MAE', round(iter_metrics.mae(), 3))
-        self.log(f'{stage}_MSE', round(iter_metrics.mse(), 3))
-        self.log(f'{stage}_RMSE', round(iter_metrics.rmse(), 3))
+        self.log_metrics(stage='test')
 
     def on_validation_epoch_start(self,):
         self.metrics["val"].flush()
@@ -430,6 +474,16 @@ class HerdnetTrainer(L.LightningModule):
     def test_step(self, batch, batch_idx):
         loss = self.shared_step("test", batch, batch_idx)
         return loss
+
+    def predict_step(self, batch, batch_idx):
+
+        images = batch
+        predictions, _ = self.model(images)
+
+        # compute metrics
+        output = self.prepare_feeding(targets=None,
+                                      output=predictions)
+        return output
 
     def configure_optimizers(self):
 
