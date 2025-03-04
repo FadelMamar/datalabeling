@@ -31,23 +31,163 @@ call wandb offline
 @REM hn_uncertainty_thrs:float=5 # helps to select those with high uncertainty
 @REM hn_uncertainty_method:str="entropy"
 
-call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+
+
+@REM  Identificator
+
+@REM @REM Convert datasets to yolo
+@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification.yaml" --skip
+@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_pretraining.yaml" --skip
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "runs/mlflow/140168774036374062/e5e3bf93d34f48f1bb7d0a648530bb45/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov5s-CL-PTR-Identification" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_identification.yaml" ^
+@REM     --cl-ratios 0 2.5 7.5 ^
+@REM     --cl-epochs 15 10 10 ^
+@REM     --cl-freeze 0 5 10  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.0001 ^
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "../runs/mlflow/140168774036374062/e340d77e14224cf2a27e8501646259fa/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov12s-CL-PTR-Identification" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_identification.yaml" ^
+@REM     --cl-ratios 2.5 7.5 ^
+@REM     --cl-epochs 10 10 ^
+@REM     --cl-freeze 5 10  ^
+@REM     --cl-lr0s 0.00005 0.00005 ^
+
+@REM @REM @REM convert datasets to yolo-obb
+@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification.yaml" --skip
+@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_pretraining.yaml" --skip
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "runs/mlflow/140168774036374062/f5b7124be14c4c89b8edd26bcf7a9a76/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov11s_obb-CL-PTR-Identification" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_identification.yaml" ^
+@REM     --cl-ratios 0 2.5 7.5 ^
+@REM     --cl-epochs 15 10 10 ^
+@REM     --cl-freeze 0 5 10  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.0001 ^
+
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "runs/mlflow/140168774036374062/8a76c60253fc48788b5324096d035420/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov8s_obb-CL-PTR-Identification" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_identification.yaml" ^
+@REM     --cl-ratios 0 2.5 7.5 ^
+@REM     --cl-epochs 15 10 10 ^
+@REM     --cl-freeze 0 5 10  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.0001 ^
+
+
+
+@REM  DETECTOR
+
+
+@REM @REM Convert datasets to yolo
+call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification-detection.yaml" --skip
+call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_pretraining.yaml" --skip
+
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800 ^
+@REM     --path-weights "base_models_weights\yolov5su.pt" ^
+@REM     --run-name "yolov5s_PTR-CL-Detector" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --ptr-data-config-yaml "data\dataset_pretraining.yaml"  ^
+@REM     --ptr-tilesize 640 --ptr-epochs 15 --use-pretraining ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_identification-detection.yaml" ^
+@REM     --cl-ratios 0 1 2.5 7.5 ^
+@REM     --cl-epochs 20 20 10 7 ^
+@REM     --cl-freeze 0 0 10 18  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800 ^
+@REM     --path-weights "yolo12s.pt" ^
+@REM     --run-name "yolov12s_PTR-CL-Detector" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --ptr-data-config-yaml "data\dataset_pretraining.yaml" --use-pretraining  ^
+@REM     --ptr-tilesize 640 --ptr-epochs 15 ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --cl-batch-size 24^
+@REM     --cl-data-config-yaml "data\dataset_identification-detection.yaml" --use-continual-learning ^
+@REM     --cl-ratios 0 1 2.5 7.5 ^
+@REM     --cl-epochs 20 20 10 7 ^
+@REM     --cl-freeze 0 0 10 18  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
+
+call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.001 --optimizer "AdamW" --optimizer-momentum 0.99 --lr0 0.0001 --lrf 0.1 --patience 20 --is-detector ^
     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
-    --height 800 --width 800^
-    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/3615defe14514a00b97ef756a815bc44/artifacts/weights/best.pt" ^
-    --run-name "yolov8_obb-CL-HN" --project-name "wildAI-detection"^
-    --tag "CL" "HN" ^
-    --ptr-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_pretraining.yaml"  ^
-    --ptr-tilesize 640 --ptr-epochs 15^
-    --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
-    --cl-data-config-yaml "data\dataset_identification.yaml" ^
-    --cl-ratios 0 1 2.5 7.5 10 ^
-    --cl-epochs 10 15 15 20 20 ^
-    --cl-freeze 0 0 10 15 15 ^
-    --cl-lr0s 0.0001 0.0001 0.00005 0.00005 0.00005 ^
-    --hn-save-dir "D:\PhD\Data per camp\IdentificationDataset\hard_samples" --use-hn-learning ^
-    --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_identification.yaml" ^
-    --hn-is-yolo-obb
+    --height 800 --width 800 ^
+    --path-weights "base_models_weights\rtdetr-l.pt" ^
+    --run-name "rtdetr_PTR-CL-Detector" --project-name "wildAI-detection"^
+    --tag "CL" "PTR" ^
+    --ptr-data-config-yaml "data\dataset_pretraining.yaml" --use-pretraining  ^
+    --ptr-tilesize 640 --ptr-epochs 15 ^
+    --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --cl-batch-size 8^
+    --cl-data-config-yaml "data\dataset_identification-detection.yaml" --use-continual-learning ^
+    --cl-ratios 0 1 2.5 7.5 ^
+    --cl-epochs 20 20 10 7 ^
+    --cl-freeze 0 0 10 18  ^
+    --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
+
+@REM @REM convert datasets to yolo-obb
+@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
+@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_pretraining.yaml" --skip
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800 ^
+@REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/2ff9bb7a991c4cd1a6eabfff0f73386d/artifacts/weights/last.pt" ^
+@REM     --run-name "yolov11_obb-PTR-CL-Detector" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --ptr-data-config-yaml "data\dataset_pretraining.yaml"  ^
+@REM     --ptr-tilesize 640 --ptr-epochs 15 ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_identification-detection.yaml" --cl-batch-size 24 ^
+@REM     --cl-ratios 0 1 2.5 7.5 ^
+@REM     --cl-epochs 20 20 10 7 ^
+@REM     --cl-freeze 0 0 10 18  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
+
+
+@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800 ^
+@REM     --path-weights "runs/mlflow/140168774036374062/3615defe14514a00b97ef756a815bc44/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov8s_obb-PTR-CL-Detector" --project-name "wildAI-detection"^
+@REM     --tag "CL" "PTR" ^
+@REM     --ptr-data-config-yaml "data\dataset_pretraining.yaml"  ^
+@REM     --ptr-tilesize 640 --ptr-epochs 15 ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --cl-batch-size 24^
+@REM     --cl-data-config-yaml "data\dataset_identification-detection.yaml" --use-continual-learning ^
+@REM     --cl-ratios 0 1 2.5 7.5 ^
+@REM     --cl-epochs 20 20 10 7 ^
+@REM     --cl-freeze 0 0 10 18  ^
+@REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
+
 
 
 call conda deactivate
+
+@REM shutdown -s
