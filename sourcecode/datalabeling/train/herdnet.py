@@ -360,6 +360,7 @@ class HerdnetTrainer(L.LightningModule):
                  work_dir: str,
                  eval_radius:int=20,
                  load_state_dict_strict: bool = True,
+                 loaded_weights_num_classes:int=None,
                  ce_weight: list = None):
 
         super().__init__()
@@ -372,7 +373,7 @@ class HerdnetTrainer(L.LightningModule):
         with open(self.args.data_config_yaml, 'r') as file:
             data_config = yaml.load(file, Loader=yaml.FullLoader)
             # including a class for background
-            num_classes = data_config['nc'] + 1
+            self.num_classes = data_config['nc'] + 1
         self.class_mapping = {str(k+1):v for k,v in data_config['names'].items()}
 
         ce_weight = torch.Tensor(ce_weight) if (
@@ -390,14 +391,16 @@ class HerdnetTrainer(L.LightningModule):
             herdnet_model_path, map_location="cpu", weights_only=True)
         success = self.model.load_state_dict(
             checkpoint['model_state_dict'], strict=load_state_dict_strict)
-        self.model.model.reshape_classes(num_classes)
         print(f"Loading ckpt:", success)
+        if isinstance(loaded_weights_num_classes,int):
+            self.model.model.reshape_classes(loaded_weights_num_classes)
+        self.is_model_reshaped = False
 
         # metrics
         self.metrics_val = PointsMetrics(
-            radius=eval_radius, num_classes=num_classes)
+            radius=eval_radius, num_classes=self.num_classes)
         self.metrics_test = PointsMetrics(
-            radius=eval_radius, num_classes=num_classes)
+            radius=eval_radius, num_classes=self.num_classes)
 
         self.metrics = {"val": self.metrics_val, "test": self.metrics_test}
 
@@ -425,6 +428,7 @@ class HerdnetTrainer(L.LightningModule):
 
     # def configure_model(self,):
     #     self.model = torch.compile(self.model, fullgraph=True)
+            
 
     def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
         # copy and adapted from animaloc.eval.HerdnetEvaluator
@@ -454,7 +458,12 @@ class HerdnetTrainer(L.LightningModule):
         return dict(gt=gt, preds=preds, est_count=counts[0])
 
     def shared_step(self, stage, batch, batch_idx):
-
+        
+        if not self.is_model_reshaped:
+            self.model.model.reshape_classes(self.num_classes)
+            self.is_model_reshaped = True
+            self.model = self.model.to(self.device)
+        
         images, targets = batch
 
         # compute losses
@@ -502,8 +511,12 @@ class HerdnetTrainer(L.LightningModule):
         for _,row in per_class_metrics.iterrows():
             for col in metrics_cols:
                 label = str(row.loc['class'])
-                class_name =self.class_mapping[label]
-                self.log(f"{class_name}_{col}", round(row.loc[col], 3))
+                if label in self.class_mapping.keys():
+                    class_name = self.class_mapping[label]
+                    name = f"{class_name}_{col}"
+                else:
+                    name = label
+                self.log(name, round(row.loc[col], 3))
 
     def on_validation_epoch_end(self,):
         self.log_metrics(stage='val')

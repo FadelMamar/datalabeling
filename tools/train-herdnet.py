@@ -28,7 +28,7 @@ def run_ligthning():
 
     args = Arguments()
     args.lr0 = 3e-4
-    args.epochs = 7
+    args.epochs = 10
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
@@ -40,7 +40,7 @@ def run_ligthning():
     freeze_layers = [0., 0.5, 0.75]
 
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
     # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
@@ -48,16 +48,16 @@ def run_ligthning():
 
     # get cross entropy loss weights
     # Data
-    datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
-                                patch_size=args.imgsz,
-                                batch_size=args.batchsize,
-                                down_ratio=down_ratio,
-                                train_empty_ratio=0.
-                                )
-    datamodule.setup('fit')
-    ce_weight = datamodule.get_labels_weights
-    # ce_weight = None
-    logger.info(f"cross entropy loss class importance weights: {ce_weight}")
+    # datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
+    #                             patch_size=args.imgsz,
+    #                             batch_size=args.batchsize,
+    #                             down_ratio=down_ratio,
+    #                             train_empty_ratio=0.
+    #                             )
+    # datamodule.setup('fit')
+    # ce_weight = datamodule.get_labels_weights
+    ce_weight = None
+    print(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
 
     # Training logic
@@ -71,10 +71,13 @@ def run_ligthning():
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                               args=args,
+                                                              loaded_weights_num_classes=7, # num classes includes background
                                                               ce_weight=ce_weight,
+                                                              map_location='cpu',
+                                                              strict=True,
                                                               work_dir='../.tmp')
 
-        logger.info(f"\nLoading checkpoint at {checkpoint_path}\n")
+        print(f"\nLoading checkpoint at {checkpoint_path}\n")
     
     for empty_ratio, lr, freeze_ratio in zip(empty_ratios, cl_lr, freeze_layers):
 
