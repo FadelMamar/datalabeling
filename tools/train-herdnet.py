@@ -83,7 +83,7 @@ def run_ligthning():
     # Training logic
     herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
                                      args=args,
-                                     ce_weight=None,
+                                     ce_weight=ce_weight,
                                      work_dir='../.tmp',
                                      # set to False if pretrained weights are being loaded properly due to classification head
                                      load_state_dict_strict=True,
@@ -91,7 +91,7 @@ def run_ligthning():
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                               args=args,
-                                                              ce_weight=None,
+                                                              ce_weight=ce_weight,
                                                               work_dir='../.tmp')
 
         logger.info(f"\nLoading checkpoint at {checkpoint_path}\n")
