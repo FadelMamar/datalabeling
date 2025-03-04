@@ -166,6 +166,37 @@ def load_dataset(data_config_yaml: str,
     return ConcatDataset(datasets=datasets), pd.concat(df_gts)
 
 
+class PredictDataset(CSVDataset):
+
+    def __init__(self, images_path:list[str], albu_transforms = None, end_transforms = None):
+
+        assert isinstance(images_path,list)
+
+        images_path = list(map(str,images_path))
+        # create dummy df_labels
+        num_images = len(images_path)
+        df_labels = {'x':[0.]*num_images,
+                     'y':[0.]*num_images,
+                     'labels':[0]*num_images,
+                     'images':images_path
+                     }
+        df_labels = pd.DataFrame.from_dict(df_labels)
+        super().__init__(csv_file=df_labels, 
+                         root_dir="", 
+                         albu_transforms=albu_transforms,
+                         end_transforms=end_transforms)
+    
+    def _load_image(self, index: int) -> Image.Image:
+        img_name = self._img_names[index]
+        return Image.open(img_name).convert('RGB')
+    
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, dict]:        
+        img = self._load_image(index)
+        target = self._load_target(index)
+        tr_img, tr_target = self._transforms(img, target)
+
+        return tr_img
+
 class HerdnetData(L.LightningDataModule):
 
     def __init__(self, data_config_yaml: str,
@@ -185,6 +216,8 @@ class HerdnetData(L.LightningDataModule):
         self.train_dataset = None
         self.test_dataset = None
         self.val_dataset = None
+        self.predict_dataset = None
+        self.predict_batchsize = 8
         self.df_train_labels_freq = None
         self.df_val_labels_freq = None
 
@@ -249,7 +282,8 @@ class HerdnetData(L.LightningDataModule):
             self.train_dataset, df_train_labels = load_dataset(data_config_yaml=self.data_config_yaml,
                                                                split='train',
                                                                transforms=self.transforms,
-                                                               empty_ratio=self.train_empty_ratio
+                                                               empty_ratio=self.train_empty_ratio,
+                                                               empty_frac=None
                                                                )
             self.df_train_labels_freq = df_train_labels['labels'].value_counts(
             ).sort_index()/len(df_train_labels)
@@ -271,12 +305,20 @@ class HerdnetData(L.LightningDataModule):
                                                 empty_ratio=None
                                                 )
 
+    def set_predict_dataset(self,images_path:list[str],batchsize:int=16):        
+        self.predict_dataset = PredictDataset(images_path=images_path,
+                                              albu_transforms=self.transforms['val'][0],
+                                              end_transforms=self.transforms['val'][1]
+                                            )
+        self.predict_batchsize = batchsize
+
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size,
                           shuffle=True, collate_fn=None,
                           num_workers=self.num_workers,
-                          pin_memory=self.pin_memory
-                          )
+                          pin_memory=self.pin_memory,
+                          persistent_workers=True
+                        )
 
     def val_dataloader(self):
         """Validation dataloader supports only batchsize=1.
@@ -301,6 +343,9 @@ class HerdnetData(L.LightningDataModule):
 
         """
         return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None)
+
+    def predict_dataloader(self):
+        return DataLoader(self.predict_dataset, batch_size=self.predict_batchsize, shuffle=False)
 
     def teardown(self, stage: str):
         # Used to clean-up when the run is finished
@@ -489,6 +534,7 @@ class HerdnetTrainer(L.LightningModule):
         # compute metrics
         output = self.prepare_feeding(targets=None,
                                       output=predictions)
+        output.pop('gt') # empty
         return output
 
     def configure_optimizers(self):
