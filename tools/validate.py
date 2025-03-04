@@ -74,7 +74,6 @@ def herdnet_val():
     
     # args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
     # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
-    # num_classes = 7
     
     # =============================================================================
     #     # Pretrained
@@ -87,11 +86,12 @@ def herdnet_val():
     # =============================================================================
     args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
     checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\mlartifacts\934358897506090439\1f0f0be9be1a406c8df8978331a99915\artifacts\epoch=2-step=1815\epoch=2-step=1815.ckpt"
-    num_classes = 2
+    
 
-    # Example: load Prediction images
-    # with open(args.data_config_yaml, 'r') as file:
-    #     data_config = yaml.load(file, Loader=yaml.FullLoader)
+    # Get number of classes
+    with open(args.data_config_yaml, 'r') as file:
+        data_config = yaml.load(file, Loader=yaml.FullLoader)
+    num_classes = data_config['nc']+1
     
     
     # set model
