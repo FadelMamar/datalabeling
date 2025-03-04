@@ -78,6 +78,7 @@ def get_groundtruth(yolo_images_dir: str,
             df = pd.read_csv(label_path, sep=' ', header=None)
             img = Image.open(image_path)
             img_width, img_height = img.size
+            img.close()
         else:  
             # empty image -> creating pseudo labels
             df = {'id': [-1], 'x': [0.], 'y': [0.], 'w': [0.], 'h': [0.]}
@@ -101,7 +102,7 @@ def get_groundtruth(yolo_images_dir: str,
         df['images'] = str(image_path)
         df.rename(columns={'id': 'labels'}, inplace=True)
         dfs.append(df)
-        img.close()
+        
 
     # concat dfs
     dfs = pd.concat(dfs)
@@ -226,8 +227,8 @@ class HerdnetData(L.LightningDataModule):
 
     @property
     def get_labels_weights(self,):
-        if self.num_classes == 2:
-            return [1.0, 1.0]
+        # if self.num_classes == 2:
+        #     return [1.0, 1.0]
         weights = 1/(self.df_train_labels_freq + 1e-6)
         weights = [1.0] + weights.to_list()
         assert len(weights) == self.num_classes, "Check for inconsistencies."
@@ -281,6 +282,7 @@ class HerdnetTrainer(L.LightningModule):
                  herdnet_model_path: str,
                  args: Arguments,
                  work_dir: str,
+                 load_state_dict_strict:bool=True,
                  ce_weight: list = None):
 
         super().__init__()
@@ -303,13 +305,14 @@ class HerdnetTrainer(L.LightningModule):
             {'loss': CrossEntropyLoss(
                 reduction='mean', weight=ce_weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
         ]
-
-        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=4)
+        
+        self.model = HerdNet(pretrained=False, down_ratio=2,num_classes=4)
         self.model = LossWrapper(self.model, losses=losses, mode="both")
         checkpoint = torch.load(
             herdnet_model_path, map_location="cpu", weights_only=True)
-        self.model.load_state_dict(checkpoint['model_state_dict'], strict=True)
+        success = self.model.load_state_dict(checkpoint['model_state_dict'], strict=load_state_dict_strict)
         self.model.model.reshape_classes(num_classes)
+        print(f"Loading ckpt:",success)
 
         # metrics
         radius = 20
@@ -339,8 +342,8 @@ class HerdnetTrainer(L.LightningModule):
             header='validation'
         )
 
-    def configure_model(self,):
-        self.model = torch.compile(self.model, fullgraph=True)
+    # def configure_model(self,):
+    #     self.model = torch.compile(self.model, fullgraph=True)
 
     def shared_step(self, stage, batch, batch_idx):
 
@@ -359,6 +362,11 @@ class HerdnetTrainer(L.LightningModule):
             # compute metrics
             output = self.herdet_evaluator.prepare_feeding(
                 targets=targets, output=predictions)
+            if output['gt']['labels'] < 1: # labels = 0 -> background
+                output = {'gt':{'loc':[],'labels':[]},
+                          'preds':output['preds'],
+                          'est_count':output['est_count']
+                          }
             iter_metrics = self.metrics[stage]
             iter_metrics.feed(**output)
             return None

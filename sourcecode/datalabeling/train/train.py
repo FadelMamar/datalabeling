@@ -247,7 +247,7 @@ def remove_label_cache(data_config_yaml: str):
                 path = os.path.join(root, p, "../labels.cache")
                 if os.path.exists(path):
                     os.remove(path)
-                    print(f"Removing: {os.path.join(root,p,"../labels.cache")}")
+                    print(f"Removing: {os.path.join(root,p,'../labels.cache')}")
                 else:
                     print(path, "does not exist.")
         except Exception as e:
@@ -359,7 +359,7 @@ def start_training(args: Arguments):
     # Load a pre-trained model
     try:
         model = YOLO(args.path_weights, task='detect', verbose=False)
-    except Exception
+    except Exception :
         model = RTDETR(args.path_weights, task='detect', verbose=False)
 
     # Display model information (optional)
