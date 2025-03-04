@@ -94,6 +94,7 @@ def run_ligthning():
                 param.requires_grad = False
             else:
                 break
+        logger.info(f"\n{int(num_layers*freeze_ratio)} layers have been frozen.\n")
 
         # Data
         datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
@@ -102,7 +103,7 @@ def run_ligthning():
                                  down_ratio=down_ratio,
                                  train_empty_ratio=empty_ratio
                                  )
-
+        
         # Trainer
         trainer = L.Trainer(num_sanity_val_steps=10,
                             logger=mlf_logger,
@@ -156,18 +157,13 @@ def run():
         args.path_weights, map_location="cpu", weights_only=True)
     herdnet.load_state_dict(checkpoint['model_state_dict'], strict=True)
     herdnet.model.reshape_classes(num_classes)
-
     herdnet = herdnet.to('cuda')
 
     work_dir = '../.tmp'
 
-    lr = 1e-4
-    weight_decay = 1e-4
-    epochs = 30
-    patch_size = 800
 
     optimizer = Adam(params=herdnet.parameters(),
-                     lr=lr, weight_decay=weight_decay)
+                     lr=args.lr0, weight_decay=args.weight_decay)
 
     metrics = PointsMetrics(radius=20, num_classes=num_classes)
 
@@ -197,7 +193,7 @@ def run():
         lr_milestones=[20,],
         optimizer=optimizer,
         auto_lr=True,
-        num_epochs=epochs,
+        num_epochs=args.epochs,
         evaluator=evaluator,
         work_dir=work_dir
     )
