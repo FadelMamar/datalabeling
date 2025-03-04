@@ -81,8 +81,8 @@ def run_ligthning():
                                                               ce_weight=None,
                                                               work_dir='../.tmp')
 
-        print(f"\nLoading checkpoint at {checkpoint_path}\n")
-
+        logger.info(f"\nLoading checkpoint at {checkpoint_path}\n")
+    
     for empty_ratio, lr, freeze_ratio in zip(empty_ratios, cl_lr, freeze_layers):
 
         herdnet_trainer.args.lr0 = lr
@@ -111,7 +111,7 @@ def run_ligthning():
                                 int(64/args.batchsize), 1),
                             precision=precision,
                             callbacks=callbacks,
-                            accelerator="gpu",
+                            accelerator="auto",
                             )
         trainer.fit(model=herdnet_trainer,
                     datamodule=datamodule,
@@ -171,14 +171,15 @@ def run():
 
     metrics = PointsMetrics(radius=20, num_classes=num_classes)
 
-    stitcher = HerdNetStitcher(
-        model=herdnet,
-        size=(patch_size, patch_size),
-        batch_size=1,
-        overlap=160,
-        down_ratio=down_ratio,
-        reduction='mean'
-    )
+    # stitcher = HerdNetStitcher(
+    #     model=herdnet,
+    #     size=(patch_size, patch_size),
+    #     batch_size=1,
+    #     overlap=160,
+    #     down_ratio=down_ratio,
+    #     reduction='mean'
+    # )
+    stitcher = None
 
     evaluator = HerdNetEvaluator(
         model=herdnet,
@@ -211,4 +212,4 @@ if __name__ == "__main__":
 
     run_ligthning()
 
-    pass
+    

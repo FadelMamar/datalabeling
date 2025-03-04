@@ -367,6 +367,9 @@ class HerdnetTrainer(L.LightningModule):
             work_dir=self.work_dir,
             header='validation'
         )
+        up = True
+        if self.stitcher is not None:
+            up = False
         self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
 
     # def configure_model(self,):
@@ -386,9 +389,7 @@ class HerdnetTrainer(L.LightningModule):
                 labels=gt_labels
             )
 
-        up = True
-        if self.stitcher is not None:
-            up = False
+        
 
         counts, locs, labels, scores, dscores = self.lmds(output)
 
@@ -432,7 +433,7 @@ class HerdnetTrainer(L.LightningModule):
         iter_metrics = self.metrics[stage]
 
         # store for class level metrics computation
-        self.herdet_evaluator._stored_metrics = iter_metrics.copy()
+        self.herdnet_evaluator._stored_metrics = iter_metrics.copy()
 
         # aggregate results
         iter_metrics.aggregate()
@@ -447,7 +448,7 @@ class HerdnetTrainer(L.LightningModule):
         per_class_metrics = self.herdnet_evaluator.results
         metrics_cols = [
             p for p in per_class_metrics.columns if p not in ['class',]]
-        for row in per_class_metrics.iterrows():
+        for _,row in per_class_metrics.iterrows():
             for col in metrics_cols:
                 self.log(row.loc['class'], row.loc[col])
 
@@ -490,5 +491,14 @@ class HerdnetTrainer(L.LightningModule):
         optimizer = torch.optim.Adam(params=self.model.parameters(),
                                      lr=self.args.lr0,
                                      weight_decay=self.args.weight_decay)
+        
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                            T_0=self.args.epochs,
+                                                                            T_mult=1,
+                                                                            eta_min=self.args.lr0*self.args.lrf,
+                                                                        )
+        return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+     
+        
 
-        return optimizer
+        
