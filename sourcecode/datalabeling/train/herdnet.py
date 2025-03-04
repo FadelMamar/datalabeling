@@ -373,6 +373,7 @@ class HerdnetTrainer(L.LightningModule):
             data_config = yaml.load(file, Loader=yaml.FullLoader)
             # including a class for background
             num_classes = data_config['nc'] + 1
+        self.class_mapping = {str(k+1):v for k,v in data_config['names'].items()}
 
         ce_weight = torch.Tensor(ce_weight) if (
             ce_weight is not None) else None
@@ -500,7 +501,9 @@ class HerdnetTrainer(L.LightningModule):
             p for p in per_class_metrics.columns if p not in ['class',]]
         for _,row in per_class_metrics.iterrows():
             for col in metrics_cols:
-                self.log(row.loc['class'], row.loc[col])
+                label = str(row.loc['class'])
+                class_name =self.class_mapping[label]
+                self.log(f"{class_name}_{col}", round(row.loc[col], 3))
 
     def on_validation_epoch_end(self,):
         self.log_metrics(stage='val')
