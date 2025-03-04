@@ -267,10 +267,28 @@ class HerdnetData(L.LightningDataModule):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, collate_fn=None)
 
     def val_dataloader(self):
+        """Validation dataloader supports only batchsize=1.
+        
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
         return DataLoader(self.val_dataset, batch_size=1, shuffle=False, collate_fn=None)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=None)
+        """Test dataloader supports only batchsize=1.
+        
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None)
 
     def teardown(self, stage: str):
         # Used to clean-up when the run is finished
@@ -362,7 +380,7 @@ class HerdnetTrainer(L.LightningModule):
             # compute metrics
             output = self.herdet_evaluator.prepare_feeding(
                 targets=targets, output=predictions)
-            if output['gt']['labels'] < 1: # labels = 0 -> background
+            if output['gt']['labels'][0] < 1: # labels = 0 -> background
                 output = {'gt':{'loc':[],'labels':[]},
                           'preds':output['preds'],
                           'est_count':output['est_count']
