@@ -67,6 +67,19 @@ def run_ligthning():
                                mode="max")
                  ]
 
+    # get cross entropy loss weights
+    # Data
+    datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
+                                patch_size=args.imgsz,
+                                batch_size=args.batchsize,
+                                down_ratio=down_ratio,
+                                train_empty_ratio=0.
+                                )
+    datamodule.setup('fit')
+    ce_weight = datamodule.get_labels_weights
+    # ce_weight = None
+    logger.info(f"cross entropy loss class importance weights: {ce_weight}")
+
     # Training logic
     herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
                                      args=args,
