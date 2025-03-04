@@ -359,6 +359,7 @@ class HerdnetTrainer(L.LightningModule):
                  loaded_weights_num_classes:int,
                  work_dir: str,
                  eval_radius:int=20,
+                 classification_threshold:float=0.25,
                  load_state_dict_strict: bool = True,
                  herdnet_model_path: str|None=None,
                  ce_weight: list = None):
@@ -369,6 +370,7 @@ class HerdnetTrainer(L.LightningModule):
         self.args = args
         self.work_dir = work_dir
         self.loaded_weights_num_classes = loaded_weights_num_classes
+        self.classification_threshold = classification_threshold
 
         # Get number of classes
         with open(self.args.data_config_yaml, 'r') as file:
@@ -423,7 +425,8 @@ class HerdnetTrainer(L.LightningModule):
             metrics=self.metrics_val,
             stitcher=self.stitcher,
             work_dir=self.work_dir,
-            header='validation'
+            header='validation',
+            lmds_kwargs = {'kernel_size': (3,3), 'adapt_ts':3.0, 'neg_ts':0.1}
         )
         up = True
         if self.stitcher is not None:
@@ -452,18 +455,26 @@ class HerdnetTrainer(L.LightningModule):
                 labels=gt_labels
             )
 
-        
-
         counts, locs, labels, scores, dscores = self.lmds(output)
-
+                
+        # 0 because batchsize is 1 !
         preds = dict(
             loc=locs[0],
             labels=labels[0],
             scores=scores[0],
             dscores=dscores[0]
         )
+        
+        # filter based on classification score. 
+        #  because Herdnet forces the prediction to be a class. It can't be a background class
+        idx_to_pop = [idx for idx,score in enumerate(preds['scores']) if score<self.classification_threshold]
+        idx_to_keep = [i for i in range(len(preds['scores'])) if i not in idx_to_pop]
+        preds_filtered = dict()
+        for k in preds.keys():
+            preds_filtered[k] = [preds[k][i] for i in idx_to_keep]
+                
 
-        return dict(gt=gt, preds=preds, est_count=counts[0])
+        return dict(gt=gt, preds=preds_filtered, est_count=counts[0])
 
     def shared_step(self, stage, batch, batch_idx):
         

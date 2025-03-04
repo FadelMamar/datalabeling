@@ -67,19 +67,31 @@ def herdnet_val():
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
-
-    # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=23-step=2040.ckpt"
     
-    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
+    # =============================================================================
+    #     Identification
+    # =============================================================================
     
+    # args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
+    # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
+    # num_classes = 7
+    
+    # =============================================================================
+    #     # Pretrained
+    # =============================================================================
+    # args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    
+    
+    # =============================================================================
+    #     Detection
+    # =============================================================================
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
+    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\mlartifacts\934358897506090439\1f0f0be9be1a406c8df8978331a99915\artifacts\epoch=2-step=1815\epoch=2-step=1815.ckpt"
+    num_classes = 2
 
     # Example: load Prediction images
-    with open(args.data_config_yaml, 'r') as file:
-        data_config = yaml.load(file, Loader=yaml.FullLoader)
-    
-    num_classes = 7
+    # with open(args.data_config_yaml, 'r') as file:
+    #     data_config = yaml.load(file, Loader=yaml.FullLoader)
     
     
     # set model
@@ -90,7 +102,9 @@ def herdnet_val():
                             )
     herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                             args=args,
+                                                            herdnet_model_path = None,
                                                             loaded_weights_num_classes=num_classes,
+                                                            classification_threshold=0.25,
                                                             ce_weight=None,
                                                             map_location='cpu',
                                                             strict=True,
@@ -104,7 +118,7 @@ def herdnet_val():
                                 train_empty_ratio=0.,
                                 )
     # Validation
-    datamodule.setup('fit')
+    # datamodule.setup('fit')
     
     # Predict
     # images_path = os.path.join(data_config['path'],data_config['test'][0])
