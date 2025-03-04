@@ -39,3 +39,4 @@ mlruns/0/meta.yaml
 yolov8-obb
 *.tmp
 *.pth
+lightning-ckpts
