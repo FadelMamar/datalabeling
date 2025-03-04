@@ -182,6 +182,11 @@ class HerdnetData(L.LightningDataModule):
         self.data_config_yaml = data_config_yaml
         self.transforms = transforms
         self.train_empty_ratio = train_empty_ratio
+        self.train_dataset = None
+        self.test_dataset = None
+        self.val_dataset = None
+        self.df_train_labels_freq = None
+        self.df_val_labels_freq = None
 
         self.num_workers = 8
         self.pin_memory = torch.cuda.is_available()
@@ -308,6 +313,7 @@ class HerdnetTrainer(L.LightningModule):
                  herdnet_model_path: str,
                  args: Arguments,
                  work_dir: str,
+                 eval_radius:int=20,
                  load_state_dict_strict: bool = True,
                  ce_weight: list = None):
 
@@ -342,11 +348,10 @@ class HerdnetTrainer(L.LightningModule):
         print(f"Loading ckpt:", success)
 
         # metrics
-        radius = 20
         self.metrics_val = PointsMetrics(
-            radius=radius, num_classes=num_classes)
+            radius=eval_radius, num_classes=num_classes)
         self.metrics_test = PointsMetrics(
-            radius=radius, num_classes=num_classes)
+            radius=eval_radius, num_classes=num_classes)
 
         self.metrics = {"val": self.metrics_val, "test": self.metrics_test}
 
