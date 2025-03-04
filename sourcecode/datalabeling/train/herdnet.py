@@ -355,12 +355,12 @@ class HerdnetData(L.LightningDataModule):
 class HerdnetTrainer(L.LightningModule):
 
     def __init__(self,
-                 herdnet_model_path: str,
                  args: Arguments,
+                 loaded_weights_num_classes:int,
                  work_dir: str,
                  eval_radius:int=20,
                  load_state_dict_strict: bool = True,
-                 loaded_weights_num_classes:int=None,
+                 herdnet_model_path: str|None=None,
                  ce_weight: list = None):
 
         super().__init__()
@@ -368,6 +368,7 @@ class HerdnetTrainer(L.LightningModule):
 
         self.args = args
         self.work_dir = work_dir
+        self.loaded_weights_num_classes = loaded_weights_num_classes
 
         # Get number of classes
         with open(self.args.data_config_yaml, 'r') as file:
@@ -375,6 +376,7 @@ class HerdnetTrainer(L.LightningModule):
             # including a class for background
             self.num_classes = data_config['nc'] + 1
         self.class_mapping = {str(k+1):v for k,v in data_config['names'].items()}
+        
 
         ce_weight = torch.Tensor(ce_weight) if (
             ce_weight is not None) else None
@@ -384,17 +386,19 @@ class HerdnetTrainer(L.LightningModule):
             {'loss': CrossEntropyLoss(
                 reduction='mean', weight=ce_weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
         ]
-
-        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=4)
+        # Load herdnet object
+        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=loaded_weights_num_classes)
         self.model = LossWrapper(self.model, losses=losses, mode="both")
-        checkpoint = torch.load(
-            herdnet_model_path, map_location="cpu", weights_only=True)
-        success = self.model.load_state_dict(
-            checkpoint['model_state_dict'], strict=load_state_dict_strict)
-        print(f"Loading ckpt:", success)
-        if isinstance(loaded_weights_num_classes,int):
-            self.model.model.reshape_classes(loaded_weights_num_classes)
-        self.is_model_reshaped = False
+        if herdnet_model_path is not None:
+            checkpoint = torch.load(
+                herdnet_model_path, map_location="cpu", weights_only=True)
+            success = self.model.load_state_dict(
+                checkpoint['model_state_dict'], strict=load_state_dict_strict)
+            print(f"Loading ckpt:", success)
+        
+        if self.num_classes != self.loaded_weights_num_classes:
+            print("Classification head of herdnet will be modified to handle {self.num_classes}.")
+            # reshaping done inside self.shared_step
 
         # metrics
         self.metrics_val = PointsMetrics(
@@ -425,9 +429,13 @@ class HerdnetTrainer(L.LightningModule):
         if self.stitcher is not None:
             up = False
         self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
+        
+        
 
     # def configure_model(self,):
-    #     self.model = torch.compile(self.model, fullgraph=True)
+    #     # reshape if needed
+    #     if self.num_classes != self.loaded_weights_num_classes:
+    #         self.model.model.reshape_classes(self.num_classes)
             
 
     def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
@@ -459,11 +467,10 @@ class HerdnetTrainer(L.LightningModule):
 
     def shared_step(self, stage, batch, batch_idx):
         
-        if not self.is_model_reshaped:
+        if self.num_classes != self.loaded_weights_num_classes:
             self.model.model.reshape_classes(self.num_classes)
-            self.is_model_reshaped = True
-            self.model = self.model.to(self.device)
-        
+            self.num_classes = self.loaded_weights_num_classes
+            
         images, targets = batch
 
         # compute losses
