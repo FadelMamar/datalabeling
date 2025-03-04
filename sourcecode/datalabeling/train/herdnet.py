@@ -441,7 +441,7 @@ class HerdnetTrainer(L.LightningModule):
     def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
         # copy and adapted from animaloc.eval.HerdnetEvaluator
 
-        gt = dict(loc=[[None, None]], labels=[None])
+        gt = dict(loc=[], labels=[])
         if targets is not None:
             gt_coords = [p[::-1]
                          for p in targets['points'].squeeze(0).tolist()]
@@ -470,6 +470,7 @@ class HerdnetTrainer(L.LightningModule):
         if self.num_classes != self.loaded_weights_num_classes:
             self.model.model.reshape_classes(self.num_classes)
             self.num_classes = self.loaded_weights_num_classes
+            self.model = self.model.to(self.device)
             
         images, targets = batch
 
@@ -496,6 +497,8 @@ class HerdnetTrainer(L.LightningModule):
             return None
 
     def log_metrics(self, stage: str):
+        
+        assert stage != 'train', "metrics only logged for val and test."
 
         iter_metrics = self.metrics[stage]
 
