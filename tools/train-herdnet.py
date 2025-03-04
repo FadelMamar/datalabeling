@@ -60,17 +60,11 @@ def run_ligthning():
     print(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
 
-    # Training logic
-    herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
-                                     args=args,
-                                     ce_weight=ce_weight,
-                                     work_dir='../.tmp',
-                                     # set to False if pretrained weights are being loaded properly due to classification head
-                                     load_state_dict_strict=True,
-                                    )
+    
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                               args=args,
+                                                              herdnet_model_path = None,
                                                               loaded_weights_num_classes=7, # num classes includes background
                                                               ce_weight=ce_weight,
                                                               map_location='cpu',
@@ -78,6 +72,15 @@ def run_ligthning():
                                                               work_dir='../.tmp')
 
         print(f"\nLoading checkpoint at {checkpoint_path}\n")
+    else:
+        # Training logic
+        herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
+                                         loaded_weights_num_classes=4,
+                                         args=args,
+                                         ce_weight=ce_weight,
+                                         work_dir='../.tmp',
+                                         load_state_dict_strict=True,
+                                        )    
     
     for empty_ratio, lr, freeze_ratio in zip(empty_ratios, cl_lr, freeze_layers):
 
