@@ -94,6 +94,7 @@ def run_ligthning():
                 param.requires_grad = False
             else:
                 break
+        logger.info(f"\n{int(num_layers*freeze_ratio)} layers have been frozen.\n")
 
         # Data
         datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
