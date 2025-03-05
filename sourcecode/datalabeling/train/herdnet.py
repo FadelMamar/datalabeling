@@ -467,14 +467,14 @@ class HerdnetTrainer(L.LightningModule):
         
         # filter based on classification score. 
         #  because Herdnet forces the prediction to be a class. It can't be a background class
-        idx_to_pop = [idx for idx,score in enumerate(preds['scores']) if score<self.classification_threshold]
-        idx_to_keep = [i for i in range(len(preds['scores'])) if i not in idx_to_pop]
-        preds_filtered = dict()
-        for k in preds.keys():
-            preds_filtered[k] = [preds[k][i] for i in idx_to_keep]
-                
+        # idx_to_pop = [idx for idx,score in enumerate(preds['scores']) if score<self.classification_threshold]
+        # idx_to_keep = [i for i in range(len(preds['scores'])) if i not in idx_to_pop]
+        # preds_filtered = dict()
+        # for k in preds.keys():
+        #     preds_filtered[k] = [preds[k][i] for i in idx_to_keep]
+        # preds = preds_filtered
 
-        return dict(gt=gt, preds=preds_filtered, est_count=counts[0])
+        return dict(gt=gt, preds=preds, est_count=counts[0])
 
     def shared_step(self, stage, batch, batch_idx):
         
