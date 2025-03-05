@@ -357,10 +357,9 @@ def start_training(args: Arguments):
     # logger = logging.getLogger(__name__)
 
     # Load a pre-trained model
-    try:
-        model = YOLO(args.path_weights, task='detect', verbose=False)
-    except Exception :
-        model = RTDETR(args.path_weights, task='detect', verbose=False)
+    model = YOLO(args.path_weights, task='detect', verbose=False)
+    if args.is_rtdetr:
+        model = RTDETR(args.path_weights)
 
     # Display model information (optional)
     model.info()

@@ -380,11 +380,13 @@ class HerdnetData(L.LightningDataModule):
 class HerdnetTrainer(L.LightningModule):
 
     def __init__(self,
-                 herdnet_model_path: str,
                  args: Arguments,
+                 loaded_weights_num_classes:int,
                  work_dir: str,
                  eval_radius:int=20,
+                 classification_threshold:float=0.25,
                  load_state_dict_strict: bool = True,
+                 herdnet_model_path: str|None=None,
                  ce_weight: list = None):
 
         super().__init__()
@@ -392,12 +394,16 @@ class HerdnetTrainer(L.LightningModule):
 
         self.args = args
         self.work_dir = work_dir
+        self.loaded_weights_num_classes = loaded_weights_num_classes
+        self.classification_threshold = classification_threshold
 
         # Get number of classes
         with open(self.args.data_config_yaml, 'r') as file:
             data_config = yaml.load(file, Loader=yaml.FullLoader)
             # including a class for background
-            num_classes = data_config['nc'] + 1
+            self.num_classes = data_config['nc'] + 1
+        self.class_mapping = {str(k+1):v for k,v in data_config['names'].items()}
+        
 
         ce_weight = torch.Tensor(ce_weight) if (
             ce_weight is not None) else None
@@ -407,21 +413,25 @@ class HerdnetTrainer(L.LightningModule):
             {'loss': CrossEntropyLoss(
                 reduction='mean', weight=ce_weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
         ]
-
-        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=4)
+        # Load herdnet object
+        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=loaded_weights_num_classes)
         self.model = LossWrapper(self.model, losses=losses, mode="both")
-        checkpoint = torch.load(
-            herdnet_model_path, map_location="cpu", weights_only=True)
-        success = self.model.load_state_dict(
-            checkpoint['model_state_dict'], strict=load_state_dict_strict)
-        self.model.model.reshape_classes(num_classes)
-        print("Loading ckpt:", success)
+        if herdnet_model_path is not None:
+            checkpoint = torch.load(
+                herdnet_model_path, map_location="cpu", weights_only=True)
+            success = self.model.load_state_dict(
+                checkpoint['model_state_dict'], strict=load_state_dict_strict)
+            print(f"Loading ckpt:", success)
+        
+        if self.num_classes != self.loaded_weights_num_classes:
+            print("Classification head of herdnet will be modified to handle {self.num_classes}.")
+            # reshaping done inside self.shared_step
 
         # metrics
         self.metrics_val = PointsMetrics(
-            radius=eval_radius, num_classes=num_classes)
+            radius=eval_radius, num_classes=self.num_classes)
         self.metrics_test = PointsMetrics(
-            radius=eval_radius, num_classes=num_classes)
+            radius=eval_radius, num_classes=self.num_classes)
 
         self.metrics = {"val": self.metrics_val, "test": self.metrics_test}
 
@@ -440,20 +450,26 @@ class HerdnetTrainer(L.LightningModule):
             metrics=self.metrics_val,
             stitcher=self.stitcher,
             work_dir=self.work_dir,
-            header='validation'
+            header='validation',
+            lmds_kwargs = {'kernel_size': (3,3), 'adapt_ts':3.0, 'neg_ts':0.1}
         )
         up = True
         if self.stitcher is not None:
             up = False
         self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
+        
+        
 
     # def configure_model(self,):
-    #     self.model = torch.compile(self.model, fullgraph=True)
+    #     # reshape if needed
+    #     if self.num_classes != self.loaded_weights_num_classes:
+    #         self.model.model.reshape_classes(self.num_classes)
+            
 
     def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
         # copy and adapted from animaloc.eval.HerdnetEvaluator
 
-        gt = dict(loc=[[None, None]], labels=[None])
+        gt = dict(loc=[], labels=[])
         if targets is not None:
             try:
                 gt_coords = targets['points'].cpu().flip(1).tolist()
@@ -465,21 +481,33 @@ class HerdnetTrainer(L.LightningModule):
             except:
                 pass
 
-        
-
         counts, locs, labels, scores, dscores = self.lmds(output)
-
+                
+        # 0 because batchsize is 1 !
         preds = dict(
             loc=locs[0],
             labels=labels[0],
             scores=scores[0],
             dscores=dscores[0]
         )
+        
+        # filter based on classification score. 
+        #  because Herdnet forces the prediction to be a class. It can't be a background class
+        # idx_to_pop = [idx for idx,score in enumerate(preds['scores']) if score<self.classification_threshold]
+        # idx_to_keep = [i for i in range(len(preds['scores'])) if i not in idx_to_pop]
+        # preds_filtered = dict()
+        # for k in preds.keys():
+        #     preds_filtered[k] = [preds[k][i] for i in idx_to_keep]
+        # preds = preds_filtered
 
         return dict(gt=gt, preds=preds, est_count=counts[0])
 
     def shared_step(self, stage, batch, batch_idx):
-
+        
+        if self.num_classes != self.loaded_weights_num_classes:
+            self.model.model.reshape_classes(self.num_classes)
+            self.num_classes = self.loaded_weights_num_classes
+            self.model = self.model.to(self.device)
         
         # compute losses
         if stage == "train":
@@ -506,6 +534,8 @@ class HerdnetTrainer(L.LightningModule):
             return None
 
     def log_metrics(self, stage: str):
+        
+        assert stage != 'train', "metrics only logged for val and test."
 
         iter_metrics = self.metrics[stage]
 
@@ -527,7 +557,13 @@ class HerdnetTrainer(L.LightningModule):
             p for p in per_class_metrics.columns if p not in ['class',]]
         for _,row in per_class_metrics.iterrows():
             for col in metrics_cols:
-                self.log(row.loc['class'], row.loc[col])
+                label = str(row.loc['class'])
+                if label in self.class_mapping.keys():
+                    class_name = self.class_mapping[label]
+                    name = f"{class_name}_{col}"
+                else:
+                    name = label
+                self.log(name, round(row.loc[col], 3))
 
     def on_validation_epoch_end(self,):
         self.log_metrics(stage='val')
@@ -570,12 +606,13 @@ class HerdnetTrainer(L.LightningModule):
                                      lr=self.args.lr0,
                                      weight_decay=self.args.weight_decay)
         
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-                                                                            T_0=self.args.epochs,
-                                                                            T_mult=1,
-                                                                            eta_min=self.args.lr0*self.args.lrf,
-                                                                        )
-        return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+        #                                                                     T_0=self.args.epochs,
+        #                                                                     T_mult=1,
+        #                                                                     eta_min=self.args.lr0*self.args.lrf,
+        #                                                                 )
+        # return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        return optimizer
      
         
 

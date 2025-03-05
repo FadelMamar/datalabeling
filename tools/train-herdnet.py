@@ -28,7 +28,7 @@ def run_ligthning():
 
     args = Arguments()
     args.lr0 = 3e-4
-    args.epochs = 15
+    args.epochs = 10
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
@@ -40,67 +40,74 @@ def run_ligthning():
     freeze_layers = [0., 0.5, 0.75]
 
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
     # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
-    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=23-step=2040.ckpt"
-
-    # loggers and callbacks
-    mlf_logger = MLFlowLogger(experiment_name="Herdnet",
-                              run_name="herdnet",
-                              tracking_uri=args.mlflow_tracking_uri,
-                              log_model=True
-                              )
-    checkpoint_callback = ModelCheckpoint(dirpath="./lightning-ckpts",
-                                          monitor='val_f1-score',
-                                          mode="max",
-                                          save_weights_only=True,
-                                          save_top_k=1
-                                          )
-    lr_callback = LearningRateMonitor(logging_interval="epoch")
-    callbacks = [checkpoint_callback,
-                 lr_callback,
-                 EarlyStopping(monitor='val_f1-score',
-                               patience=args.patience,
-                               min_delta=1e-4,
-                               mode="max")
-                 ]
+    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
 
     # get cross entropy loss weights
     # Data
-    datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
-                                patch_size=args.imgsz,
-                                batch_size=args.batchsize,
-                                down_ratio=down_ratio,
-                                train_empty_ratio=0.
-                                )
-    datamodule.setup('fit')
-    ce_weight = datamodule.get_labels_weights
-    # ce_weight = None
-    logger.info(f"cross entropy loss class importance weights: {ce_weight}")
+    # datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
+    #                             patch_size=args.imgsz,
+    #                             batch_size=args.batchsize,
+    #                             down_ratio=down_ratio,
+    #                             train_empty_ratio=0.
+    #                             )
+    # datamodule.setup('fit')
+    # ce_weight = datamodule.get_labels_weights
+    ce_weight = None
+    print(f"cross entropy loss class importance weights: {ce_weight}")
+    datamodule = None
 
-    # Training logic
-    herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
-                                     args=args,
-                                     ce_weight=ce_weight,
-                                     work_dir='../.tmp',
-                                     # set to False if pretrained weights are being loaded properly due to classification head
-                                     load_state_dict_strict=True,
-                                     )
+    
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
                                                               args=args,
+                                                              herdnet_model_path = None,
+                                                              loaded_weights_num_classes=7, # num classes includes background
                                                               ce_weight=ce_weight,
+                                                              map_location='cpu',
+                                                              strict=True,
                                                               work_dir='../.tmp')
 
-        logger.info(f"\nLoading checkpoint at {checkpoint_path}\n")
+        print(f"\nLoading checkpoint at {checkpoint_path}\n")
+    else:
+        # Training logic
+        herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
+                                         loaded_weights_num_classes=4,
+                                         args=args,
+                                         ce_weight=ce_weight,
+                                         work_dir='../.tmp',
+                                         load_state_dict_strict=True,
+                                        )    
     
     for empty_ratio, lr, freeze_ratio in zip(empty_ratios, cl_lr, freeze_layers):
 
+        # loggers and callbacks
+        mlf_logger = MLFlowLogger(experiment_name="Herdnet",
+                                run_name=f"herdnet-{empty_ratio}-{lr}-{freeze_ratio}",
+                                tracking_uri=args.mlflow_tracking_uri,
+                                log_model=True
+                                )
+        checkpoint_callback = ModelCheckpoint(dirpath="./lightning-ckpts",
+                                            monitor='val_f1-score',
+                                            mode="max",
+                                            save_weights_only=True,
+                                            save_top_k=1
+                                            )
+        lr_callback = LearningRateMonitor(logging_interval="epoch")
+        callbacks = [checkpoint_callback,
+                    lr_callback,
+                    EarlyStopping(monitor='val_f1-score',
+                                patience=args.patience,
+                                min_delta=1e-4,
+                                mode="max")
+                    ]
+
         herdnet_trainer.args.lr0 = lr
 
-        # freeze params
+        # Freeze params
         num_layers = len(list(herdnet_trainer.parameters()))
         for idx, param in enumerate(herdnet_trainer.parameters()):
             if idx/num_layers < freeze_ratio:
@@ -115,7 +122,7 @@ def run_ligthning():
                                  batch_size=args.batchsize,
                                  down_ratio=down_ratio,
                                  train_empty_ratio=empty_ratio
-                                 )
+                                )
         
         # Trainer
         trainer = L.Trainer(num_sanity_val_steps=10,
