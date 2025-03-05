@@ -20,6 +20,7 @@ class Arguments:
        
     # model type
     is_detector:bool=False
+    is_rtdetr:bool=False
 
     # active learning flags
     mlflow_tracking_uri:str="http://localhost:5000"
