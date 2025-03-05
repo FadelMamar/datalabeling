@@ -197,6 +197,7 @@ class PredictDataset(CSVDataset):
 
         return tr_img
 
+
 class HerdnetData(L.LightningDataModule):
 
     def __init__(self, data_config_yaml: str,
@@ -304,6 +305,35 @@ class HerdnetData(L.LightningDataModule):
                                                 empty_frac=1.,
                                                 empty_ratio=None
                                                 )
+        elif stage == 'validate':
+            # val
+            self.val_dataset, df_val_labels = load_dataset(data_config_yaml=self.data_config_yaml,
+                                                           split='val',
+                                                           transforms=self.transforms,
+                                                           empty_ratio=None,
+                                                           empty_frac=1.
+                                                           )
+            self.df_val_labels_freq = df_val_labels['labels'].value_counts(
+            ).sort_index()/len(df_val_labels)
+
+    def val_collate_fn(self,batch):
+
+        batched = dict(img=torch.stack([p[0] for p in batch])
+                    )
+        targets = [p[1] for p in batch]
+        keys = targets[0].keys()
+        
+        for k in keys:
+            if k == 'points':
+                batched[k] = torch.vstack([a[k] for a in targets])
+            elif k == 'labels':
+                batched[k] = torch.hstack([a[k] for a in targets])
+            elif (k == 'w') or (k == 'h'):
+                batched[k] = torch.hstack([torch.Tensor(a[k]) for a in targets])
+            else:
+                batched[k] = [a[k] for a in targets]    
+
+        return batched
 
     def set_predict_dataset(self,images_path:list[str],batchsize:int=16):        
         self.predict_dataset = PredictDataset(images_path=images_path,
@@ -330,7 +360,7 @@ class HerdnetData(L.LightningDataModule):
             validation DataLoader.
 
         """
-        return DataLoader(self.val_dataset, batch_size=1, shuffle=False, collate_fn=None)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.val_collate_fn)
 
     def test_dataloader(self):
         """Test dataloader supports only batchsize=1.
@@ -342,15 +372,10 @@ class HerdnetData(L.LightningDataModule):
             test DataLoader.
 
         """
-        return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.val_collate_fn)
 
     def predict_dataloader(self):
         return DataLoader(self.predict_dataset, batch_size=self.predict_batchsize, shuffle=False)
-
-    def teardown(self, stage: str):
-        # Used to clean-up when the run is finished
-        pass
-
 
 class HerdnetTrainer(L.LightningModule):
 
@@ -390,7 +415,7 @@ class HerdnetTrainer(L.LightningModule):
         success = self.model.load_state_dict(
             checkpoint['model_state_dict'], strict=load_state_dict_strict)
         self.model.model.reshape_classes(num_classes)
-        print(f"Loading ckpt:", success)
+        print("Loading ckpt:", success)
 
         # metrics
         self.metrics_val = PointsMetrics(
@@ -430,14 +455,15 @@ class HerdnetTrainer(L.LightningModule):
 
         gt = dict(loc=[[None, None]], labels=[None])
         if targets is not None:
-            gt_coords = [p[::-1]
-                         for p in targets['points'].squeeze(0).tolist()]
-            gt_labels = targets['labels'].squeeze(0).tolist()
-
-            gt = dict(
-                loc=gt_coords,
-                labels=gt_labels
-            )
+            try:
+                gt_coords = targets['points'].cpu().flip(1).tolist()
+                gt_labels = targets['labels'].cpu().tolist()
+                gt = dict(
+                    loc=gt_coords,
+                    labels=gt_labels
+                )
+            except:
+                pass
 
         
 
@@ -454,21 +480,22 @@ class HerdnetTrainer(L.LightningModule):
 
     def shared_step(self, stage, batch, batch_idx):
 
-        images, targets = batch
-
+        
         # compute losses
         if stage == "train":
+            images, targets = batch
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
             self.log_dict(loss_dict)
             return loss
 
         else:
+            images = batch.pop('img')
             predictions, _ = self.model(images)
 
             # compute metrics
             output = self.prepare_feeding(
-                targets=targets, output=predictions)
+                targets=batch, output=predictions)
             if output['gt']['labels'][0] < 1:  # labels = 0 -> background
                 output = {'gt': {'loc': [], 'labels': []},
                           'preds': output['preds'],
