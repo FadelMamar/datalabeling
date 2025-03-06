@@ -377,6 +377,7 @@ class HerdnetData(L.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(self.predict_dataset, batch_size=self.predict_batchsize, shuffle=False)
 
+
 class HerdnetTrainer(L.LightningModule):
 
     def __init__(self,
@@ -384,6 +385,7 @@ class HerdnetTrainer(L.LightningModule):
                  loaded_weights_num_classes:int,
                  work_dir: str,
                  eval_radius:int=20,
+                 down_ratio:int=2,
                  classification_threshold:float=0.25,
                  load_state_dict_strict: bool = True,
                  herdnet_model_path: str|None=None,
@@ -414,7 +416,7 @@ class HerdnetTrainer(L.LightningModule):
                 reduction='mean', weight=ce_weight), 'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
         ]
         # Load herdnet object
-        self.model = HerdNet(pretrained=False, down_ratio=2, num_classes=loaded_weights_num_classes)
+        self.model = HerdNet(pretrained=False, down_ratio=down_ratio, num_classes=loaded_weights_num_classes)
         self.model = LossWrapper(self.model, losses=losses, mode="both")
         if herdnet_model_path is not None:
             checkpoint = torch.load(
@@ -472,7 +474,7 @@ class HerdnetTrainer(L.LightningModule):
         gt = dict(loc=[], labels=[])
         if targets is not None:
             try:
-                gt_coords = targets['points'].cpu().flip(1).tolist()
+                gt_coords = targets['points'].cpu().flip(1).tolist() # from (x,y) to (y,x)
                 gt_labels = targets['labels'].cpu().tolist()
                 gt = dict(
                     loc=gt_coords,
