@@ -199,6 +199,8 @@ class PredictDataset(CSVDataset):
 
 
 class HerdnetData(L.LightningDataModule):
+    """Lightning datamodule. This class handles all the data preparation tasks. It facilitates reproducibility.
+    """
 
     def __init__(self, data_config_yaml: str,
                  patch_size: int,
@@ -268,9 +270,12 @@ class HerdnetData(L.LightningDataModule):
             self.transforms['test'] = self.transforms['val']
 
     @property
-    def get_labels_weights(self,):
-        # if self.num_classes == 2:
-        #     return [1.0, 1.0]
+    def get_labels_weights(self,)->torch.Tensor:
+        """Computes importance weights for cross entropy loss
+
+        Returns:
+            torch.Tensor: weights for cross entropy loss
+        """
         weights = 1/(self.df_train_labels_freq + 1e-6)
         weights = [1.0] + weights.to_list()
         assert len(weights) == self.num_classes, "Check for inconsistencies."
@@ -316,8 +321,15 @@ class HerdnetData(L.LightningDataModule):
             self.df_val_labels_freq = df_val_labels['labels'].value_counts(
             ).sort_index()/len(df_val_labels)
 
-    def val_collate_fn(self,batch):
+    def val_collate_fn(self,batch:tuple):
+        """collate_fn used to create the validation dataloader
 
+        Args:
+            batch (tuple): (img:torch.Tensor, targets:dict)
+
+        Returns:
+            _type_: _description_
+        """
         batched = dict(img=torch.stack([p[0] for p in batch])
                     )
         targets = [p[1] for p in batch]
@@ -335,7 +347,8 @@ class HerdnetData(L.LightningDataModule):
 
         return batched
 
-    def set_predict_dataset(self,images_path:list[str],batchsize:int=16):        
+    def set_predict_dataset(self,images_path:list[str],batchsize:int=16)->None:  
+              
         self.predict_dataset = PredictDataset(images_path=images_path,
                                               albu_transforms=self.transforms['val'][0],
                                               end_transforms=self.transforms['val'][1]
@@ -351,7 +364,7 @@ class HerdnetData(L.LightningDataModule):
                         )
 
     def val_dataloader(self):
-        """Validation dataloader supports only batchsize=1.
+        """Creates validation dataloader.
 
 
         Returns
@@ -363,7 +376,7 @@ class HerdnetData(L.LightningDataModule):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=self.val_collate_fn)
 
     def test_dataloader(self):
-        """Test dataloader supports only batchsize=1.
+        """Test dataloader .
 
 
         Returns
@@ -459,15 +472,7 @@ class HerdnetTrainer(L.LightningModule):
         if self.stitcher is not None:
             up = False
         self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
-        
-        
-
-    # def configure_model(self,):
-    #     # reshape if needed
-    #     if self.num_classes != self.loaded_weights_num_classes:
-    #         self.model.model.reshape_classes(self.num_classes)
-            
-
+                  
     def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
         # copy and adapted from animaloc.eval.HerdnetEvaluator
 
