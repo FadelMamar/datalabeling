@@ -1,8 +1,10 @@
 from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
+from ..arguments.logger import logger
+from zenml import step
 
-# TODO: add format check before conversion!
+
 def check_label_format(loaded_df:pd.DataFrame)->str:
     """checks label format
 
@@ -25,7 +27,7 @@ def check_label_format(loaded_df:pd.DataFrame)->str:
     else:
         raise NotImplementedError(f"The number of features ({num_features}) in the label file is wrong. Check yolo or yolo-obb format from ultralytics.")
 
-
+@step
 def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str,skip:bool=True)->None:
     """Converts labels in yolo format to Oriented Bounding Box (obb) format.
 
@@ -50,7 +52,7 @@ def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str,skip:bool=True)->None
             pass
         else:
             if skip:
-                print(label_path, " does not follow yolo format. Skipped",end="\n")
+                logger.info(f"{label_path} does not follow yolo format. Skipped",end="\n")
                 continue
             else:
                 raise ValueError(f"{label_path} does not follow yolo format.")
@@ -87,6 +89,7 @@ def convert_yolo_to_obb(yolo_labels_dir:str,output_dir:str,skip:bool=True)->None
         df[cols].to_csv(Path(output_dir)/label_path.name,
                         sep=' ',index=False,header=False)
 
+@step
 def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str,skip:bool=True)->None:
     """Converts labels in Oriented Bounding Box (obb) format to yolo format
 
@@ -111,7 +114,7 @@ def convert_obb_to_yolo(obb_labels_dir:str,output_dir:str,skip:bool=True)->None:
             pass
         else:
             if skip:
-                print(label_path, " does not follow yolo-obb format. Skipped",end="\n")
+                logger.info(f"{label_path} does not follow yolo-obb format. Skipped")
                 continue
             else:
                 raise ValueError(f"{label_path} does not follow yolo-obb format.")

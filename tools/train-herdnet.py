@@ -13,8 +13,9 @@ from datalabeling.arguments import Arguments
 import lightning as L
 from lightning.pytorch.loggers import MLFlowLogger
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
+from zenml import pipeline
 
-
+@pipeline
 def run_ligthning():
 
     import logging

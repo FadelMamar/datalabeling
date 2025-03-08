@@ -7,10 +7,12 @@ import traceback
 from pathlib import Path
 import pandas as pd
 import math
+from ..arguments.logger import logger
+from zenml import pipeline, step
 
-
+@step
 def sample_pos_neg(images_paths: list, ratio: float, seed: int = 41):
-    """_summary_
+    """sample positive and negative images
 
     Args:
         images_paths (list): _description_
@@ -18,7 +20,7 @@ def sample_pos_neg(images_paths: list, ratio: float, seed: int = 41):
         seed (int, optional): _description_. Defaults to 41.
 
     Returns:
-        _type_: _description_
+        list[str]: selected images' paths
     """
 
     # build dataframe
@@ -30,20 +32,20 @@ def sample_pos_neg(images_paths: list, ratio: float, seed: int = 41):
     num_empty = (data["is_empty"] == 1).sum()
     num_non_empty = len(data)-num_empty
     if num_empty == 0:
-        print("contains only positive samples")
+        logger.info("provided images are all positive samples")
     num_sampled_empty = min(math.floor(num_non_empty*ratio), num_empty)
     sampled_empty = data.loc[data['is_empty'] == 1].sample(
         n=num_sampled_empty, random_state=seed)
     # concatenate
     sampled_data = pd.concat([sampled_empty, data.loc[data['is_empty'] == 0]])
 
-    print(f"Sampling: pos={num_non_empty} & neg={num_sampled_empty}", end="\n")
+    logger.info(f"Sampling: pos={num_non_empty} & neg={num_sampled_empty}", end="\n")
 
     return sampled_data['image_paths'].to_list()
 
-
+@step
 def get_data_cfg_paths_for_cl(ratio: float, data_config_yaml: str, cl_save_dir: str, seed: int = 41, split: str = 'train', pattern_glob: str = "*"):
-    """_summary_
+    """Builds appropriate cfg file for yolo training
 
     Args:
         ratio (float): _description_
@@ -56,7 +58,7 @@ def get_data_cfg_paths_for_cl(ratio: float, data_config_yaml: str, cl_save_dir: 
         NotImplementedError: _description_
 
     Returns:
-        _type_: _description_
+        str: save_path_cfg location of cfg yaml file
     """
 
     with open(data_config_yaml, 'r') as file:
@@ -68,7 +70,7 @@ def get_data_cfg_paths_for_cl(ratio: float, data_config_yaml: str, cl_save_dir: 
     # sample positive and negative images
     sampled_imgs_paths = []
     for dir_images in train_dirs_images:
-        print(f"Sampling positive and negative samples from {dir_images}")
+        logger.info(f"Sampling positive and negative samples from {dir_images}")
         paths = sample_pos_neg(images_paths=list(Path(dir_images).glob(pattern_glob)),
                                ratio=ratio,
                                seed=seed
@@ -80,7 +82,7 @@ def get_data_cfg_paths_for_cl(ratio: float, data_config_yaml: str, cl_save_dir: 
         cl_save_dir, f"{split}_ratio_{ratio}-seed_{seed}.txt")
     pd.Series(sampled_imgs_paths).to_csv(save_path_samples,
                                          index=False, header=False)
-    print(f"Saving {len(sampled_imgs_paths)} sampled images.")
+    logger.info(f"Saving {len(sampled_imgs_paths)} sampled images.")
     # save config
     if split == 'train':
         cfg_dict = {'path': root,
@@ -102,21 +104,21 @@ def get_data_cfg_paths_for_cl(ratio: float, data_config_yaml: str, cl_save_dir: 
     with open(save_path_cfg, 'w') as file:
         yaml.dump(cfg_dict, file)
 
-    print(
+    logger.info(
         f"Saving samples at: {save_path_samples} and data_cfg at {save_path_cfg}", end="\n\n")
 
     return str(save_path_cfg)
 
-
+@step
 def get_data_cfg_paths_for_HN(args: Arguments, data_config_yaml: str):
-    """_summary_
+    """Builds appropriate data cfg file for yolo training
 
     Args:
         args (Arguments): _description_
-        data_config_yaml (str): _description_
+        data_config_yaml (str): yolo data cfg file
 
     Returns:
-        _type_: _description_
+        str: save_data_config_yaml
     """
 
     from ..annotator import Detector
@@ -186,7 +188,7 @@ def get_data_cfg_paths_for_HN(args: Arguments, data_config_yaml: str):
 
     return str(save_data_config_yaml)
 
-
+@step
 def training_routine(model: YOLO | RTDETR, args: Arguments, imgsz: int = None, batchsize: int = None, data_cfg: str | None = None, resume: bool = False):
 
     # Train the model
@@ -234,7 +236,7 @@ def training_routine(model: YOLO | RTDETR, args: Arguments, imgsz: int = None, b
                 resume=resume
                 )
 
-
+@step
 def remove_label_cache(data_config_yaml: str):
 
     # Remove labels.cache
@@ -247,20 +249,20 @@ def remove_label_cache(data_config_yaml: str):
                 path = os.path.join(root, p, "../labels.cache")
                 if os.path.exists(path):
                     os.remove(path)
-                    print(f"Removing: {os.path.join(root,p,'../labels.cache')}")
+                    logger.info(f"Removing: {os.path.join(root,p,'../labels.cache')}")
                 else:
-                    print(path, "does not exist.")
+                    logger.info(path, "does not exist.")
         except Exception as e:
             # print(e)
             traceback.print_exc()
 
-
+@step
 def pretraining_run(model: YOLO, args: Arguments):
 
     # check arguments
     assert os.path.exists(
         args.ptr_data_config_yaml), "provide --ptr-data-config-yaml"
-    print("\n\n------------ Pretraining ----------", end="\n\n")
+    logger.info("\n\n------------ Pretraining ----------", end="\n\n")
     # remove cache
     remove_label_cache(args.ptr_data_config_yaml)
 
@@ -277,12 +279,12 @@ def pretraining_run(model: YOLO, args: Arguments):
                      resume=False
                      )
 
-
+@step
 def hard_negative_strategy_run(model: YOLO, args: Arguments, img_glob_pattern: str = "*"):
 
     # check  arguments
     assert args.hn_save_dir is not None, "Provide --hn-save-dir"
-    print("\n\n------------ hard negative sampling learning strategy ----------", end="\n\n")
+    logger.info("\n\n------------ hard negative sampling learning strategy ----------", end="\n\n")
     # remove cache
     remove_label_cache(args.hn_data_config_yaml)
 
@@ -309,13 +311,13 @@ def hard_negative_strategy_run(model: YOLO, args: Arguments, img_glob_pattern: s
                      resume=resume
                      )
 
-
+@step
 def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str = "*"):
 
     # check arguments
     assert os.path.exists(
         args.cl_data_config_yaml), "Provide --cl-data-config-yaml"
-    print("\n\n------------ Continual learning ----------", end="\n\n")
+    logger.info("\n\n------------ Continual learning ----------", end="\n\n")
     # remove cache
     remove_label_cache(args.cl_data_config_yaml)
     # check flags
@@ -346,15 +348,13 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
                          )
         count += 1
 
-
-def start_training(args: Arguments):
-    """Trains a YOLO model using ultralytics.
+@pipeline
+def start_ultralytics_training(args: Arguments):
+    """Trains a YOLO or RTDETR model using ultralytics.
 
     Args:
         args (Arguments): configs
     """
-
-    # logger = logging.getLogger(__name__)
 
     # Load a pre-trained model
     model = YOLO(args.path_weights, task='detect', verbose=False)

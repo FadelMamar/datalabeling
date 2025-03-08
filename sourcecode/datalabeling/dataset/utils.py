@@ -19,7 +19,8 @@ from tqdm import tqdm
 from label_studio_converter import Converter
 from label_studio_sdk import Client
 import traceback
-
+from ..arguments.logger import logger
+from zenml import pipeline, step
 
 
 
@@ -43,7 +44,7 @@ def load_ls_annotations(input_dir:str=JSONMIN_DIR_PATH)->tuple[list,list]:
 
     return ls_annotations,paths
 
-def convert_lsjsonmin_to_df(json_data:List[Dict])->pd.DataFrame:
+def _convert_lsjsonmin_to_df(json_data:List[Dict])->pd.DataFrame:
     """Converts Label studio (LS) annotations from json to DataFrames
 
     Args:
@@ -119,10 +120,10 @@ def convert_lsjsonmin_annotations_to_csv(rewrite_existing=True)->None:
         save_path = os.path.join(CSV_DIR_PATH,path.name.replace('.json','.csv'))
         if Path(save_path).exists() :
             if rewrite_existing:
-                df = convert_lsjsonmin_to_df(json_data=annotation)
+                df = _convert_lsjsonmin_to_df(json_data=annotation)
                 df.to_csv(save_path,index=False)
         else:
-            df = convert_lsjsonmin_to_df(json_data=annotation)
+            df = _convert_lsjsonmin_to_df(json_data=annotation)
             df.to_csv(save_path,index=False)
 
 def convert_json_to_coco(input_file:str,out_file_name:str=None,parsed_config:dict=None)->Dict:
@@ -183,6 +184,7 @@ def get_upload_img_dir(coco_annotation:dict):
 
         return directory.pop() 
 
+@step
 def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:str=COCO_DIR_PATH,
                                      parse_ls_config:bool=False,dotenv_path:str=None,ls_client:Client=None)->dict:
     """Converts directory with LS json files to coco format.
@@ -194,8 +196,6 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
     Returns:
         dict: the schema is {uploaded_image_dir:coco_annotation_path}
     """
-
-    
     
     def get_ls_parsed_config(ls_json_path:str):
 
@@ -231,6 +231,7 @@ def convert_json_annotations_to_coco(input_dir:str=JSON_DIR_PATH,dest_dir_coco:s
 
     return dict(zip(upload_img_dirs,coco_paths))
 
+@step
 def load_coco_annotations(dest_dir_coco:str=COCO_DIR_PATH)->dict:
     """Loads existing coco annotations
 
@@ -247,14 +248,15 @@ def load_coco_annotations(dest_dir_coco:str=COCO_DIR_PATH)->dict:
   
 
     return dict(zip(upload_img_dirs,coco_paths))
-    
+
+@step
 def get_slices(coco_annotation_file_path:str,img_dir:str,
                overlap_height_ratio:float=0.2,overlap_width_ratio:float=0.2,
                slice_height:int=640,slice_width:int=640,
                min_area_ratio:float=0.1,
                ignore_negative_samples:bool=False,
                verbose:bool=False)->dict:
-    """Slices annotations. This function call slice_coco from ``sahi``. See https://github.com/obss/sahi/blob/main/sahi/slicing.py#L413
+    """Slices annotations. This function call slice_coco from ``sahi``. Resulting images are saved as .jpg files. See https://github.com/obss/sahi/blob/main/sahi/slicing.py#L413
 
     Args:
         coco_annotation_file_path (str): path to annotation
@@ -290,6 +292,7 @@ def get_slices(coco_annotation_file_path:str,img_dir:str,
 
     return sliced_coco_dict
 
+@step
 def sample_data(coco_dict_slices:dict,
                 img_dir:str,
                 empty_ratio:float=3.,
@@ -328,8 +331,9 @@ def sample_data(coco_dict_slices:dict,
         p = os.path.join(img_dir,parent_file+ext)
         if os.path.exists(p):
             return p
+        
+        logger.error(f'Parent file note found for {file_name} in {img_dir} >> {parent_file}')
         raise FileNotFoundError(f'Parent file note found for {file_name} in {img_dir} >> {parent_file}')
-    
     
     # build mapping for labels
     label_ids = [cat['id'] for cat in coco_dict_slices['categories']]
@@ -443,6 +447,7 @@ def sample_data(coco_dict_slices:dict,
 
     return df
 
+@step
 def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=False)->None:
     """Saves tiles (or slices of images) as .jpg files
 
@@ -473,6 +478,7 @@ def save_tiles(df_tiles:pd.DataFrame,out_img_dir:str,clear_out_img_dir:bool=Fals
         tile = img[y0:y1,x0:x1,:]
         imsave(fname=save_path,arr=tile,check_contrast=False)
 
+@step
 def load_label_map(path:str,label_to_discard:list=None, labels_to_keep:list=None)->dict:
     """Loads label map. The map should be a json mapping class index to class name.
 
@@ -497,6 +503,7 @@ def load_label_map(path:str,label_to_discard:list=None, labels_to_keep:list=None
     label_map = dict(zip(range(len(names)),names))
     return label_map
 
+@step
 def update_yolo_data_cfg(data_config_yaml,label_map:dict):
     """Updates yolo data config yaml file "names" and "nc" fields.
 
@@ -515,6 +522,7 @@ def update_yolo_data_cfg(data_config_yaml,label_map:dict):
     with open(data_config_yaml,'w') as file:
         yaml.dump(yolo_config,file,default_flow_style=False, sort_keys=False)
 
+@step
 def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:int,slice_height:int):
     """Saves annotations as yolo dataset. 
 
@@ -546,12 +554,14 @@ def save_df_as_yolo(df_annotation:pd.DataFrame,dest_path_labels:str,slice_width:
     # check value range
     assert df_annotation[cols[1:]].all().max() <=1., "max value <= 1"
     assert df_annotation[cols[1:]].all().min() >= 0., "min value >=0"
+    assert df_annotation['label_id'].min()==0, "labels values start from 0 t C-1."
     
     
     for image_name,df in tqdm(df_annotation.groupby('images'),desc='Saving yolo labels'):
         txt_file = image_name.split('.')[0] + '.txt'
         df[cols].to_csv(os.path.join(dest_path_labels,txt_file),sep=' ',index=False,header=False)
 
+@pipeline
 def build_yolo_dataset(args:Dataprepconfigs):
     """Builds a yolo dataset
 
@@ -632,4 +642,5 @@ def build_yolo_dataset(args:Dataprepconfigs):
             print("--"*25,end="\n")
             traceback.print_exc()
             print("--"*25)
-            print(f"Failed to build yolo dataset for for {img_dir} -- {cocopath}\n\n")
+            logger.exception(e)
+            logger.error(f"Failed to build yolo dataset for for {img_dir} -- {cocopath}")

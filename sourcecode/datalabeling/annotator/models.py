@@ -12,14 +12,13 @@ import ultralytics
 import torch
 import json
 from pathlib import Path
-import logging
 from typing import Any, List, Optional
 import numpy as np
 import pandas as pd
 import torch
 import traceback
+from ..arguments.logger import logger
 
-logger = logging.getLogger(__name__)
 
 
 # https://github.com/obss/sahi/blob/main/sahi/models/yolov8.py
@@ -327,7 +326,8 @@ class Detector(object):
                 try:
                     results.to_json(save_path,orient='records',indent=2)
                 except Exception as e:
-                    print('!!!Failed to save results as json!!!\n')
+                    logger.exception(e)
+                    logger.error('!!!Failed to save results as json!!!\n')
                     traceback.print_exc()
 
             return results
@@ -357,7 +357,8 @@ class Detector(object):
         try:
             dfs.drop(columns=['bbox','image_id','segmentation','iscrowd'],inplace=True)
         except Exception as e:
-            print("Tried to drop columns: ['bbox','image_id','segmentation','iscrowd'].")
+            logger.exception(e)
+            logger.error("Tried to drop columns: ['bbox','image_id','segmentation','iscrowd'].")
             traceback.print_exc()
             
 

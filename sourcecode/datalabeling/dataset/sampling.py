@@ -9,11 +9,15 @@ import torch
 from tqdm import tqdm
 from datalabeling.annotator import Detector
 import scipy
-
+import sys
+from tqdm import tqdm
+from ..arguments.logger import logger
+from zenml import step
 
 def load_prediction_results(path_result:str)->pd.DataFrame:
     return pd.read_json(path_result,orient='records')
 
+@step
 # load groundtruth
 def load_groundtruth(images_dir:str=None,images_paths:list[str]=None)->tuple[pd.DataFrame,list]:
     
@@ -40,6 +44,7 @@ def load_groundtruth(images_dir:str=None,images_paths:list[str]=None)->tuple[pd.
         elif len(df.columns) == 5:
             df.columns = ['category_id','x','y','w','h']
         else:
+            logger.error("Check features in label file.")
             raise ValueError("Check features in label file.")
         
         # record features
@@ -59,10 +64,11 @@ def load_groundtruth(images_dir:str=None,images_paths:list[str]=None)->tuple[pd.
         
         df_list.append(df)
     
-    print(f"Loading groundtruth: there are {num_empty} empty images.")
+    logger.info(f"Loading groundtruth: there are {num_empty} empty images.")
 
     return pd.concat(df_list,axis=0), col_names
 
+@step
 # get preds and targets
 def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detector,images_paths:list[str]=None,load_results:bool=False,save_tag:str=""):
 
@@ -112,6 +118,7 @@ def get_preds_targets(images_dirs:list[str],pred_results_dir:str,detector:Detect
     
     return pd.concat(df_results,axis=0), pd.concat(df_labels,axis=0),features_names
 
+@step
 # compute mAP@50
 def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,col_names:list[str]):
     
@@ -136,6 +143,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
             y_min = np.min(gt[:,ys],axis=1).reshape((-1,1))
             y_max = np.max(gt[:,ys],axis=1).reshape((-1,1))
         else:
+            logger.error("Supports only yolo-obb outputs.")
             raise NotImplementedError("Support only yolo-obb outputs.")
         
         return np.hstack([x_min,y_min,x_max,y_max])
@@ -182,6 +190,7 @@ def compute_detector_performance(df_results:pd.DataFrame,df_labels:pd.DataFrame,
 
     return df_results_per_img
 
+@step
 # compute uncertainty
 def get_uncertainty(df_results_per_img:pd.DataFrame,mode:str='entropy',reoder_ascending:bool=False):
 
@@ -199,6 +208,7 @@ def get_uncertainty(df_results_per_img:pd.DataFrame,mode:str='entropy',reoder_as
 
     return df_results_per_img
 
+@step
 # select images with low mAP@50 but high confidence
 def select_hard_samples(df_results_per_img:pd.DataFrame,
                         score_col:str='max_scores',

@@ -1,11 +1,22 @@
+from zenml import step
+from datalabeling.train import HerdnetData, HerdnetTrainer
+from datalabeling.validation import ultralytics_validate, herdnet_validate
 
+from datalabeling.arguments import Arguments
+import lightning as L
+import os, yaml
+from pathlib import Path
+import torch
+import random
+import pandas as pd
+from lightning.pytorch.loggers import MLFlowLogger
+# from ultralytics import YOLO
+# from pathlib import Path
+from datalabeling.train import remove_label_cache
 
-
-
+@step
 def ultralytics_val():
-    from ultralytics import YOLO
-    # from pathlib import Path
-    from datalabeling.train import remove_label_cache
+    
     
     # Getting results for yolov12s : Detection and Identification
     paths = ["../runs/mlflow/140168774036374062/e0ea49b51ce34cfe9de6b482a2180037/artifacts/weights/best.pt", # Identification model weights
@@ -32,32 +43,10 @@ def ultralytics_val():
     for split in splits:
         for path,dataconfig in zip(paths,dataconfigs):
             print("\n",'-'*20,split,'-'*20)
-            model = YOLO(path)
-            model.info()
-            
-            # Customize validation settings
-            validation_results = model.val(data=dataconfig,
-                                            imgsz=imgsz,
-                                            batch=64,
-                                            split=split,
-                                            conf=conf_threshold,
-                                            iou=iou_threshold,
-                                            device="cuda"
-                                        )
+           ultralytics_validate(...)
 
-
+@step
 def herdnet_val():
-
-    from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
-    from datalabeling.arguments import Arguments
-    import lightning as L
-    import os, yaml
-    from pathlib import Path
-    import torch
-    import random
-    import pandas as pd
-    from lightning.pytorch.loggers import MLFlowLogger
-
 
     # lowering matrix multiplication precision
     if torch.cuda.is_available():
@@ -100,38 +89,9 @@ def herdnet_val():
                             tracking_uri=args.mlflow_tracking_uri,
                             log_model=True
                             )
-    herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
-                                                            args=args,
-                                                            herdnet_model_path = None,
-                                                            loaded_weights_num_classes=num_classes,
-                                                            classification_threshold=0.25,
-                                                            ce_weight=None,
-                                                            map_location='cpu',
-                                                            strict=True,
-                                                            work_dir='../.tmp')
 
-    # Data
-    datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
-                                patch_size=args.imgsz,
-                                batch_size=args.batchsize,
-                                down_ratio=down_ratio,
-                                train_empty_ratio=0.,
-                                )
-    # Validation
-    # datamodule.setup('fit')
+    herdnet_validate(...)
     
-    # Predict
-    # images_path = os.path.join(data_config['path'],data_config['test'][0])
-    # images_path = list(Path(images_path).glob('*'))
-    # datamodule.set_predict_dataset(images_path=images_path,batchsize=1)
-    
-    trainer = L.Trainer(accelerator="auto",profiler='simple',logger=mlf_logger)
-    
-    # out = trainer.validate(model=herdnet_trainer,datamodule=datamodule)
-    
-    out = trainer.test(model=herdnet_trainer,datamodule=datamodule)
-    
-    # out = trainer.predict(model=herdnet_trainer, datamodule=datamodule,)
 
 if __name__ == "__main__":
 

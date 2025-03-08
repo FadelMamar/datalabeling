@@ -1,0 +1,158 @@
+
+
+# run and project name MLOps
+run_name: detector
+project_name: wildAI
+tag:
+ - ""
+
+# model type
+model:
+  is_detector: false
+  is_rtdetr: false
+
+# active learning flags
+mlflow:
+  tracking_uri: http://localhost:5000
+  model_alias: null
+
+# labels to discard
+discard_labels: 
+ - null 
+keep_labels:
+ - null
+
+training: 
+  data_config_yaml: null
+  height: 640
+  width:  640
+  imgsz:  null
+  path_weights: null 
+  lr0: 1e-4
+  lrf: 1e-2
+  warmup_epochs: 3
+  batchsize: 32
+  epochs: 50
+  seed: 41
+  optimizer: AdamW
+  optimizer_momentum: 0.99
+  device: 0
+  patience: 10
+  # regularization
+  dropout: 5e-4
+  weight_decay: 5e-4
+  # transfer learning
+  freeze: null
+  # lr scheduling
+  cos_annealing: true
+
+pretraining:
+  use_pretraining: false
+  ptr_data_config_yaml: null
+  ptr_tilesize: 640
+  ptr_batchsize: 32
+  ptr_epochs: 10
+  ptr_lr0: 1e-4
+  ptr_lrf: 0.1
+  ptr_freeze: null
+
+continual_learning: 
+  use_continual_learning: false
+  cl_ratios: # ratio = num_empty/num_non_empty
+   - 1.0
+  cl_epochs:
+   - 20
+  cl_freeze:
+   - 0
+  cl_lr0s:
+   - 1e-4
+  cl_save_dir: null # should be given!
+  cl_data_config_yaml: null
+  cl_batch_size: 16
+
+hard_negative:
+  use_hn_learning: false
+  hn_save_dir: null
+  hn_data_config_yaml: null
+  hn_imgsz: 1280 # used to resize the input image
+  hn_tilesize: 1280 # used for sliding window based detections
+  hn_num_epochs: 10
+  hn_freeze: 20
+  hn_lr0: 5e-5
+  hn_lrf: 1e-1
+  hn_batch_size: 16
+  hn_is_yolo_obb: false
+  hn_use_sliding_window: true # can't change thru cli
+  hn_overlap_ratio: 0.2
+  hn_map_thrs: 0.35 # mAP threshold. lower than it is considered sample of interest
+  hn_score_thrs: 0.7
+  hn_confidence_threshold: 0.25
+  hn_ratio: 20 # ratio = num_empty/num_non_empty. Higher allows to look at all saved empty images
+  hn_uncertainty_thrs: 5 # helps to select those with high uncertainty
+  hn_uncertainty_method: entropy
+  hn_load_results: false
+
+data_augmentation: #https://docs.ultralytics.com/modes/train/#augmentation-settings-and-hyperparameters
+  rotation_degree: 45.
+  mixup: 0.
+  shear: 10.
+  copy_paste: 0.
+  erasing: 0.
+  scale: 0.0
+  fliplr: 0.5
+  flipud: 0.5
+  hsv_h: 0.
+  hsv_s: 0.3
+  hsv_v: 0.3
+  translate: 0.2
+  mosaic: 0.
+
+# model exporting format
+export:
+  format: null
+  batch_size: 1
+  model_weights: path/to_weights
+  half: false # to use FP16
+  int8: false # int8 quantization\
+  dynamic: false
+
+#arguments
+data_preparation: 
+  root_path: C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling
+  dest_path_images: none
+  dest_path_labels: none 
+  height: 640
+  width: 640
+  min_visibility: 0.5
+  save_all: false
+  overlap_ratio: 0.1
+  empty_ratio: 0.1
+  data_config_yaml: none
+  # annotations paths
+  coco_json_dir: none
+  ls_json_dir: none
+  parse_ls_config: false
+  # convert dataset formats
+  yolo_to_obb: false
+  obb_to_yolo: false
+  skip: false # will skip wrongly formatted target files else, interrupts process
+  # cli
+  build_yolo_dataset: false
+  clear_yolo_dir: false
+  save_only_empty: false
+  # model type
+  is_detector: false
+  # create coco from ls
+  load_coco_annotations: false
+  # labels to discard
+  discard_labels:
+   - other
+   - rocks
+   - vegetation
+   - detection 
+   - 'termite mound'
+   - label
+  keep_labels:
+   - null
+  # label mapping for identification dataset
+  label_map:null

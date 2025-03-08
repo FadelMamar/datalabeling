@@ -1,1 +1,2 @@
-from .train import *
+from .yolo import *
+from .herdnet import *

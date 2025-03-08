@@ -20,32 +20,10 @@ from torch.nn import CrossEntropyLoss
 import numpy as np
 from animaloc.train import Trainer
 from animaloc.eval import PointsMetrics, HerdNetStitcher, HerdNetEvaluator
-from animaloc.utils.useful_funcs import mkdir
 from PIL import Image
+from ..dataset.sampling import check_label_format
+from zenml import step
 
-
-def check_label_format(loaded_df: pd.DataFrame) -> str:
-    """checks label format
-
-    Args:
-        loaded_df (pd.DataFrame): target values
-
-    Raises:
-        NotImplementedError: when the format is not yolo or yolo-obb
-
-    Returns:
-        str: yolo or yolo-obb
-    """
-
-    num_features = len(loaded_df.columns)
-
-    if num_features == 5:
-        return "yolo"
-    elif num_features == 9:
-        return "yolo-obb"
-    else:
-        raise NotImplementedError(
-            f"The number of features ({num_features}) in the label file is wrong. Check yolo or yolo-obb format from ultralytics.")
 
 
 def get_groundtruth(yolo_images_dir: str,
@@ -134,7 +112,7 @@ def get_groundtruth(yolo_images_dir: str,
 
     return dfs
 
-
+@step
 def load_dataset(data_config_yaml: str,
                  split: str,
                  transforms: dict,
@@ -166,7 +144,7 @@ def load_dataset(data_config_yaml: str,
     return ConcatDataset(datasets=datasets), pd.concat(df_gts)
 
 
-class PredictDataset(CSVDataset):
+class HerdnetPredictDataset(CSVDataset):
 
     def __init__(self, images_path:list[str], albu_transforms = None, end_transforms = None):
 
@@ -196,6 +174,7 @@ class PredictDataset(CSVDataset):
         tr_img, tr_target = self._transforms(img, target)
 
         return tr_img
+
 
 class HerdnetData(L.LightningDataModule):
 
@@ -306,7 +285,7 @@ class HerdnetData(L.LightningDataModule):
                                                 )
 
     def set_predict_dataset(self,images_path:list[str],batchsize:int=16):        
-        self.predict_dataset = PredictDataset(images_path=images_path,
+        self.predict_dataset = HerdnetPredictDataset(images_path=images_path,
                                               albu_transforms=self.transforms['val'][0],
                                               end_transforms=self.transforms['val'][1]
                                             )
@@ -431,15 +410,7 @@ class HerdnetTrainer(L.LightningModule):
         up = True
         if self.stitcher is not None:
             up = False
-        self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
-        
-        
-
-    # def configure_model(self,):
-    #     # reshape if needed
-    #     if self.num_classes != self.loaded_weights_num_classes:
-    #         self.model.model.reshape_classes(self.num_classes)
-            
+        self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)           
 
     def prepare_feeding(self, targets: dict[str, torch.Tensor] | None, output: dict[torch.Tensor]) -> dict:
         # copy and adapted from animaloc.eval.HerdnetEvaluator

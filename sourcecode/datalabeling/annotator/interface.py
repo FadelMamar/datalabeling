@@ -16,6 +16,8 @@ import os
 import logging
 from urllib.parse import unquote, quote
 import traceback
+from ..arguments.logger import logger
+
 
 class Annotator(object):
 
@@ -155,8 +157,10 @@ class Annotator(object):
                 # using unquote to deal with special characters
                 img_path = get_local_path(unquote(img_url),download_resources=False)
             except Exception as e :
-                traceback.print_exc()
+                # traceback.print_exc()
+                logger.exception(e)
                 img_path = get_local_path(img_url,download_resources=False)
+                logger.info(f"Uploading {img_url} instead of {unquote(img_url)}.")
 
             img = Image.open(img_path)
             prediction = self.predict(img)

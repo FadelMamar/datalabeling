@@ -23,7 +23,7 @@ if __name__ == '__main__':
                      simplify=True)
     
     if args.start_training:
-        from datalabeling.train import start_training
+        from datalabeling.train import start_ultralytics_training
         import mlflow
         import wandb
         import yaml
