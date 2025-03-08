@@ -17,7 +17,6 @@ from datalabeling.train import remove_label_cache
 @step
 def ultralytics_val():
     
-    
     # Getting results for yolov12s : Detection and Identification
     paths = ["../runs/mlflow/140168774036374062/e0ea49b51ce34cfe9de6b482a2180037/artifacts/weights/best.pt", # Identification model weights
             "../runs/mlflow/140168774036374062/a59eda79d9444ff4befc561ac21da6b4/artifacts/weights/best.pt" # Detection model weights
@@ -27,10 +26,12 @@ def ultralytics_val():
                     r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml",
                     r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
                 ]
-
+    model_type='yolo'
     imgsz = 800
     iou_threshold=0.45
     conf_threshold=0.235
+    batch=16
+    device="cuda"
     splits = [
             "val", 
             "test",
@@ -43,7 +44,9 @@ def ultralytics_val():
     for split in splits:
         for path,dataconfig in zip(paths,dataconfigs):
             print("\n",'-'*20,split,'-'*20)
-           ultralytics_validate(...)
+           ultralytics_validate(path, dataconfig, split, imgsz, 
+                                conf_threshold, iou_threshold, model_type,
+                                 device=device, batch=batch)
 
 @step
 def herdnet_val():

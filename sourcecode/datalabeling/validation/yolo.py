@@ -1,7 +1,10 @@
 from ultralytics import YOLO, RTDETR
 
 
-def ultralytics_validate(path, data_config_yaml, split, imgsz, conf_threshold, iou_threshold,model_type='yolo', device="cuda", batch=16):
+def ultralytics_validate(path:str, data_config_yaml:str, split:str, imgsz:int,
+                        conf_threshold:float, iou_threshold:float,
+                        model_type:str='yolo', device:str="cuda", batch:int=16):
+    
 
     if model_type == 'yolo':
         model = YOLO(path)

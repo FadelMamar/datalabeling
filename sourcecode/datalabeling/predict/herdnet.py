@@ -1,14 +1,19 @@
 from zenml import step
-from ..train import HerdnetTrainer, HerdnetData
+from ..train import HerdnetTrainer, TRANSFORMS
 import lightning as L
+from ..dataset.handlers import HerdnetPredictDataset
+from torch.utils.data import DataLoader
+
 
 @step
-def predict(imgsz, down_ratio, data_config_yaml, checkpoint_path, work_dir,batchsize=1, split="val", accelerator="auto", classification_threshold=0.25):
+def predict(args,images_path:list[str], imgsz:int, down_ratio:int,
+            checkpoint_path:str, work_dir:str, batchsize:int=1, split:str="val",
+             accelerator:str="auto", classification_threshold:float=0.25):
 
     assert split in ["val", "test"]
   
     # Get number of classes
-    with open(data_config_yaml, 'r') as file:
+    with open(args.data_config_yaml, 'r') as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
     num_classes = data_config['nc']+1
     
@@ -23,15 +28,15 @@ def predict(imgsz, down_ratio, data_config_yaml, checkpoint_path, work_dir,batch
                                                             strict=True,
                                                             work_dir=work_dir)
     # Data
-    datamodule = HerdnetData(data_config_yaml=data_config_yaml,
-                                patch_size=imgsz,
-                                batch_size=batchsize,
-                                down_ratio=down_ratio,
-                                train_empty_ratio=0.,
+    data = HerdnetPredictDataset(images_path=images_path, 
+                                        albu_transforms = TRANSFORMS['val'][0], 
+                                        end_transforms = TRANSFORMS['val'][1]
                                 )
-
+    data = DataLoader(data, batch_size=batchsize,
+                    num_workers=0, shuffle=False, persistent_workers=True)
+                                        
     trainer = L.Trainer(accelerator=accelerator,profiler='simple')
     
-    out = trainer.predict(model=herdnet_trainer,datamodule=datamodule)
+    out = trainer.predict(model=herdnet_trainer,data)
     
     return out

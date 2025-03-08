@@ -22,8 +22,43 @@ from animaloc.train import Trainer
 from animaloc.eval import PointsMetrics, HerdNetStitcher, HerdNetEvaluator
 from PIL import Image
 from ..dataset.sampling import check_label_format
+from ..dataset.handlers import HerdnetPredictDataset
 from zenml import step
 
+
+TRANSFORMS['train'] = ([A.Resize(width=self.patch_size, height=self.patch_size, p=1.),
+                                         A.VerticalFlip(p=0.5),
+                                        A.HorizontalFlip(p=0.5),
+                                        A.RandomRotate90(p=0.5),
+                                        A.RandomBrightnessContrast(
+                                            brightness_limit=0.2, contrast_limit=0.2, p=0.2),
+                                        A.Blur(blur_limit=15, p=0.2),
+                                        A.Normalize(p=1.0, mean=(
+                                            0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+                                         ],
+                                        [
+                                        MultiTransformsWrapper([
+                                            FIDT(num_classes=self.num_classes,
+                                                 down_ratio=down_ratio),
+                                            PointsToMask(radius=2,
+                                                         num_classes=self.num_classes,
+                                                         squeeze=True,
+                                                         down_ratio=int(
+                                                             patch_size//(16*patch_size/512))
+                                                         )
+                                        ])]
+                                        )
+TRANSFORMS['val'] = (
+    [A.Resize(width=self.patch_size, height=self.patch_size, p=1.),
+        A.Normalize(p=1.0, mean=(0.485, 0.456, 0.406),
+                    std=(0.229, 0.224, 0.225))
+        ],
+    [
+        DownSample(
+            down_ratio=down_ratio, anno_type='point'),
+    ]
+)
+TRANSFORMS['test'] = self.transforms['val']
 
 
 def get_groundtruth(yolo_images_dir: str,
@@ -144,44 +179,13 @@ def load_dataset(data_config_yaml: str,
     return ConcatDataset(datasets=datasets), pd.concat(df_gts)
 
 
-class HerdnetPredictDataset(CSVDataset):
-
-    def __init__(self, images_path:list[str], albu_transforms = None, end_transforms = None):
-
-        assert isinstance(images_path,list)
-
-        images_path = list(map(str,images_path))
-        # create dummy df_labels
-        num_images = len(images_path)
-        df_labels = {'x':[0.]*num_images,
-                     'y':[0.]*num_images,
-                     'labels':[0]*num_images,
-                     'images':images_path
-                     }
-        df_labels = pd.DataFrame.from_dict(df_labels)
-        super().__init__(csv_file=df_labels, 
-                         root_dir="", 
-                         albu_transforms=albu_transforms,
-                         end_transforms=end_transforms)
-    
-    def _load_image(self, index: int) -> Image.Image:
-        img_name = self._img_names[index]
-        return Image.open(img_name).convert('RGB')
-    
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, dict]:        
-        img = self._load_image(index)
-        target = self._load_target(index)
-        tr_img, tr_target = self._transforms(img, target)
-
-        return tr_img
-
-
 class HerdnetData(L.LightningDataModule):
 
     def __init__(self, data_config_yaml: str,
                  patch_size: int,
                  down_ratio: int = 2,
                  batch_size: int = 32,
+                 num_workers: int = 8,
                  transforms: dict[str, tuple] = None,
                  train_empty_ratio: float = 0.):
 
@@ -200,7 +204,7 @@ class HerdnetData(L.LightningDataModule):
         self.df_train_labels_freq = None
         self.df_val_labels_freq = None
 
-        self.num_workers = 8
+        self.num_workers = num_workers
         self.pin_memory = torch.cuda.is_available()
 
         # Get number of classes
@@ -210,40 +214,7 @@ class HerdnetData(L.LightningDataModule):
             self.num_classes = data_config['nc'] + 1
 
         if self.transforms is None:
-            self.transforms = {}
-            self.transforms['train'] = ([A.Resize(width=self.patch_size, height=self.patch_size, p=1.),
-                                         A.VerticalFlip(p=0.5),
-                                        A.HorizontalFlip(p=0.5),
-                                        A.RandomRotate90(p=0.5),
-                                        A.RandomBrightnessContrast(
-                                            brightness_limit=0.2, contrast_limit=0.2, p=0.2),
-                                        A.Blur(blur_limit=15, p=0.2),
-                                        A.Normalize(p=1.0, mean=(
-                                            0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
-                                         ],
-                                        [
-                                        MultiTransformsWrapper([
-                                            FIDT(num_classes=self.num_classes,
-                                                 down_ratio=down_ratio),
-                                            PointsToMask(radius=2,
-                                                         num_classes=self.num_classes,
-                                                         squeeze=True,
-                                                         down_ratio=int(
-                                                             patch_size//(16*patch_size/512))
-                                                         )
-                                        ])]
-                                        )
-            self.transforms['val'] = (
-                [A.Resize(width=self.patch_size, height=self.patch_size, p=1.),
-                 A.Normalize(p=1.0, mean=(0.485, 0.456, 0.406),
-                             std=(0.229, 0.224, 0.225))
-                 ],
-                [
-                    DownSample(
-                        down_ratio=down_ratio, anno_type='point'),
-                ]
-            )
-            self.transforms['test'] = self.transforms['val']
+            self.transforms = TRANSFORMS
 
     @property
     def get_labels_weights(self,):
@@ -309,7 +280,7 @@ class HerdnetData(L.LightningDataModule):
             validation DataLoader.
 
         """
-        return DataLoader(self.val_dataset, batch_size=1, shuffle=False, collate_fn=None, num_workers=8)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=None, num_workers=self.num_workers, persistent_workers=True)
 
     def test_dataloader(self):
         """Test dataloader supports only batchsize=1.
@@ -321,10 +292,10 @@ class HerdnetData(L.LightningDataModule):
             test DataLoader.
 
         """
-        return DataLoader(self.test_dataset, batch_size=1, shuffle=False, collate_fn=None, num_workers=8)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, collate_fn=None, num_workers=self.num_workers, persistent_workers=True)
 
     def predict_dataloader(self):
-        return DataLoader(self.predict_dataset, batch_size=self.predict_batchsize, shuffle=False)
+        return DataLoader(self.predict_dataset, batch_size=self.predict_batchsize, num_workers=self.num_workers, shuffle=False,persistent_workers=True)
 
     def teardown(self, stage: str):
         # Used to clean-up when the run is finished

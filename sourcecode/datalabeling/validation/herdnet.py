@@ -1,7 +1,10 @@
 import yaml
 import lightning as L
 
-def herdnet_validate(imgsz,batchsize,down_ratio,data_config_yaml, checkpoint_path, logger, work_dir,split="val", accelerator="auto", classification_threshold=0.25):
+def herdnet_validate(imgsz:int,batchsize:int, down_ratio:int,
+                    data_config_yaml:str, checkpoint_path:str, logger,
+                    work_dir:str:None, split:str="val", accelerator:str="auto",
+                    classification_threshold:float=0.25):
 
     assert split in ["val", "test"]
   
