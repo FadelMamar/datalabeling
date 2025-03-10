@@ -136,9 +136,9 @@ call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\datas
 @REM     --cl-freeze 0 0 10 18  ^
 @REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
 
-call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.001 --optimizer "AdamW" --optimizer-momentum 0.99 --lr0 0.0001 --lrf 0.1 --patience 20 --is-detector ^
+call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.001 --optimizer "AdamW" --optimizer-momentum 0.99 --lr0 0.0001 --lrf 0.1 --patience 20 --is-detector ^
     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
-    --height 800 --width 800 ^
+    --height 800 --width 800 --is-rtdetr^
     --path-weights "base_models_weights\rtdetr-l.pt" ^
     --run-name "rtdetr_PTR-CL-Detector" --project-name "wildAI-detection"^
     --tag "CL" "PTR" ^
@@ -146,10 +146,10 @@ call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.001 --
     --ptr-tilesize 640 --ptr-epochs 15 ^
     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --cl-batch-size 8^
     --cl-data-config-yaml "data\dataset_identification-detection.yaml" --use-continual-learning ^
-    --cl-ratios 0 1 2.5 7.5 ^
-    --cl-epochs 20 20 10 7 ^
-    --cl-freeze 0 0 10 18  ^
-    --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
+    --cl-ratios 0 2.5 7.5 ^
+    --cl-epochs 15 10 10 ^
+    --cl-freeze 0 5 10  ^
+    --cl-lr0s 0.0001 0.0001 0.0001
 
 @REM @REM convert datasets to yolo-obb
 @REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
