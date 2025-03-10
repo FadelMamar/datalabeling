@@ -1,9 +1,9 @@
 call .\activate_label-backend_env.bat
 
-call cd ..
+call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
-call python tools\cli.py --export-format "openvino" --width 1280 --height 1280 --export-batch-size 1^
-             --export-model-weights "C:\Users\FADELCO\OneDrive\Bureau\datalabeling\models\best.pt"^
+call uv run tools\cli.py --export-format "engine" --width 1280 --height 1280 --export-batch-size 1^
+             --export-model-weights ""^
              --half --dynamic
 
 call deactivate
