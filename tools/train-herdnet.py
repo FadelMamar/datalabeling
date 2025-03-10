@@ -5,7 +5,7 @@ from animaloc.train.losses import FocalLoss
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from animaloc.train import Trainer
-from animaloc.eval import PointsMetrics, HerdNetStitcher, HerdNetEvaluator
+from animaloc.eval import PointsMetrics, HerdNetEvaluator
 
 
 from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
@@ -134,7 +134,12 @@ def run_ligthning():
                             callbacks=callbacks,
                             accelerator="auto",
                             )
-        trainer.fit(model=herdnet_trainer, datamodule=datamodule)
+        trainer.fit(model=herdnet_trainer,
+                    datamodule=datamodule,
+                    )
+        # trainer.validate(model=herdnet_trainer,
+        #             datamodule=datamodule,
+        #             )
 
 
 def run():
