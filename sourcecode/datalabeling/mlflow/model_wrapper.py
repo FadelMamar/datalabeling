@@ -1,8 +1,7 @@
 import mlflow
 import torch
-from sahi.models.yolov8 import Yolov8DetectionModel
 from sahi.predict import get_sliced_prediction
-from ..annotator import Yolov8ObbDetectionModel,Detector
+from ..annotator import Detector
 
 
 class DetectorWrapper(mlflow.pyfunc.PythonModel):
