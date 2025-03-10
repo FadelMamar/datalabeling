@@ -136,25 +136,22 @@ call wandb offline
 call wandb offline
 
 @REM @REM convert datasets to yolo-obb
-@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
+call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_labeler.yaml" --skip
 
-@REM @REM Convert datasets to yolo
-@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification-detection.yaml" --skip
-
-call python tools\cli.py --start-training --batchsize 32  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
+call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0001 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
     --height 800 --width 800^
-    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/f5b7124be14c4c89b8edd26bcf7a9a76/artifacts/weights/best.pt" ^
+    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/771014640604815853/9ab053acdcbb486992fbe456e3701c88/artifacts/weights/best.pt" ^
     --run-name "yolov11s_obb-CT" --project-name "labeler"^
     --tag "continuous-training" ^
     --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
-    --cl-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_labeler.yaml" ^
+    --cl-data-config-yaml "data\dataset_labeler.yaml" ^
     --cl-ratios 7.5 ^
     --cl-epochs 50  ^
-    --cl-freeze 15 ^
-    --cl-lr0s 0.00005 ^
+    --cl-freeze 0 ^
+    --cl-lr0s 0.0001 ^
     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
-    --hn-num-epochs 7 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_labeler.yaml" ^
+    --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_labeler.yaml" ^
     --hn-is-yolo-obb
 
 
@@ -176,10 +173,11 @@ call python tools\cli.py --start-training --batchsize 32  --weight-decay 0.0005 
 @REM     --run-name "yolov5mu" --project-name "wildAI-detection"^
 @REM     --tag "dataset-v4" "transferlearning"^
 
+@REM @REM Convert datasets to yolo
+@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_labeler.yaml" --skip
 
 
-
-call conda deactivate
+call deactivate
 
 :: uncomment to disable immediate shutdown
 @REM shutdown -s

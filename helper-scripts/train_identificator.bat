@@ -36,10 +36,10 @@ call wandb offline
 @REM  Identificator
 
 @REM @REM Convert datasets to yolo
-@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification.yaml" --skip
-@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_pretraining.yaml" --skip
+@REM call uv run  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification.yaml" --skip
+@REM call uv run  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_pretraining.yaml" --skip
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800^
 @REM     --path-weights "runs/mlflow/140168774036374062/e5e3bf93d34f48f1bb7d0a648530bb45/artifacts/weights/best.pt" ^
@@ -52,7 +52,7 @@ call wandb offline
 @REM     --cl-freeze 0 5 10  ^
 @REM     --cl-lr0s 0.0001 0.0001 0.0001 ^
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800^
 @REM     --path-weights "../runs/mlflow/140168774036374062/e340d77e14224cf2a27e8501646259fa/artifacts/weights/best.pt" ^
@@ -66,10 +66,10 @@ call wandb offline
 @REM     --cl-lr0s 0.00005 0.00005 ^
 
 @REM @REM @REM convert datasets to yolo-obb
-@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification.yaml" --skip
-@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_pretraining.yaml" --skip
+@REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification.yaml" --skip
+@REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_pretraining.yaml" --skip
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800^
 @REM     --path-weights "runs/mlflow/140168774036374062/f5b7124be14c4c89b8edd26bcf7a9a76/artifacts/weights/best.pt" ^
@@ -83,7 +83,7 @@ call wandb offline
 @REM     --cl-lr0s 0.0001 0.0001 0.0001 ^
 
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800^
 @REM     --path-weights "runs/mlflow/140168774036374062/8a76c60253fc48788b5324096d035420/artifacts/weights/best.pt" ^
@@ -102,11 +102,11 @@ call wandb offline
 
 
 @REM @REM Convert datasets to yolo
-call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification-detection.yaml" --skip
-call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_pretraining.yaml" --skip
+call uv run  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification-detection.yaml" --skip
+call uv run  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_pretraining.yaml" --skip
 
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800 ^
 @REM     --path-weights "base_models_weights\yolov5su.pt" ^
@@ -121,7 +121,7 @@ call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\datas
 @REM     --cl-freeze 0 0 10 18  ^
 @REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800 ^
 @REM     --path-weights "yolo12s.pt" ^
@@ -136,7 +136,7 @@ call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\datas
 @REM     --cl-freeze 0 0 10 18  ^
 @REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
 
-call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.001 --optimizer "AdamW" --optimizer-momentum 0.99 --lr0 0.0001 --lrf 0.1 --patience 20 --is-detector ^
+call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.001 --optimizer "AdamW" --optimizer-momentum 0.99 --lr0 0.0001 --lrf 0.1 --patience 20 --is-detector ^
     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
     --height 800 --width 800 --is-rtdetr^
     --path-weights "base_models_weights\rtdetr-l.pt" ^
@@ -152,10 +152,10 @@ call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.001 -
     --cl-lr0s 0.0001 0.0001 0.0001
 
 @REM @REM convert datasets to yolo-obb
-@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
-@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_pretraining.yaml" --skip
+@REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
+@REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_pretraining.yaml" --skip
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800 ^
 @REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/2ff9bb7a991c4cd1a6eabfff0f73386d/artifacts/weights/last.pt" ^
@@ -171,7 +171,7 @@ call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.001 -
 @REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
 
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
 @REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
 @REM     --height 800 --width 800 ^
 @REM     --path-weights "runs/mlflow/140168774036374062/3615defe14514a00b97ef756a815bc44/artifacts/weights/best.pt" ^
@@ -188,6 +188,6 @@ call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.001 -
 
 
 
-call conda deactivate
+call deactivate
 
 @REM shutdown -s

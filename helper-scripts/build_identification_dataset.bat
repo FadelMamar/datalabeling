@@ -77,4 +77,4 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
 
 
-call conda deactivate
+call deactivate

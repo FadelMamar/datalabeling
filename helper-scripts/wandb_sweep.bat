@@ -4,6 +4,6 @@ call cd ..\tools
 
 call wandb online
 
-call python sweeps.py
+call uv run sweeps.py
 
-call conda deactivate
+call deactivate
