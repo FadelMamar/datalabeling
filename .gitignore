@@ -40,3 +40,4 @@ yolov8-obb
 *.tmp
 *.pth
 lightning-ckpts
+labeler
