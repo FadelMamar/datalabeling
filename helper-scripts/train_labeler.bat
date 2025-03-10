@@ -135,51 +135,28 @@ call wandb offline
 
 call wandb offline
 
-@REM --use-pretraining
+@REM @REM convert datasets to yolo-obb
+@REM call python  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
 
-call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-detector ^
-    --scale 0.5 --mosaic 0.0 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 3 ^
+@REM @REM Convert datasets to yolo
+@REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_identification-detection.yaml" --skip
+
+call python tools\cli.py --start-training --batchsize 32  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
+    --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
     --height 800 --width 800^
-    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/d0dbe2b4cbe143258121a734edd9dca8/artifacts/weights/best.pt" ^
-    --run-name "yolov8_obb-PTR-CL-HN" --project-name "wildAI-detection"^
-    --tag "CL" "HN" ^
-    --ptr-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_pretraining.yaml"  ^
-    --ptr-tilesize 640 --ptr-epochs 5^
+    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/f5b7124be14c4c89b8edd26bcf7a9a76/artifacts/weights/best.pt" ^
+    --run-name "yolov11s_obb-CT" --project-name "labeler"^
+    --tag "continuous-training" ^
     --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
-    --cl-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_cl.yaml" ^
-    --cl-ratios 0 1 2.5 7.5 10 ^
-    --cl-epochs 10 15 15 20 20 ^
-    --cl-freeze 0 0 10 15 15 ^
-    --cl-lr0s 0.0001 0.0001 0.00005 0.00001 0.00001 ^
+    --cl-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_labeler.yaml" ^
+    --cl-ratios 7.5 ^
+    --cl-epochs 50  ^
+    --cl-freeze 15 ^
+    --cl-lr0s 0.00005 ^
     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
-    --hn-num-epochs 7 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_cl.yaml" ^
+    --hn-num-epochs 7 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_labeler.yaml" ^
     --hn-is-yolo-obb
 
-@REM call python tools\cli.py --start-training --batchsize 16  --weight-decay 0.0005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 10 --is-detector ^
-@REM     --scale 0.5 --mosaic 0.0 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
-@REM     --height 1280 --width 1280^
-@REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/57daf3bcd99b4dd4b040cb4f8670960c/artifacts/weights/best.pt" ^
-@REM     --run-name "yolov8s_obb-PTR-CL-HN" --project-name "wildAI-detection"^
-@REM     --tag "HN" ^
-@REM     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
-@REM     --hn-num-epochs 5 --hn-freeze 22 --hn-data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_hn.yaml" ^
-@REM     --hn-tilesize 1280 --hn-imgsz 1280 --hn-lr0 0.0001 --hn-lrf 0.01 ^
-@REM     --hn-is-yolo-obb
-
-
-@REM call python tools\cli.py --start-training --batchsize 32  --epochs 50 --lr0 0.0001 --lrf 0.01 --patience 10 --is-detector^
-@REM     --scale 0.0 --weight-decay 0.0005^
-@REM     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
-@REM     --path-weights "base_models_weights\yolov8m-obb.pt" ^
-@REM     --run-name "yolov8m-obb" --project-name "wildAI-detection"^
-@REM     --tag "dataset-v3"^
-
-@REM call python tools\cli.py --start-training --batchsize 32  --epochs 50 --lr0 0.001 --lrf 0.01 --patience 10 --is-detector^
-@REM     --scale 0.0 --weight-decay 0.0005^
-@REM     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
-@REM     --path-weights "yolov8m-obb.pt" ^
-@REM     --run-name "yolov8m-obb" --project-name "wildAI-detection"^
-@REM     --tag "dataset-v3"^
 
 :: Transfer learning from a model registered on mlflow
 @REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
@@ -190,37 +167,6 @@ call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.0005 -
 @REM     --run-name "obb-detector" --project-name "wildAI-detection"^
 @REM     --tag "hard_samples" "transfer-learning"
 
-@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
-@REM     --scale 0.5 --mosaic 0.3 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0^
-@REM     --height 640 --width 640^
-@REM     --mlflow-model-alias "last"^
-@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
-@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
-@REM     --tag "hard_samples" "transfer-learning"
-
-@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
-@REM     --scale 0.8 --mosaic 1. --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.3^
-@REM     --height 640 --width 640^
-@REM     --mlflow-model-alias "last"^
-@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
-@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
-@REM     --tag "hard_samples" "transfer-learning"
-
-@REM call python tools\cli.py --start-training --batchsize 16  --epochs 20 --lr0 0.0001 --weight-decay 0.05 --lrf 0.01 --patience 10 --is-detector^
-@REM     --scale 0.8 --mosaic 1. --copy-paste 0.5 --mixup 0.0 --rotation-degree 45. --erasing 0.3^
-@REM     --height 640 --width 640^
-@REM     --mlflow-model-alias "last"^
-@REM     --data-config-yaml "D:\PhD\Data per camp\DetectionDataset\hard_samples\hard_samples.yaml"^
-@REM     --run-name "obb-detector" --project-name "wildAI-detection"^
-@REM     --tag "hard_samples" "transfer-learning"
-
-@REM :: Finetuning from a model registered on mlflow
-@REM call python tools\cli.py --start-training --batchsize 32  --epochs 20 --lr0 0.0001 --lrf 0.01 --patience 5 --is-detector^
-@REM     --scale 0.0 --weight-decay 0.0005^
-@REM     --mlflow-model-alias "last"^
-@REM     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
-@REM     --run-name "detector" --project-name "wildAI-detection"^
-@REM     --tag "dataset-v4" ^ 
 
 @REM :: Transfer learning from a pth file
 @REM call python tools\cli.py --start-training --batchsize 128  --epochs 20 --lr0 0.001 --lrf 0.01 --patience 5 --is-detector^
@@ -232,18 +178,8 @@ call python tools\cli.py --start-training --batchsize 8  --weight-decay 0.0005 -
 
 
 
-@REM :: Finetuning from a pth file
-@REM call python tools\cli.py --start-training --batchsize 64  --epochs 25 --lr0 0.001 --lrf 0.01 --patience 5 --is-detector^
-@REM     --scale 0.0 --weight-decay 0.0005^
-@REM     --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\data_config.yaml" ^
-@REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/095bc5dc29c74399b19e8f4c60fa4fa1/artifacts/weights/best.pt" ^
-@REM     --run-name "yolov5mu" --project-name "wildAI-detection"^
-@REM     --tag "dataset-v4"^
-
-
-
 
 call conda deactivate
 
 :: uncomment to disable immediate shutdown
-shutdown -s
+@REM shutdown -s
