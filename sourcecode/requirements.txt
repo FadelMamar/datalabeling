@@ -204,7 +204,7 @@ wcwidth==0.2.13
 webcolors==24.11.1
 webencodings==0.5.1
 websocket-client==1.8.0
-werkzeug==2.0.2
+Werkzeug>=3.0.6
 wrapt==1.17.2
 xmljson==0.2.1
 zipp==3.21.0
