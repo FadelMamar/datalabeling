@@ -1,4 +1,4 @@
-from sahi.models.yolov8 import Yolov8DetectionModel
+from sahi.models.ultralytics import UltralyticsDetectionModel
 from sahi.prediction import ObjectPrediction
 from sahi.utils.compatibility import fix_full_shape_list, fix_shift_amount_list
 from sahi.utils.import_utils import check_requirements
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # https://github.com/obss/sahi/blob/main/sahi/models/yolov8.py
-class Yolov8ObbDetectionModel(DetectionModel):
+class YoloObbDetectionModel(DetectionModel):
     def check_dependencies(self) -> None:
         check_requirements(["ultralytics"])
 
@@ -39,14 +39,14 @@ class Yolov8ObbDetectionModel(DetectionModel):
             model.to(self.device)
             self.set_model(model)
         except Exception as e:
-            raise TypeError("model_path is not a valid yolov8-obb model path: ", e)
+            raise TypeError("model_path is not a valid yolo-obb model path: ", e)
 
     def set_model(self, model: Any):
         """
         Sets the underlying YOLOv8-obb model.
         Args:
             model: Any
-                A YOLOv8-obb model
+                A YOLO-obb model
         """
 
         self.model = model
@@ -210,12 +210,12 @@ class Detector(object):
         self.is_yolo_obb = is_yolo_obb
         logger.info( f"Computing device: {device}")
         if is_yolo_obb:
-            self.detection_model = Yolov8ObbDetectionModel(model=YOLO(path_to_weights,task='obb'),
+            self.detection_model = YoloObbDetectionModel(model=YOLO(path_to_weights,task='obb'),
                                                             confidence_threshold=confidence_threshold,
                                                             image_size=self.imgsz,
                                                             device=device)
         else:
-            self.detection_model = Yolov8DetectionModel(model=YOLO(path_to_weights,task='detect'),
+            self.detection_model = UltralyticsDetectionModel(model=YOLO(path_to_weights,task='detect'),
                                                         confidence_threshold=confidence_threshold,
                                                         image_size=self.imgsz,
                                                         device=device,
