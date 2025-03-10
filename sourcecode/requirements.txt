@@ -4,6 +4,7 @@ scikit-image
 python-dotenv
 sahi
 geopandas
+notebook
 label-studio-ml
 label-studio-sdk
 label-studio-converter
