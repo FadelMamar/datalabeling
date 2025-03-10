@@ -44,7 +44,7 @@ faker==37.0.0
 fastjsonschema==2.21.1
 filelock==3.17.0
 fire==0.7.0
-flask==1.1.2
+flask>=2.2.5
 fonttools==4.56.0
 fqdn==1.5.1
 fsspec==2025.3.0
