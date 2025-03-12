@@ -1,2 +1,3 @@
 from .arguments import Arguments, Dataprepconfigs
-from .arguments import *
+
+__all__ = ["Arguments", "Dataprepconfigs"]
