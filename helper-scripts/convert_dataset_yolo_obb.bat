@@ -8,4 +8,4 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 :: obb to yolo
 @REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "data\dataset_conversion.yaml" --skip
 
-call conda deactivate
+call deactivate

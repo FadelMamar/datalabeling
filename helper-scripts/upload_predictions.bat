@@ -11,6 +11,6 @@ call cd ..\tools
 @REM confidence_threshold:float,
 @REM device:str
 @REM use_sliding_window
-call python upload_predictions.py 1 "..\models\best_openvino_model" True 1280 0.1 0.2 "NPU" False
+call uv run upload_predictions.py 1 "..\models\best_openvino_model" True 1280 0.1 0.2 "NPU" False
 
-call conda deactivate
+call deactivate

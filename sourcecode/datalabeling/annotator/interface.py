@@ -1,7 +1,4 @@
-from sahi.models.yolov8 import Yolov8DetectionModel
-from .models import Yolov8ObbDetectionModel, Detector
-from ultralytics import YOLO
-from sahi.predict import get_sliced_prediction
+from .models import Detector
 import torch
 from PIL import Image
 from time import time
