@@ -73,6 +73,7 @@ def get_groundtruth(
 
     # Iterate through labels
     dfs = list()
+    count_empty = 0
     for image_path in tqdm(
         Path(yolo_images_dir).glob("*"), desc="Getting groundtruths"
     ):
@@ -87,6 +88,7 @@ def get_groundtruth(
             img_width, img_height = img.size
             img.close()
         else:
+            count_empty += 1
             continue
             # empty image -> creating pseudo labels
             # df = {'id': [-1], 'x': [0.], 'y': [0.], 'w': [0.], 'h': [0.]}
@@ -137,7 +139,7 @@ def get_groundtruth(
     if save_path is not None:
         dfs.to_csv(save_path, index=False)
 
-    return dfs
+    return dfs, count_empty
 
 
 def load_dataset(
@@ -152,15 +154,17 @@ def load_dataset(
     datasets = list()
     df_gts = list()
     root = data_config["path"]
+    num_empty_images = 0
     for img_dir in tqdm(data_config[split], desc="concatenating datasets"):
         img_dir = os.path.join(root, img_dir)
-        df = get_groundtruth(
+        df, count_empty = get_groundtruth(
             yolo_images_dir=img_dir,
             save_path=None,
             load_gt_csv=None,  # path_to_csv
             empty_ratio=empty_ratio,
             empty_frac=empty_frac,
         )
+        num_empty_images += count_empty
         dataset = FolderDataset(  # CSVDataset
             csv_file=df,
             root_dir=img_dir,
@@ -170,7 +174,7 @@ def load_dataset(
         datasets.append(dataset)
         df_gts.append(df)
 
-    return ConcatDataset(datasets=datasets), pd.concat(df_gts)
+    return ConcatDataset(datasets=datasets), pd.concat(df_gts), num_empty_images
 
 
 class PredictDataset(CSVDataset):
@@ -234,6 +238,9 @@ class HerdnetData(L.LightningDataModule):
         self.predict_batchsize = 8
         self.df_train_labels_freq = None
         self.df_val_labels_freq = None
+        self.num_empty_images_val = None
+        self.num_empty_images_train = None
+        self.num_empty_images_test = None
 
         self.num_workers = 8
         self.pin_memory = torch.cuda.is_available()
@@ -304,7 +311,7 @@ class HerdnetData(L.LightningDataModule):
     def setup(self, stage: str):
         if stage == "fit":
             # train
-            self.train_dataset, df_train_labels = load_dataset(
+            self.train_dataset, df_train_labels, self.num_empty_images_train = load_dataset(
                 data_config_yaml=self.data_config_yaml,
                 split="train",
                 transforms=self.transforms,
@@ -313,9 +320,9 @@ class HerdnetData(L.LightningDataModule):
             )
             self.df_train_labels_freq = df_train_labels[
                 "labels"
-            ].value_counts().sort_index() / len(df_train_labels)
+            ].value_counts().sort_index() / (len(df_train_labels) + self.num_empty_images_train)
             # val
-            self.val_dataset, df_val_labels = load_dataset(
+            self.val_dataset, df_val_labels, self.num_empty_images_val = load_dataset(
                 data_config_yaml=self.data_config_yaml,
                 split="val",
                 transforms=self.transforms,
@@ -324,10 +331,10 @@ class HerdnetData(L.LightningDataModule):
             )
             self.df_val_labels_freq = df_val_labels[
                 "labels"
-            ].value_counts().sort_index() / len(df_val_labels)
+            ].value_counts().sort_index() / (len(df_val_labels) + self.num_empty_images_val)
 
         elif stage == "test":
-            self.test_dataset, _ = load_dataset(
+            self.test_dataset, _, self.num_empty_images_test = load_dataset(
                 data_config_yaml=self.data_config_yaml,
                 split="test",
                 transforms=self.transforms,
@@ -336,7 +343,7 @@ class HerdnetData(L.LightningDataModule):
             )
         elif stage == "validate":
             # val
-            self.val_dataset, df_val_labels = load_dataset(
+            self.val_dataset, df_val_labels, self.num_empty_images_val = load_dataset(
                 data_config_yaml=self.data_config_yaml,
                 split="val",
                 transforms=self.transforms,
@@ -345,7 +352,7 @@ class HerdnetData(L.LightningDataModule):
             )
             self.df_val_labels_freq = df_val_labels[
                 "labels"
-            ].value_counts().sort_index() / len(df_val_labels)
+            ].value_counts().sort_index() / (len(df_val_labels) + self.num_empty_images_val)
 
     def val_collate_fn(self, batch: tuple)->tuple[torch.Tensor,dict]:
         """collate_fn used to create the validation dataloader
@@ -445,7 +452,9 @@ class HerdnetData(L.LightningDataModule):
 class HerdnetTrainer(L.LightningModule):
     def __init__(
         self,
-        args: Arguments,
+        data_config_yaml:str,
+        lr:float,
+        weight_decay:float,
         loaded_weights_num_classes: int,
         work_dir: str,
         eval_radius: int = 20,
@@ -456,15 +465,20 @@ class HerdnetTrainer(L.LightningModule):
         ce_weight: list = None,
     ):
         super().__init__()
-        self.save_hyperparameters()
-
-        self.args = args
+        
+        self.save_hyperparameters("lr",
+                                  "weight_decay",
+                                  "data_config_yaml",
+                                  "down_ratio",
+                                  "ce_weight",
+                                  "eval_radius")
+        
         self.work_dir = work_dir
         self.loaded_weights_num_classes = loaded_weights_num_classes
         self.classification_threshold = classification_threshold
 
         # Get number of classes
-        with open(self.args.data_config_yaml, "r") as file:
+        with open(data_config_yaml, "r") as file:
             data_config = yaml.load(file, Loader=yaml.FullLoader)
             # including a class for background
             self.num_classes = data_config["nc"] + 1
@@ -505,7 +519,7 @@ class HerdnetTrainer(L.LightningModule):
 
         if self.num_classes != self.loaded_weights_num_classes:
             print(
-                "Classification head of herdnet will be modified to handle {self.num_classes}."
+                f"Classification head of herdnet will be modified to handle {self.num_classes}."
             )
             # reshaping done inside self.shared_step
 
@@ -686,8 +700,8 @@ class HerdnetTrainer(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
             params=self.model.parameters(),
-            lr=self.args.lr0,
-            weight_decay=self.args.weight_decay,
+            lr=self.hparams.lr,
+            weight_decay=self.hparams.weight_decay,
         )
 
         # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
