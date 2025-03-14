@@ -322,6 +322,7 @@ class HerdnetData(L.LightningDataModule):
             self.df_train_labels_freq = df_train_labels[
                 "labels"
             ].value_counts().sort_index() / (len(df_train_labels) + self.num_empty_images_train)
+            print(f"Train dataset as {len(self.train_dataset)} samples including {self.num_empty_images_train} negative samples.")
             # val
             self.val_dataset, df_val_labels, self.num_empty_images_val = load_dataset(
                 data_config_yaml=self.data_config_yaml,
@@ -333,6 +334,8 @@ class HerdnetData(L.LightningDataModule):
             self.df_val_labels_freq = df_val_labels[
                 "labels"
             ].value_counts().sort_index() / (len(df_val_labels) + self.num_empty_images_val)
+            print(f"Val dataset as {len(self.val_dataset)} samples including {self.num_empty_images_val} negative samples.")
+
 
         elif stage == "test":
             self.test_dataset, _, self.num_empty_images_test = load_dataset(
@@ -342,6 +345,7 @@ class HerdnetData(L.LightningDataModule):
                 empty_frac=1.0,
                 empty_ratio=None,
             )
+            print(f"Test dataset as {len(self.test_dataset)} samples including {self.num_empty_images_test} negative samples.")
         elif stage == "validate":
             # val
             self.val_dataset, df_val_labels, self.num_empty_images_val = load_dataset(
@@ -354,6 +358,7 @@ class HerdnetData(L.LightningDataModule):
             self.df_val_labels_freq = df_val_labels[
                 "labels"
             ].value_counts().sort_index() / (len(df_val_labels) + self.num_empty_images_val)
+            print(f"Val dataset as {len(self.val_dataset)} samples including {self.num_empty_images_val} negative samples.")
 
     def val_collate_fn(self, batch: tuple)->tuple[torch.Tensor,dict]:
         """collate_fn used to create the validation dataloader
