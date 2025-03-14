@@ -54,13 +54,8 @@ def get_groundtruth(
     yolo_images_dir: str,
     save_path: str = None,
     load_gt_csv: str = None,
-    empty_ratio: float | None = 0.0,
-    empty_frac: float | None = None,
 ):
-    if empty_frac is not None:
-        assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
-    if empty_ratio is not None:
-        assert empty_ratio >= 0.0, "should be non-negative"
+
 
     if load_gt_csv is not None:
         return pd.read_csv(load_gt_csv)
@@ -74,6 +69,7 @@ def get_groundtruth(
     # Iterate through labels
     dfs = list()
     count_empty = 0
+    images_empty = list()
     for image_path in tqdm(
         Path(yolo_images_dir).glob("*"), desc="Getting groundtruths"
     ):
@@ -87,8 +83,9 @@ def get_groundtruth(
             img = Image.open(image_path)
             img_width, img_height = img.size
             img.close()
-        else:
+        else: # empty image has no corresponding txt file
             count_empty += 1
+            images_empty.append(os.path.relpath(image_path, yolo_images_dir))
             continue
             # empty image -> creating pseudo labels
             # df = {'id': [-1], 'x': [0.], 'y': [0.], 'w': [0.], 'h': [0.]}
@@ -109,7 +106,7 @@ def get_groundtruth(
             df["w"] = (df["x2"] - df["x1"]) * img_width
             df["h"] = (df["y4"] - df["y1"]) * img_height
 
-        df["images"] = os.path.relpath(str(image_path), yolo_images_dir)
+        df["images"] = os.path.relpath(image_path, yolo_images_dir)
         df.rename(columns={"id": "labels"}, inplace=True)
         dfs.append(df)
 
@@ -122,33 +119,38 @@ def get_groundtruth(
 
     # sample empty images and non-empty
     # if there are
-    if sum(dfs.labels < 1) > 0:
-        df_non_empty = dfs.loc[dfs.labels > 0].copy()
-        df_empty = dfs.loc[dfs.labels < 1].copy()
-        if empty_frac is None:
-            num_non_empty = len(df_non_empty)
-            frac = min(empty_ratio * num_non_empty, len(df_empty)) / len(df_empty)
-            frac = max(0.0, frac)
-        else:
-            frac = empty_frac
-        df_empty = df_empty.sample(frac=frac)
-        print(f"Sampling {len(df_empty)} empty images.", end="\n")
-        # concatenate empty and non_empty
-        dfs = pd.concat([df_empty, df_non_empty])
+    # if sum(dfs.labels < 1) > 0:
+    #     df_non_empty = dfs.loc[dfs.labels > 0].copy()
+    #     df_empty = dfs.loc[dfs.labels < 1].copy()
+    #     if empty_frac is None:
+    #         num_non_empty = len(df_non_empty)
+    #         frac = min(empty_ratio * num_non_empty, len(df_empty)) / len(df_empty)
+    #         frac = max(0.0, frac)
+    #     else:
+    #         frac = empty_frac
+    #     df_empty = df_empty.sample(frac=frac)
+    #     print(f"Sampling {len(df_empty)} empty images.", end="\n")
+    #     # concatenate empty and non_empty
+    #     dfs = pd.concat([df_empty, df_non_empty])
 
     if save_path is not None:
         dfs.to_csv(save_path, index=False)
 
-    return dfs, count_empty
+    return dfs, count_empty, images_empty
 
 
 def load_dataset(
     data_config_yaml: str,
     split: str,
     transforms: dict,
-    empty_ratio: float = 0.0,
+    empty_ratio: float|None = None,
     empty_frac: float = None,
 ):
+    if empty_frac is not None:
+        assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
+    if empty_ratio is not None:
+        assert empty_ratio >= 0.0, "should be non-negative"
+
     with open(data_config_yaml, "r") as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
     datasets = list()
@@ -157,19 +159,31 @@ def load_dataset(
     num_empty_images = 0
     for img_dir in tqdm(data_config[split], desc="concatenating datasets"):
         img_dir = os.path.join(root, img_dir)
-        df, count_empty = get_groundtruth(
+        df, count_empty, images_empty = get_groundtruth(
             yolo_images_dir=img_dir,
             save_path=None,
-            load_gt_csv=None,  # path_to_csv
-            empty_ratio=empty_ratio,
-            empty_frac=empty_frac,
+            load_gt_csv=None,
         )
-        num_empty_images += count_empty
+        # select empty images
+        num_empty_sampled = None
+        if empty_ratio is not None:
+            num_empty_sampled = min(int(empty_ratio*len(df)),len(df)) if empty_frac is not None else None
+        if (num_empty_sampled is None) and (empty_frac is None):
+            sampled_images_empty = []
+        else:
+            sampled_images_empty = pd.Series(images_empty).sample(n=num_empty_sampled,
+                                                                  frac=empty_frac,
+                                                                  replace=False,
+                                                                  random_state=41).to_list()
+        num_empty_images += len(sampled_images_empty)
+        # selected images
+        selected_images = sampled_images_empty + df["images"].to_list()
         dataset = FolderDataset(  # CSVDataset
             csv_file=df,
-            root_dir=img_dir,
+            root_dir=None,
             albu_transforms=transforms[split][0],
             end_transforms=transforms[split][1],
+            images_paths=selected_images
         )
         datasets.append(dataset)
         df_gts.append(df)
