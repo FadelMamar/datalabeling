@@ -1,37 +1,28 @@
-# load env variables!
 from dotenv import load_dotenv
-DOTENV_PATH='../.env'
-print("loading env variables:", load_dotenv(DOTENV_PATH))
-
+import os
+from datalabeling.annotator import Annotator
+from typing import Sequence
 import fire
 
-
 def main(project_id:int,
-         path_to_weights: str,
-         is_yolo_obb:bool,
-         tilesize:int, 
-         overlapratio:float,
-         confidence_threshold:float,
-         device:str,
-         use_sliding_window:bool):
+        alias:Sequence[str],
+        confidence_threshold:float=0.15
+        ):
+
+    DOT_ENV_PATH='../.env'
+    load_dotenv(DOT_ENV_PATH)
     
-
-    from datalabeling.annotator import Annotator
-
-    # using path_to_weights
-    # go to ultralytics.nn.autobackend to modify ov_compiled device to "AUTO:NPU,GPU,CPU" + enable caching of model
-    handler = Annotator(path_to_weights=path_to_weights,
-                        is_yolo_obb=is_yolo_obb,
-                        tilesize=tilesize,
-                        overlapratio=overlapratio,
-                        use_sliding_window=use_sliding_window,
-                        confidence_threshold=confidence_threshold,
-                        tag_to_append=f"-sahi:{use_sliding_window}",
-                        device=device,
-                        dotenv_path=DOTENV_PATH)
-    
-    handler.upload_predictions(project_id=project_id,top_n=0)
-
+    # aliases = ["version11",]
+    # project_id = 40 # insert correct project_id by loooking at the url
+    for alias in aliases:
+        name = "obb-detector" # detector, "obb-detector"
+        handler = Annotator(mlflow_model_alias=alias,
+                            mlflow_model_name=name,
+                            confidence_threshold=confidence_threshold,
+                            is_yolo_obb=name.strip() == "obb-detector",
+                            dotenv_path=DOT_ENV_PATH
+                        )
+        handler.upload_predictions(project_id=project_id)
 
 if __name__ == "__main__":
     fire.Fire(main)

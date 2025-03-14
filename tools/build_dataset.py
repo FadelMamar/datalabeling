@@ -1,5 +1,8 @@
 from datalabeling.arguments import Dataprepconfigs
-from datalabeling.dataset import build_yolo_dataset,convert_obb_to_yolo,convert_yolo_to_obb
+from datalabeling.dataset import (build_yolo_dataset,
+                                  convert_obb_to_yolo,
+                                  convert_yolo_to_obb,
+                                  create_yolo_seg_directory)
 from datargs import parse
 from pathlib import Path
 import json
@@ -8,6 +11,7 @@ import os
 import logging
 import traceback
 from dotenv import load_dotenv
+
 
 def load_datasets(data_config_yaml:str)->list[str]:
 
@@ -22,7 +26,7 @@ def load_datasets(data_config_yaml:str)->list[str]:
                 path = os.path.join(root,p)
                 paths.append(path)
         except Exception as e:
-            print('Failed to load training datasets for conversion --> ',e)    
+            print(f'Failed to load datasets for conversion {split} --> ',e)    
 
 
     return paths
@@ -80,3 +84,18 @@ if __name__ == '__main__':
             except Exception as e:
                 logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
+    
+    # create yolo-seg labels
+    if args.create_yolo_seg_dir:
+        from ultralytics import SAM
+        model_sam = SAM(args.sam_model_path)
+        create_yolo_seg_directory(data_config_yaml=args.data_config_yaml,
+                                imgsz=args.imgsz,
+                                model_sam=model_sam,
+                                device=args.device,
+                                copy_images_dir=args.copy_images
+                            )
+
+
+
+        

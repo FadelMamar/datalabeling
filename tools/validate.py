@@ -101,14 +101,15 @@ def herdnet_val():
                             log_model=True
                             )
     herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
-                                                            args=args,
-                                                            herdnet_model_path = None,
-                                                            loaded_weights_num_classes=num_classes,
-                                                            classification_threshold=0.25,
-                                                            ce_weight=None,
-                                                            map_location='cpu',
-                                                            strict=True,
-                                                            work_dir='../.tmp')
+                                                            data_config_yaml=args.data_config_yaml,
+                                                              lr=None,
+                                                              weight_decay=None,
+                                                              herdnet_model_path = None,
+                                                              loaded_weights_num_classes=num_classes, 
+                                                              ce_weight=None,
+                                                              map_location='cpu',
+                                                              strict=True,
+                                                              work_dir='../.tmp')
 
     # Data
     datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,

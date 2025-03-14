@@ -41,3 +41,4 @@ yolov8-obb
 *.pth
 lightning-ckpts
 labeler
+*.docx
