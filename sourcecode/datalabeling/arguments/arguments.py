@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Sequence
-
+import torch
 # paths
 # CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 # JSON_DIR_PATH = os.path.join(CUR_DIR, "../../../exported_annotations/json")
@@ -145,6 +145,8 @@ class Dataprepconfigs:
     dest_path_labels: str = None  # os.path.join(CUR_DIR,'../../../data/train/labels')
     height: int = 640
     width: int = 640
+    imgsz:int=640
+    device:str= 'cuda' if torch.cuda.is_available() else 'cpu'
     # overlap:int=80
     min_visibility: float = 0.5
     save_all: bool = False
@@ -185,3 +187,8 @@ class Dataprepconfigs:
 
     # label mapping for identification dataset
     label_map: str = None
+
+    # creating yolo-seg labels
+    create_yolo_seg_dir:bool=False
+    sam_model_path:str=None
+    copy_images:bool=False

@@ -6,7 +6,7 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from animaloc.train import Trainer, FasterRCNNTrainer
 from animaloc.eval import PointsMetrics, HerdNetEvaluator
-
+from tqdm import tqdm
 
 from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
 from datalabeling.arguments import Arguments
@@ -29,43 +29,47 @@ def run_ligthning():
     args = Arguments()
     args.lr0 = 3e-4
     args.epochs = 10
-    args.imgsz = 800
+    args.imgsz = 640
     args.batchsize = 32
     down_ratio = 2
-    precision = "16-mixed"
+    precision = "32" #"16-mixed"
     # empty_ratio = 0.
     args.patience = 10
-    cl_lr = [3e-4, 5e-5, 5e-5]
-    empty_ratios = [1, 2.5, 7.5]
-    freeze_layers = [0., 0.5, 0.75]
+    cl_lr = [3e-4,]
+    empty_ratios = [1,]
+    freeze_layers = [0.75,]
 
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
-    # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
-    # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    # args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
+    # args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
+    args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
+    args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
-    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
+    # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
+    checkpoint_path = None
+    checkpoint_num_classes = 7 # num classes includes background
 
     # get cross entropy loss weights
     # Data
-    # datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
-    #                             patch_size=args.imgsz,
-    #                             batch_size=args.batchsize,
-    #                             down_ratio=down_ratio,
-    #                             train_empty_ratio=0.
-    #                             )
-    # datamodule.setup('fit')
-    # ce_weight = datamodule.get_labels_weights
-    ce_weight = None
+    datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
+                                patch_size=args.imgsz,
+                                batch_size=args.batchsize,
+                                down_ratio=down_ratio,
+                                train_empty_ratio=0.
+                                )
+    datamodule.setup('fit')
+    ce_weight = datamodule.get_labels_weights
+    # ce_weight = None
     print(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
 
     
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(checkpoint_path=checkpoint_path,
-                                                              args=args,
+                                                              lr=args.lr0,
+                                                              weight_decay=args.weight_decay,
+                                                              data_config_yaml=args.data_config_yaml,
                                                               herdnet_model_path = None,
-                                                              loaded_weights_num_classes=7, # num classes includes background
+                                                              loaded_weights_num_classes=checkpoint_num_classes, 
                                                               ce_weight=ce_weight,
                                                               map_location='cpu',
                                                               strict=True,
@@ -75,8 +79,10 @@ def run_ligthning():
     else:
         # Training logic
         herdnet_trainer = HerdnetTrainer(herdnet_model_path=args.path_weights,
+                                         data_config_yaml=args.data_config_yaml,
+                                         lr=args.lr0,
+                                         weight_decay=args.weight_decay,
                                          loaded_weights_num_classes=4,
-                                         args=args,
                                          ce_weight=ce_weight,
                                          work_dir='../.tmp',
                                          load_state_dict_strict=True,
@@ -164,11 +170,11 @@ def run():
 
     datamodule.setup("fit")
     
-    # check dataloaders
-    for img_val,targets_val in datamodule.val_dataloader():
+    # check val dataloaders
+    for img_val,targets_val in tqdm(datamodule.val_dataloader(), desc="Val dataloader check"):
         pass
-    for img_tr,targets_tr in datamodule.train_dataloader():
-        pass
+    # for img_tr,targets_tr in tqdm(datamodule.train_dataloader(),desc="Train dataloader check"):
+    #     pass
 
     num_classes = datamodule.num_classes
 
@@ -221,20 +227,21 @@ def run():
         header='validation'
     )
     
+    # check
     evaluator.evaluate()
     
-    # trainer = Trainer(
-    #     model=herdnet,
-    #     train_dataloader=datamodule.train_dataloader(),
-    #     val_dataloader=None,
-    #     lr_milestones=[20,],
-    #     optimizer=optimizer,
-    #     auto_lr=True,
-    #     device_name=device,
-    #     num_epochs=args.epochs,
-    #     evaluator=evaluator,
-    #     work_dir=work_dir
-    # )
+    trainer = Trainer(
+        model=herdnet,
+        train_dataloader=datamodule.train_dataloader(),
+        val_dataloader=None,
+        lr_milestones=[20,],
+        optimizer=optimizer,
+        auto_lr=True,
+        device_name=device,
+        num_epochs=args.epochs,
+        evaluator=evaluator,
+        work_dir=work_dir
+    )
     
     # FasterRCNN Training
     # FasterRCNNTrainer(model=...,
@@ -249,15 +256,15 @@ def run():
     #                 work_dir=work_dir
     #                 )
 
-    # herdnet = trainer.start(
-    #     warmup_iters=30, checkpoints='best', select='max', validate_on='f1_score')
+    herdnet = trainer.start(
+        warmup_iters=30, checkpoints='best', select='max', validate_on='f1_score')
 
 
 if __name__ == "__main__":
 
-    run()
+    # run()
 
-    # run_ligthning()
+    run_ligthning()
     
     pass
 

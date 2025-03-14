@@ -35,15 +35,15 @@ PYTHON_VERSION = "{major}.{minor}.1".format(major=version_info.major,
 conda_env = {
     'channels': ['defaults'],
     'dependencies': [
-        'python~={}'.format(PYTHON_VERSION),
+        'python>=3.11',
         'pip',
           {
             'pip': [
-                'mlflow',
+                'mlflow>=2.13.2',
                 'pillow',
                 'ultralytics',
                 'sahi',
-                'cloudpickle=={}'.format(cloudpickle.__version__),
+                'cloudpickle',
                 'torch>=2.0.0'
             ],
           },
@@ -52,17 +52,9 @@ conda_env = {
 }
 
 def main():
-    # parser = argparse.ArgumentParser('Creates/gets an MLflow experiment and registers a detection model to the Model Registry')
-    # parser.add_argument('--name', help='MLflow experiment name')
-    # parser.add_argument('--model', help='Path to saved PyTorch model')
-    # parser.add_argument('--model-name', help='Registered model name')
-    # parser.add_argument('--is-yolo-obb', help='Boolean indicator',
-    #                     default=False, type=bool, required=True, choices=[True, False])
-
+    
     args = parse(Args)
 
-
-    # TRACKING_URI=  "http://localhost:5000"
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
 
     artifacts = {'path': args.model}
