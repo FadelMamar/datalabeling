@@ -25,7 +25,6 @@ colorama==0.4.6
 comm==0.2.2
 contourpy==1.3.1
 cycler==0.12.1
--e file:///C:/Users/Machine%20Learning/Desktop/workspace-wildAI/datalabeling/sourcecode
 datamodel-code-generator==0.26.1
 datargs==1.1.0
 debugpy==1.8.13

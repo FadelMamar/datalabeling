@@ -4,7 +4,7 @@ from animaloc.models import LossWrapper
 from animaloc.train.losses import FocalLoss
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
-from animaloc.train import Trainer
+from animaloc.train import Trainer, FasterRCNNTrainer
 from animaloc.eval import PointsMetrics, HerdNetEvaluator
 
 
@@ -145,13 +145,14 @@ def run_ligthning():
 def run():
 
     args = Arguments()
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
+    args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     args.lr0 = 3e-4
-    args.imgsz = 800
-    args.batchsize = 16
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    args.imgsz = 640
+    args.batchsize = 8
+    args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
     down_ratio = 2
     empty_ratio = 0.
+    device = 'cpu'
 
     # Data
     datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
@@ -162,6 +163,12 @@ def run():
                              )
 
     datamodule.setup("fit")
+    
+    # check dataloaders
+    for img_val,targets_val in datamodule.val_dataloader():
+        pass
+    for img_tr,targets_tr in datamodule.train_dataloader():
+        pass
 
     num_classes = datamodule.num_classes
 
@@ -173,14 +180,18 @@ def run():
         {'loss': CrossEntropyLoss(reduction='mean', weight=ce_weights),
          'idx': 1, 'idy': 1, 'lambda': 1.0, 'name': 'ce_loss'}
     ]
-
+    
+    # Load model
     herdnet = HerdNet(pretrained=False, down_ratio=down_ratio, num_classes=4)
     herdnet = LossWrapper(herdnet, losses=losses)
     checkpoint = torch.load(
-        args.path_weights, map_location="cpu", weights_only=True)
+        args.path_weights,
+        map_location="cpu",
+        weights_only=True
+    )
     herdnet.load_state_dict(checkpoint['model_state_dict'], strict=True)
     herdnet.model.reshape_classes(num_classes)
-    herdnet = herdnet.to('cuda')
+    herdnet = herdnet.to(device)
 
     work_dir = '../.tmp'
 
@@ -204,31 +215,50 @@ def run():
         model=herdnet,
         dataloader=datamodule.val_dataloader(),
         metrics=metrics,
+        device_name=device,
         stitcher=stitcher,
         work_dir=work_dir,
         header='validation'
     )
+    
+    evaluator.evaluate()
+    
+    # trainer = Trainer(
+    #     model=herdnet,
+    #     train_dataloader=datamodule.train_dataloader(),
+    #     val_dataloader=None,
+    #     lr_milestones=[20,],
+    #     optimizer=optimizer,
+    #     auto_lr=True,
+    #     device_name=device,
+    #     num_epochs=args.epochs,
+    #     evaluator=evaluator,
+    #     work_dir=work_dir
+    # )
+    
+    # FasterRCNN Training
+    # FasterRCNNTrainer(model=...,
+    #                 train_dataloader=datamodule.train_dataloader(),
+    #                 val_dataloader=None,
+    #                 lr_milestones=[20,],
+    #                 optimizer=optimizer,
+    #                 auto_lr=True,
+    #                 device_name=device,
+    #                 num_epochs=args.epochs,
+    #                 evaluator=evaluator,
+    #                 work_dir=work_dir
+    #                 )
 
-    trainer = Trainer(
-        model=herdnet,
-        train_dataloader=datamodule.train_dataloader(),
-        val_dataloader=None,
-        lr_milestones=[20,],
-        optimizer=optimizer,
-        auto_lr=True,
-        num_epochs=args.epochs,
-        evaluator=evaluator,
-        work_dir=work_dir
-    )
-
-    herdnet = trainer.start(
-        warmup_iters=30, checkpoints='best', select='max', validate_on='f1_score')
+    # herdnet = trainer.start(
+    #     warmup_iters=30, checkpoints='best', select='max', validate_on='f1_score')
 
 
 if __name__ == "__main__":
 
-    # run()
+    run()
 
-    run_ligthning()
+    # run_ligthning()
+    
+    pass
 
     
