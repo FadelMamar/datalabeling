@@ -29,20 +29,21 @@ def run_ligthning():
     args = Arguments()
     args.lr0 = 3e-4
     args.epochs = 10
-    args.imgsz = 640
+    args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
-    precision = "32" #"16-mixed"
+    precision = "16-mixed"
     # empty_ratio = 0.
     args.patience = 10
-    cl_lr = [3e-4,]
-    empty_ratios = [1,]
-    freeze_layers = [0.75,]
+    cl_lr = [5e-5,]
+    empty_ratios = [0,]
+    freeze_layers = [0.,]
+    device='cpu'
 
-    # args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
-    # args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
-    args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
-    args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
+    # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
+    # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
     # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
     checkpoint_path = None
@@ -57,7 +58,7 @@ def run_ligthning():
                                 train_empty_ratio=0.
                                 )
     datamodule.setup('fit')
-    ce_weight = datamodule.get_labels_weights
+    ce_weight = datamodule.get_labels_weights.to(device)    
     # ce_weight = None
     print(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
@@ -111,7 +112,7 @@ def run_ligthning():
                                 mode="max")
                     ]
 
-        herdnet_trainer.args.lr0 = lr
+        herdnet_trainer.hparams.lr = lr
 
         # Freeze params
         num_layers = len(list(herdnet_trainer.parameters()))
@@ -138,7 +139,7 @@ def run_ligthning():
                                 int(64/args.batchsize), 1),
                             precision=precision,
                             callbacks=callbacks,
-                            accelerator="auto",
+                            accelerator=device,
                             )
         trainer.fit(model=herdnet_trainer,
                     datamodule=datamodule,
@@ -151,14 +152,14 @@ def run_ligthning():
 def run():
 
     args = Arguments()
-    args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
-    args.lr0 = 3e-4
-    args.imgsz = 640
-    args.batchsize = 8
-    args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
+    args.lr0 = 1e-4
+    args.imgsz = 800
+    args.batchsize = 32
+    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
     down_ratio = 2
     empty_ratio = 0.
-    device = 'cpu'
+    device = 'cuda'
 
     # Data
     datamodule = HerdnetData(data_config_yaml=args.data_config_yaml,
@@ -171,14 +172,14 @@ def run():
     datamodule.setup("fit")
     
     # check val dataloaders
-    for img_val,targets_val in tqdm(datamodule.val_dataloader(), desc="Val dataloader check"):
-        pass
+    # for img_val,targets_val in tqdm(datamodule.val_dataloader(), desc="Val dataloader check"):
+    #     pass
     # for img_tr,targets_tr in tqdm(datamodule.train_dataloader(),desc="Train dataloader check"):
     #     pass
 
     num_classes = datamodule.num_classes
 
-    ce_weights = None  # datamodule.get_labels_weights
+    ce_weights = datamodule.get_labels_weights.to(device)
 
     losses = [
         {'loss': FocalLoss(reduction='mean'), 'idx': 0,
@@ -192,7 +193,7 @@ def run():
     herdnet = LossWrapper(herdnet, losses=losses)
     checkpoint = torch.load(
         args.path_weights,
-        map_location="cpu",
+        map_location=device,
         weights_only=True
     )
     herdnet.load_state_dict(checkpoint['model_state_dict'], strict=True)
@@ -228,7 +229,7 @@ def run():
     )
     
     # check
-    evaluator.evaluate()
+    # evaluator.evaluate()
     
     trainer = Trainer(
         model=herdnet,
@@ -262,9 +263,9 @@ def run():
 
 if __name__ == "__main__":
 
-    # run()
+    run()
 
-    run_ligthning()
+    # run_ligthning()
     
     pass
 
