@@ -3,6 +3,10 @@ import pandas as pd
 from tqdm import tqdm
 import cv2
 import numpy as np
+import shutil, os, yaml
+from ultralytics import SAM
+from ultralytics.data.dataset import YOLODataset, YOLOConcatDataset
+import torch
 
 def check_label_format(loaded_df: pd.DataFrame) -> str:
     """checks label format
@@ -217,11 +221,11 @@ def create_yolo_seg_labels(data_config_yaml:str,imgsz:int,model_sam:SAM,device:s
         # Load YOLO dataset
         for path in data_config[split]:
             # create Segmentations directory inside split
-            seg_dir = (Path(path).parent/'Segmentations')
-            if not seg_dir.exists():
-                print(f"Creating directory: {seg_dir}")
-            (seg_dir/'labels').mkdir(exist_ok=True,parents=True)
-            (seg_dir/'images').mkdir(exist_ok=True,parents=True)
+            seg_Labels_dir = (Path(path).parent/'Segmentations'/'labels')
+            if seg_Labels_dir.exists():
+                shutil.rmtree(seg_Labels_dir)
+                print(f"Deleting existing segmentation labels : {seg_Labels_dir}")
+            seg_Labels_dir.mkdir(exist_ok=True,parents=True)
             images_path = os.path.join(data_config['path'], path)
             dataset = YOLODataset(img_path=images_path,task='detect',data={'names':data_config['names']},augment=False,imgsz=imgsz,classes=None)
             datasets.append(dataset)
@@ -255,3 +259,6 @@ def create_yolo_seg_labels(data_config_yaml:str,imgsz:int,model_sam:SAM,device:s
                                                 num_classes=data_config['nc'],
                                                 verbose=False
                                             )
+
+
+
