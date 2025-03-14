@@ -2,19 +2,19 @@
 path: D:\PhD\Data per camp\DetectionDataset 
 
 train: 
- - delplanque_tiled_data\train_tiled\images
- - delplanque_tiled_data\val_tiled\images
- - Rep 1\train\images
+ - bushriver\images
+ - Rep 3\train\images
  - Rep 2\train\images
+ - Rep 1 - Wet\val\images
+ - delplanque_tiled_data\val_tiled\images
  - WAID\images\valid
- - WAID\images\test
+ - savmap\images
+ - Rep 3\val\images
  - Rep 2\val\images
  - Rep 1\val\images
- - bushriver\images
  
 val :  
- - Rep 2\val\images
- - Rep 1\val\images
+ - Rep 1\train\images
 
 # test:  # test images (optional)
 
