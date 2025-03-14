@@ -202,10 +202,11 @@ def convert_segment_masks_to_yolo_seg(masks_sam2:np.ndarray, output_path:str, nu
     file.close()
 
 
-def create_yolo_seg_labels(data_config_yaml:str,imgsz:int,model_sam:SAM,device:str='cpu'):
+def create_yolo_seg_directory(data_config_yaml:str,imgsz:int,model_sam:SAM,device:str='cpu',copy_images_dir:bool=True):
 
     with open(data_config_yaml, 'r') as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
+        
     
     # Move to device
     model_sam = model_sam.to(device)
@@ -214,6 +215,16 @@ def create_yolo_seg_labels(data_config_yaml:str,imgsz:int,model_sam:SAM,device:s
     # get available splits in data_config
     splits=[s for s in ['val','train','test'] if s in data_config.keys()]
     print("Convertings splits:", splits)
+    
+    def is_dir_yolo(labels_dir:str)->None:
+        
+        for label_path in tqdm(Path(labels_dir).glob("*.txt"), desc="checking labels format"):
+            df = pd.read_csv(label_path, sep=" ", header=None)
+            if check_label_format(loaded_df=df) == "yolo":
+                continue
+            else:
+                raise ValueError('Annotations should be in the yolo format')
+        return None
 
     for split in splits:
         datasets = list()
@@ -221,13 +232,29 @@ def create_yolo_seg_labels(data_config_yaml:str,imgsz:int,model_sam:SAM,device:s
         # Load YOLO dataset
         for path in data_config[split]:
             # create Segmentations directory inside split
-            seg_Labels_dir = (Path(path).parent/'Segmentations'/'labels')
+            images_path = os.path.join(data_config['path'],path)
+            
+            # check folder format
+            is_dir_yolo(images_path.replace('images', 'labels'))
+            
+            seg_dir = Path(images_path).parent/'Segmentations'
+            seg_Labels_dir = seg_dir/'labels'
             if seg_Labels_dir.exists():
                 shutil.rmtree(seg_Labels_dir)
                 print(f"Deleting existing segmentation labels : {seg_Labels_dir}")
             seg_Labels_dir.mkdir(exist_ok=True,parents=True)
-            images_path = os.path.join(data_config['path'], path)
-            dataset = YOLODataset(img_path=images_path,task='detect',data={'names':data_config['names']},augment=False,imgsz=imgsz,classes=None)
+            if copy_images_dir:
+                if (seg_dir/'images').exists():
+                    shutil.rmtree(seg_dir/'images')
+                    print('Deleting directory:',seg_dir/'images')
+                shutil.copytree(images_path, seg_dir)
+                print(f'Copying {images_path} into {seg_dir}')
+            dataset = YOLODataset(img_path=images_path,
+                                  task='detect',
+                                  data={'names':data_config['names']},
+                                  augment=False,
+                                  imgsz=imgsz,
+                                  classes=None)
             datasets.append(dataset)
         dataset = YOLOConcatDataset(datasets)
 
