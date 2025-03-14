@@ -12,6 +12,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "label-studio-ml>=1.0.9",
     "label-studio-sdk>=1.0.10",
+    "label-studio-converter",
     "lightning>=2.5.0.post0",
     "matplotlib>=3.10.1",
     "mlflow==2.13.2",
