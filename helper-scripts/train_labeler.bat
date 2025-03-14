@@ -41,21 +41,24 @@ call wandb offline
 @REM @REM convert datasets to yolo-obb
 call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_labeler.yaml" --skip
 
-call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0001 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
-    --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
-    --height 800 --width 800^
-    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/771014640604815853/9ab053acdcbb486992fbe456e3701c88/artifacts/weights/best.pt" ^
-    --run-name "yolov11s_obb-CT" --project-name "labeler"^
-    --tag "continuous-training" ^
-    --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
-    --cl-data-config-yaml "data\dataset_labeler.yaml" ^
-    --cl-ratios 7.5 ^
-    --cl-epochs 50  ^
-    --cl-freeze 0 ^
-    --cl-lr0s 0.0001 ^
-    --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
-    --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_labeler.yaml" ^
-    --hn-is-yolo-obb
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0001 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/771014640604815853/9ab053acdcbb486992fbe456e3701c88/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov11s_obb-CT" --project-name "labeler"^
+@REM     --tag "continuous-training" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_labeler.yaml" ^
+@REM     --cl-ratios 7.5 ^
+@REM     --cl-epochs 50  ^
+@REM     --cl-freeze 0 ^
+@REM     --cl-lr0s 0.0001 ^
+@REM     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
+@REM     --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_labeler.yaml" ^
+@REM     --hn-is-yolo-obb
+
+
+call uv run tools\cli.py train-herdnet.py
 
 
 :: Transfer learning from a model registered on mlflow
