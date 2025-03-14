@@ -223,6 +223,7 @@ class HerdnetData(L.LightningDataModule):
         batch_size: int = 32,
         transforms: dict[str, tuple] = None,
         train_empty_ratio: float = 0.0,
+        normalization:str='standard'
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -263,7 +264,7 @@ class HerdnetData(L.LightningDataModule):
                         brightness_limit=0.2, contrast_limit=0.2, p=0.2
                     ),
                     A.Blur(blur_limit=15, p=0.2),
-                    A.Normalize(
+                    A.Normalize(normalization=normalization,
                         p=1.0, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
                     ),
                 ],
@@ -284,7 +285,7 @@ class HerdnetData(L.LightningDataModule):
             self.transforms["val"] = (
                 [
                     A.Resize(width=self.patch_size, height=self.patch_size, p=1.0),
-                    A.Normalize(
+                    A.Normalize(normalization=normalization,
                         p=1.0, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
                     ),
                 ],
