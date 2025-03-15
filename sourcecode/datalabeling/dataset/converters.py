@@ -297,9 +297,13 @@ def create_yolo_seg_directory(
             # create masks
             mask = results.masks.data.cpu() * labels.view(-1, 1, 1)
             mask = mask.numpy()
-            assert len(mask.shape) == 3
-            assert mask.min()>=0 and mask.max()>0, "Error in mask. Please check"
-
+            try:
+                assert len(mask.shape) == 3
+                assert mask.min()>=0 and mask.max()>0, f"Error in mask. Please check {data['im_file']}"
+            except Exception as e:
+                print(f"Error in mask min={mask.min()},max={mask.max()}. Please check {data['im_file']}. Skipping")
+                print(e)
+                continue
             # convert masks to yolo-seg
             img_path = Path(data["im_file"])
             output_dir = img_path.parent.parent / "Segmentations" / "labels"
