@@ -285,24 +285,27 @@ def create_yolo_seg_directory(
                 [data["bboxes"][:, :2], data["bboxes"][:, :2] + data["bboxes"][:, 2:]],
                 1,
             )
-            bboxes = (bboxes * imgsz).long().tolist()
+            bboxes = (bboxes * imgsz).long().cpu().tolist()
+            labels = data["cls"].ravel().long().cpu()+1 # account for background class
             (results,) = model_sam(
                 data["im_file"],
-                imgsz=imgsz,
                 bboxes=bboxes,
-                labels=data["cls"].squeeze().long().tolist(),
+                labels=labels.tolist(),
                 device=device,
                 verbose=False,
             )
             # create masks
-            mask = results.masks.data.cpu() * data["cls"].long().cpu().view(-1, 1, 1)
+            mask = results.masks.data.cpu() * labels.view(-1, 1, 1)
+            mask = mask.numpy()
             assert len(mask.shape) == 3
+            assert mask.min()>=0 and mask.max()>0, "Error in mask. Please check"
+
             # convert masks to yolo-seg
             img_path = Path(data["im_file"])
             output_dir = img_path.parent.parent / "Segmentations" / "labels"
             output_path = output_dir / img_path.with_suffix(".txt").name
             convert_segment_masks_to_yolo_seg(
-                masks_sam2=mask.numpy(),
+                masks_sam2=mask,
                 output_path=output_path,
                 num_classes=data_config["nc"],
                 verbose=False,
