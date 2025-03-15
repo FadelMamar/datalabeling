@@ -25,7 +25,7 @@ if __name__ == '__main__':
     if args.start_training:
         from datalabeling.train import start_training
         import mlflow
-        import wandb
+        # import wandb
         import yaml
 
         if args.mlflow_model_alias is  None:
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         if not (args.ptr_data_config_yaml or args.use_continual_learning or args.use_hn_learning):
             with open(args.data_config_yaml,'r') as file:
                 data_config = yaml.load(file,Loader=yaml.FullLoader)
-                data_config["mode"] = "standard"
+                # data_config["mode"] = "standard"
                 # wandb.log(data_config)
 
         start_training(args)
