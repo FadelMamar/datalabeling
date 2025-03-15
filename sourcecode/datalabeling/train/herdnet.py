@@ -54,14 +54,7 @@ def get_groundtruth(
     yolo_images_dir: str,
     save_path: str = None,
     load_gt_csv: str = None,
-    empty_ratio: float | None = 0.0,
-    empty_frac: float | None = None,
-):
-    if empty_frac is not None:
-        assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
-    if empty_ratio is not None:
-        assert empty_ratio >= 0.0, "should be non-negative"
-
+) -> tuple[pd.DataFrame, int, list]:
     if load_gt_csv is not None:
         return pd.read_csv(load_gt_csv)
 
@@ -74,6 +67,7 @@ def get_groundtruth(
     # Iterate through labels
     dfs = list()
     count_empty = 0
+    images_empty = list()
     for image_path in tqdm(
         Path(yolo_images_dir).glob("*"), desc="Getting groundtruths"
     ):
@@ -87,8 +81,9 @@ def get_groundtruth(
             img = Image.open(image_path)
             img_width, img_height = img.size
             img.close()
-        else:
+        else:  # empty image has no corresponding txt file
             count_empty += 1
+            images_empty.append(os.path.relpath(image_path, yolo_images_dir))
             continue
             # empty image -> creating pseudo labels
             # df = {'id': [-1], 'x': [0.], 'y': [0.], 'w': [0.], 'h': [0.]}
@@ -109,7 +104,7 @@ def get_groundtruth(
             df["w"] = (df["x2"] - df["x1"]) * img_width
             df["h"] = (df["y4"] - df["y1"]) * img_height
 
-        df["images"] = os.path.relpath(str(image_path), yolo_images_dir)
+        df["images"] = os.path.relpath(image_path, yolo_images_dir)
         df.rename(columns={"id": "labels"}, inplace=True)
         dfs.append(df)
 
@@ -120,35 +115,24 @@ def get_groundtruth(
     # shift to range [0,num_classes] so that 0 is the background class for empty images
     dfs["labels"] = dfs["labels"] + 1
 
-    # sample empty images and non-empty
-    # if there are
-    if sum(dfs.labels < 1) > 0:
-        df_non_empty = dfs.loc[dfs.labels > 0].copy()
-        df_empty = dfs.loc[dfs.labels < 1].copy()
-        if empty_frac is None:
-            num_non_empty = len(df_non_empty)
-            frac = min(empty_ratio * num_non_empty, len(df_empty)) / len(df_empty)
-            frac = max(0.0, frac)
-        else:
-            frac = empty_frac
-        df_empty = df_empty.sample(frac=frac)
-        print(f"Sampling {len(df_empty)} empty images.", end="\n")
-        # concatenate empty and non_empty
-        dfs = pd.concat([df_empty, df_non_empty])
-
     if save_path is not None:
         dfs.to_csv(save_path, index=False)
 
-    return dfs, count_empty
+    return dfs, count_empty, images_empty
 
 
 def load_dataset(
     data_config_yaml: str,
     split: str,
     transforms: dict,
-    empty_ratio: float = 0.0,
-    empty_frac: float = None,
-):
+    empty_ratio: float | None = None,
+    empty_frac: float | None = None,
+) -> tuple[ConcatDataset, pd.DataFrame, int]:
+    if empty_frac is not None:
+        assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
+    if empty_ratio is not None:
+        assert empty_ratio >= 0.0, "should be non-negative"
+
     with open(data_config_yaml, "r") as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
     datasets = list()
@@ -157,19 +141,38 @@ def load_dataset(
     num_empty_images = 0
     for img_dir in tqdm(data_config[split], desc="concatenating datasets"):
         img_dir = os.path.join(root, img_dir)
-        df, count_empty = get_groundtruth(
+        df, count_empty, images_empty = get_groundtruth(
             yolo_images_dir=img_dir,
             save_path=None,
-            load_gt_csv=None,  # path_to_csv
-            empty_ratio=empty_ratio,
-            empty_frac=empty_frac,
+            load_gt_csv=None,
         )
-        num_empty_images += count_empty
+        # select empty images
+        num_empty_sampled = None
+        if empty_ratio is not None:
+            num_empty_sampled = (
+                min(int(empty_ratio * len(df)), len(images_empty))
+                if empty_frac is not None
+                else None
+            )
+        if (num_empty_sampled is None) and (empty_frac is None):
+            sampled_images_empty = []
+        else:
+            sampled_images_empty = (
+                pd.Series(images_empty)
+                .sample(
+                    n=num_empty_sampled, frac=empty_frac, replace=False, random_state=41
+                )
+                .to_list()
+            )
+        num_empty_images += len(sampled_images_empty)
+        # selected images
+        selected_images = sampled_images_empty + df["images"].to_list()
         dataset = FolderDataset(  # CSVDataset
             csv_file=df,
-            root_dir=img_dir,
+            root_dir=None,
             albu_transforms=transforms[split][0],
             end_transforms=transforms[split][1],
+            images_paths=selected_images,
         )
         datasets.append(dataset)
         df_gts.append(df)
@@ -223,7 +226,7 @@ class HerdnetData(L.LightningDataModule):
         batch_size: int = 32,
         transforms: dict[str, tuple] = None,
         train_empty_ratio: float = 0.0,
-        normalization:str='standard'
+        normalization: str = "standard",
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -264,8 +267,11 @@ class HerdnetData(L.LightningDataModule):
                         brightness_limit=0.2, contrast_limit=0.2, p=0.2
                     ),
                     A.Blur(blur_limit=15, p=0.2),
-                    A.Normalize(normalization=normalization,
-                        p=1.0, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+                    A.Normalize(
+                        normalization=normalization,
+                        p=1.0,
+                        mean=(0.485, 0.456, 0.406),
+                        std=(0.229, 0.224, 0.225),
                     ),
                 ],
                 [
@@ -285,8 +291,11 @@ class HerdnetData(L.LightningDataModule):
             self.transforms["val"] = (
                 [
                     A.Resize(width=self.patch_size, height=self.patch_size, p=1.0),
-                    A.Normalize(normalization=normalization,
-                        p=1.0, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
+                    A.Normalize(
+                        normalization=normalization,
+                        p=1.0,
+                        mean=(0.485, 0.456, 0.406),
+                        std=(0.229, 0.224, 0.225),
                     ),
                 ],
                 [
@@ -312,17 +321,23 @@ class HerdnetData(L.LightningDataModule):
     def setup(self, stage: str):
         if stage == "fit":
             # train
-            self.train_dataset, df_train_labels, self.num_empty_images_train = load_dataset(
-                data_config_yaml=self.data_config_yaml,
-                split="train",
-                transforms=self.transforms,
-                empty_ratio=self.train_empty_ratio,
-                empty_frac=None,
+            self.train_dataset, df_train_labels, self.num_empty_images_train = (
+                load_dataset(
+                    data_config_yaml=self.data_config_yaml,
+                    split="train",
+                    transforms=self.transforms,
+                    empty_ratio=self.train_empty_ratio,
+                    empty_frac=None,
+                )
             )
             self.df_train_labels_freq = df_train_labels[
                 "labels"
-            ].value_counts().sort_index() / (len(df_train_labels) + self.num_empty_images_train)
-            print(f"Train dataset as {len(self.train_dataset)} samples including {self.num_empty_images_train} negative samples.")
+            ].value_counts().sort_index() / (
+                len(df_train_labels) + self.num_empty_images_train
+            )
+            print(
+                f"Train dataset as {len(self.train_dataset)} samples including {self.num_empty_images_train} negative samples."
+            )
             # val
             self.val_dataset, df_val_labels, self.num_empty_images_val = load_dataset(
                 data_config_yaml=self.data_config_yaml,
@@ -333,9 +348,12 @@ class HerdnetData(L.LightningDataModule):
             )
             self.df_val_labels_freq = df_val_labels[
                 "labels"
-            ].value_counts().sort_index() / (len(df_val_labels) + self.num_empty_images_val)
-            print(f"Val dataset as {len(self.val_dataset)} samples including {self.num_empty_images_val} negative samples.")
-
+            ].value_counts().sort_index() / (
+                len(df_val_labels) + self.num_empty_images_val
+            )
+            print(
+                f"Val dataset as {len(self.val_dataset)} samples including {self.num_empty_images_val} negative samples."
+            )
 
         elif stage == "test":
             self.test_dataset, _, self.num_empty_images_test = load_dataset(
@@ -345,7 +363,9 @@ class HerdnetData(L.LightningDataModule):
                 empty_frac=1.0,
                 empty_ratio=None,
             )
-            print(f"Test dataset as {len(self.test_dataset)} samples including {self.num_empty_images_test} negative samples.")
+            print(
+                f"Test dataset as {len(self.test_dataset)} samples including {self.num_empty_images_test} negative samples."
+            )
         elif stage == "validate":
             # val
             self.val_dataset, df_val_labels, self.num_empty_images_val = load_dataset(
@@ -357,10 +377,14 @@ class HerdnetData(L.LightningDataModule):
             )
             self.df_val_labels_freq = df_val_labels[
                 "labels"
-            ].value_counts().sort_index() / (len(df_val_labels) + self.num_empty_images_val)
-            print(f"Val dataset as {len(self.val_dataset)} samples including {self.num_empty_images_val} negative samples.")
+            ].value_counts().sort_index() / (
+                len(df_val_labels) + self.num_empty_images_val
+            )
+            print(
+                f"Val dataset as {len(self.val_dataset)} samples including {self.num_empty_images_val} negative samples."
+            )
 
-    def val_collate_fn(self, batch: tuple)->tuple[torch.Tensor,dict]:
+    def val_collate_fn(self, batch: tuple) -> tuple[torch.Tensor, dict]:
         """collate_fn used to create the validation dataloader
 
         Args:
@@ -458,9 +482,9 @@ class HerdnetData(L.LightningDataModule):
 class HerdnetTrainer(L.LightningModule):
     def __init__(
         self,
-        data_config_yaml:str,
-        lr:float,
-        weight_decay:float,
+        data_config_yaml: str,
+        lr: float,
+        weight_decay: float,
         loaded_weights_num_classes: int,
         work_dir: str,
         eval_radius: int = 20,
@@ -471,14 +495,16 @@ class HerdnetTrainer(L.LightningModule):
         ce_weight: list = None,
     ):
         super().__init__()
-        
-        self.save_hyperparameters("lr",
-                                  "weight_decay",
-                                  "data_config_yaml",
-                                  "down_ratio",
-                                  "ce_weight",
-                                  "eval_radius")
-        
+
+        self.save_hyperparameters(
+            "lr",
+            "weight_decay",
+            "data_config_yaml",
+            "down_ratio",
+            "ce_weight",
+            "eval_radius",
+        )
+
         self.work_dir = work_dir
         self.loaded_weights_num_classes = loaded_weights_num_classes
         self.classification_threshold = classification_threshold
@@ -561,44 +587,36 @@ class HerdnetTrainer(L.LightningModule):
         if self.stitcher is not None:
             up = False
         self.lmds = HerdNetLMDS(up=up, **self.herdnet_evaluator.lmds_kwargs)
-    
-    def batch_metrics(self, 
-                      metric:PointsMetrics,
-                      batchsize:int, 
-                      output:dict)->None:
-        if batchsize>=1:
+
+    def batch_metrics(
+        self, metric: PointsMetrics, batchsize: int, output: dict
+    ) -> None:
+        if batchsize >= 1:
             for i in range(batchsize):
-                gt = {k:v[i] for k,v in output['gt'].items()}
-                preds = {k:v[i] for k,v in output['preds'].items()}
-                counts = output['est_count'][i]
-                output_i = dict(gt = gt, preds = preds, est_count = counts)
+                gt = {k: v[i] for k, v in output["gt"].items()}
+                preds = {k: v[i] for k, v in output["preds"].items()}
+                counts = output["est_count"][i]
+                output_i = dict(gt=gt, preds=preds, est_count=counts)
                 metric.feed(**output_i)
         else:
             raise NotImplementedError
-    
-    def prepare_feeding(self, targets: dict[str, torch.Tensor], output: list[torch.Tensor]) -> dict:
 
-        try: # batchsize==1
-            gt_coords = [p[::-1] for p in targets['points'].cpu().tolist()]
-            gt_labels = targets['labels'].cpu().tolist()
-        except Exception: # batchsize>1
-            gt_coords = [p[::-1] for p in targets['points']]
-            gt_labels = targets['labels']
-        
+    def prepare_feeding(
+        self, targets: dict[str, torch.Tensor], output: list[torch.Tensor]
+    ) -> dict:
+        try:  # batchsize==1
+            gt_coords = [p[::-1] for p in targets["points"].cpu().tolist()]
+            gt_labels = targets["labels"].cpu().tolist()
+        except Exception:  # batchsize>1
+            gt_coords = [p[::-1] for p in targets["points"]]
+            gt_labels = targets["labels"]
+
         # get predictions
         counts, locs, labels, scores, dscores = self.lmds(output)
-        gt = dict(
-            loc = gt_coords,
-            labels = gt_labels
-        )
-        preds = dict(
-            loc = locs,
-            labels = labels,
-            scores = scores,
-            dscores = dscores
-        )        
-        
-        return dict(gt = gt, preds = preds, est_count = counts)
+        gt = dict(loc=gt_coords, labels=gt_labels)
+        preds = dict(loc=locs, labels=labels, scores=scores, dscores=dscores)
+
+        return dict(gt=gt, preds=preds, est_count=counts)
 
     def shared_step(self, stage, batch, batch_idx):
         if self.num_classes != self.loaded_weights_num_classes:
@@ -615,9 +633,11 @@ class HerdnetTrainer(L.LightningModule):
             return loss
 
         else:
-            images,targets = batch
+            images, targets = batch
             batchsize = images.shape[0]
-            assert batchsize>=1 and len(images.shape)==4, "Input image does not have the right shape > e.g. [b,c,h,w]"
+            assert batchsize >= 1 and len(images.shape) == 4, (
+                "Input image does not have the right shape > e.g. [b,c,h,w]"
+            )
             predictions, _ = self.model(images)
             # compute metrics
             output = self.prepare_feeding(targets=targets, output=predictions)

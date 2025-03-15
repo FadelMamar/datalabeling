@@ -22,6 +22,7 @@ class Arguments:
     # model type
     is_detector: bool = False
     is_rtdetr: bool = False
+    task: bool = "detect"  # "detect" "obb" "segment"
 
     # active learning flags
     mlflow_tracking_uri: str = "http://localhost:5000"
@@ -145,8 +146,8 @@ class Dataprepconfigs:
     dest_path_labels: str = None  # os.path.join(CUR_DIR,'../../../data/train/labels')
     height: int = 640
     width: int = 640
-    imgsz:int=640
-    device:str= 'cuda' if torch.cuda.is_available() else 'cpu'
+    imgsz: int = 640
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
     # overlap:int=80
     min_visibility: float = 0.5
     save_all: bool = False
@@ -189,6 +190,6 @@ class Dataprepconfigs:
     label_map: str = None
 
     # creating yolo-seg labels
-    create_yolo_seg_dir:bool=False
-    sam_model_path:str=None
-    copy_images:bool=False
+    create_yolo_seg_dir: bool = False
+    sam_model_path: str = None
+    copy_images: bool = False

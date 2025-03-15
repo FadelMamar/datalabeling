@@ -42,3 +42,4 @@ yolov8-obb
 lightning-ckpts
 labeler
 *.docx
+base_models_weights
