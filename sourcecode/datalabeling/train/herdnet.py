@@ -399,7 +399,7 @@ class HerdnetData(L.LightningDataModule):
         targets = [p[1] for p in batch]
         keys = targets[0].keys()
 
-        # get non_empty samples indidces
+        # get non_empty samples indidces -> set difference
         non_empty_idx = [i for i, a in enumerate(targets) if len(a["labels"]) > 0]
         targets_empty = [
             targets[i] for i in list(set(range(len(batch))) - set(non_empty_idx))
@@ -409,15 +409,15 @@ class HerdnetData(L.LightningDataModule):
         # Creating batch
         for k in keys:
             batched[k] = []  # initialize to be empty list
-            if k == "points":
+            if k == "points" or k=='labels':
                 batched[k] = [a[k].cpu().tolist() for a in targets]
                 if len(targets_empty) > 0:
                     batched[k] = batched[k] + [[]] * len(targets_empty)
-            if k == "labels":
-                batched[k] = [a[k].cpu().tolist() for a in targets]
-                # batched[k] = [a if isinstance(a,list) else [a] for a in batched[k]]
-                if len(targets_empty) > 0:
-                    batched[k] = batched[k] + [[]] * len(targets_empty)
+            # if k == "labels":
+            #     batched[k] = [a[k].cpu().tolist() for a in targets]
+            #     # batched[k] = [a if isinstance(a,list) else [a] for a in batched[k]]
+            #     if len(targets_empty) > 0:
+            #         batched[k] = batched[k] + [[]] * len(targets_empty)
 
         return batch_img, batched
 
