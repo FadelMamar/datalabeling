@@ -54,7 +54,7 @@ def get_groundtruth(
     yolo_images_dir: str,
     save_path: str = None,
     load_gt_csv: str = None,
-):
+)->tuple[pd.DataFrame,int,list]:
 
 
     if load_gt_csv is not None:
@@ -117,22 +117,6 @@ def get_groundtruth(
     # shift to range [0,num_classes] so that 0 is the background class for empty images
     dfs["labels"] = dfs["labels"] + 1
 
-    # sample empty images and non-empty
-    # if there are
-    # if sum(dfs.labels < 1) > 0:
-    #     df_non_empty = dfs.loc[dfs.labels > 0].copy()
-    #     df_empty = dfs.loc[dfs.labels < 1].copy()
-    #     if empty_frac is None:
-    #         num_non_empty = len(df_non_empty)
-    #         frac = min(empty_ratio * num_non_empty, len(df_empty)) / len(df_empty)
-    #         frac = max(0.0, frac)
-    #     else:
-    #         frac = empty_frac
-    #     df_empty = df_empty.sample(frac=frac)
-    #     print(f"Sampling {len(df_empty)} empty images.", end="\n")
-    #     # concatenate empty and non_empty
-    #     dfs = pd.concat([df_empty, df_non_empty])
-
     if save_path is not None:
         dfs.to_csv(save_path, index=False)
 
@@ -144,8 +128,8 @@ def load_dataset(
     split: str,
     transforms: dict,
     empty_ratio: float|None = None,
-    empty_frac: float = None,
-):
+    empty_frac: float|None = None,
+)->tuple[ConcatDataset,pd.DataFrame,int]:
     if empty_frac is not None:
         assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
     if empty_ratio is not None:
@@ -167,7 +151,7 @@ def load_dataset(
         # select empty images
         num_empty_sampled = None
         if empty_ratio is not None:
-            num_empty_sampled = min(int(empty_ratio*len(df)),len(df)) if empty_frac is not None else None
+            num_empty_sampled = min(int(empty_ratio*len(df)),len(images_empty)) if empty_frac is not None else None
         if (num_empty_sampled is None) and (empty_frac is None):
             sampled_images_empty = []
         else:

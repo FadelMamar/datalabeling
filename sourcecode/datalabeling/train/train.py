@@ -5,19 +5,18 @@ import os
 import traceback
 from pathlib import Path
 import pandas as pd
-import math
 
 
 def sample_pos_neg(images_paths: list, ratio: float, seed: int = 41):
     """_summary_
 
     Args:
-        images_paths (list): _description_
-        ratio (float): _description_
-        seed (int, optional): _description_. Defaults to 41.
+        images_paths (list): images paths
+        ratio (float): ratio defined as num_empty/num_non_empty
+        seed (int, optional): random seed. Defaults to 41.
 
     Returns:
-        _type_: _description_
+        list: selected paths to images
     """
 
     # build dataframe
@@ -33,7 +32,7 @@ def sample_pos_neg(images_paths: list, ratio: float, seed: int = 41):
     num_non_empty = len(data) - num_empty
     if num_empty == 0:
         print("contains only positive samples")
-    num_sampled_empty = min(math.floor(num_non_empty * ratio), num_empty)
+    num_sampled_empty = min(int(num_non_empty * ratio), num_empty)
     sampled_empty = data.loc[data["is_empty"] == 1].sample(
         n=num_sampled_empty, random_state=seed
     )
@@ -339,14 +338,13 @@ def hard_negative_strategy_run(
     args.lrf = args.hn_lrf
     args.freeze = args.hn_freeze
     args.epochs = args.hn_num_epochs
-    resume = False  # args.use_pretraining or args.use_continual_learning
     training_routine(
         model=model,
         args=args,
         imgsz=args.hn_imgsz,
         batchsize=args.hn_batch_size,
         data_cfg=hn_cfg_path,
-        resume=resume,
+        resume=False,
     )
 
 
@@ -379,13 +377,12 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
         args.freeze = freeze
         args.lr0 = lr
         args.epochs = num_epochs
-        resume = False  # args.use_pretraining or (count>0)
         training_routine(
             model=model,
             args=args,
             data_cfg=cl_cfg_path,
             batchsize=args.cl_batch_size,
-            resume=resume,
+            resume=False,
         )
         count += 1
 
@@ -398,9 +395,10 @@ def start_training(args: Arguments):
     """
 
     # logger = logging.getLogger(__name__)
+    assert args.task in ["detect", "obb", "segment"]
 
     # Load a pre-trained model
-    model = YOLO(args.path_weights, task="detect", verbose=False)
+    model = YOLO(args.path_weights, task=args.task, verbose=False)
     if args.is_rtdetr:
         model = RTDETR(args.path_weights)
 
