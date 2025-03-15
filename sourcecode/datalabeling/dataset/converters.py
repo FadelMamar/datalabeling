@@ -60,7 +60,7 @@ def convert_yolo_to_obb(
             pass
         else:
             if skip:
-                print(label_path, " does not follow yolo format. Skipped", end="\n")
+                # print(label_path, " does not follow yolo format. Skipped", end="\n")
                 continue
             else:
                 raise ValueError(f"{label_path} does not follow yolo format.")
@@ -124,7 +124,7 @@ def convert_obb_to_yolo(
             pass
         else:
             if skip:
-                print(label_path, " does not follow yolo-obb format. Skipped", end="\n")
+                # print(label_path, " does not follow yolo-obb format. Skipped", end="\n")
                 continue
             else:
                 raise ValueError(f"{label_path} does not follow yolo-obb format.")
