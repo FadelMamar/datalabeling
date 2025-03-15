@@ -42,34 +42,35 @@ if __name__ == '__main__':
             args.path_weights = mlflow.pyfunc.load_model(modelURI).unwrap_python_model().detection_model.detection_model.model.ckpt_path
             logging.info(f"Loading model {modelURI} registered with alias: {alias}")            
 
-        with wandb.init(project=args.project_name,
-                    config=args,
-                    name=args.run_name,
-                    tags=args.tag):
-        
-            # log data_config file
-            if args.ptr_data_config_yaml:
-                with open(args.ptr_data_config_yaml,'r') as file:
-                    data_config = yaml.load(file,Loader=yaml.FullLoader)
-                    data_config["mode"] = "pretraining"
-                    wandb.log(data_config)
+        # with wandb.init(
+        #             # project=args.project_name,
+        #             config=args,
+        #             name=args.run_name,
+        #             # tags=args.tag
+        #             ):
+        # log data_config file
+        if args.ptr_data_config_yaml:
+            with open(args.ptr_data_config_yaml,'r') as file:
+                data_config = yaml.load(file,Loader=yaml.FullLoader)
+                data_config["mode"] = "pretraining"
+                # wandb.log(data_config)
 
-            if args.use_continual_learning: 
-                with open(args.cl_data_config_yaml,'r') as file:
-                    data_config = yaml.load(file,Loader=yaml.FullLoader)
-                    data_config["mode"] = "continuous_learning"
-                    wandb.log(data_config)
+        if args.use_continual_learning: 
+            with open(args.cl_data_config_yaml,'r') as file:
+                data_config = yaml.load(file,Loader=yaml.FullLoader)
+                data_config["mode"] = "continuous_learning"
+                # wandb.log(data_config)
 
-            if args.use_hn_learning: 
-                with open(args.hn_data_config_yaml,'r') as file:
-                    data_config = yaml.load(file,Loader=yaml.FullLoader)
-                    data_config["mode"] = "hard negative learning"
-                    wandb.log(data_config)
-                    
-            if not (args.ptr_data_config_yaml or args.use_continual_learning or args.use_hn_learning):
-                with open(args.data_config_yaml,'r') as file:
-                    data_config = yaml.load(file,Loader=yaml.FullLoader)
-                    data_config["mode"] = "standard"
-                    wandb.log(data_config)
+        if args.use_hn_learning: 
+            with open(args.hn_data_config_yaml,'r') as file:
+                data_config = yaml.load(file,Loader=yaml.FullLoader)
+                data_config["mode"] = "hard negative learning"
+                # wandb.log(data_config)
+                
+        if not (args.ptr_data_config_yaml or args.use_continual_learning or args.use_hn_learning):
+            with open(args.data_config_yaml,'r') as file:
+                data_config = yaml.load(file,Loader=yaml.FullLoader)
+                data_config["mode"] = "standard"
+                # wandb.log(data_config)
 
-            start_training(args)
+        start_training(args)

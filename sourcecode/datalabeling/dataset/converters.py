@@ -247,7 +247,7 @@ def create_yolo_seg_directory(data_config_yaml:str,imgsz:int,model_sam:SAM,devic
                 if (seg_dir/'images').exists():
                     shutil.rmtree(seg_dir/'images')
                     print('Deleting directory:',seg_dir/'images')
-                shutil.copytree(images_path, seg_dir)
+                shutil.copytree(images_path, seg_dir/'images')
                 print(f'Copying {images_path} into {seg_dir}')
             dataset = YOLODataset(img_path=images_path,
                                   task='detect',
@@ -259,7 +259,7 @@ def create_yolo_seg_directory(data_config_yaml:str,imgsz:int,model_sam:SAM,devic
         dataset = YOLOConcatDataset(datasets)
 
         #  Saving segmentations
-        for data in tqdm(dataset,desc=f"Creating yolo-seg for splut={split}"):
+        for data in tqdm(dataset,desc=f"Creating yolo-seg for split={split}"):
             
             # skip negative samples
             if data['cls'].nelement() == 0:
