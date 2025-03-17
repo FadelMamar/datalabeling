@@ -30,13 +30,13 @@ def run_ligthning():
         torch.set_float32_matmul_precision("high")
 
     args = Arguments()
-    args.lr0 = 3e-4
-    args.epochs = 10
+    args.lr0 = 1e-4
+    args.epochs = 30
     args.imgsz = 800
     args.batchsize = 32
     down_ratio = 2
     precision = "16-mixed"
-    # empty_ratio = 0.
+    empty_ratio = 0.0
     args.patience = 10
     cl_lr = [
         5e-5,
@@ -47,7 +47,7 @@ def run_ligthning():
     freeze_layers = [
         0.0,
     ]
-    device = "cpu"
+    device = "cuda"
 
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
     args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
@@ -65,7 +65,7 @@ def run_ligthning():
         patch_size=args.imgsz,
         batch_size=args.batchsize,
         down_ratio=down_ratio,
-        train_empty_ratio=0.0,
+        train_empty_ratio=empty_ratio,
     )
     datamodule.setup("fit")
     ce_weight = datamodule.get_labels_weights.to(device)
@@ -169,16 +169,18 @@ def run_ligthning():
 
 def run():
     args = Arguments()
-    args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
     args.lr0 = 1e-4
-    args.imgsz = 640
+    args.imgsz = 800
     args.batchsize = 32
     args.path_weights = (
-        r"..\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
+        r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
     )
     down_ratio = 2
     empty_ratio = 0.0
     device = "cuda"
+    args.epochs = 30
+    work_dir = "../.tmp" # for HerdNet Trainer
 
     # Data
     datamodule = HerdnetData(
@@ -226,7 +228,7 @@ def run():
     herdnet.model.reshape_classes(num_classes)
     herdnet = herdnet.to(device)
 
-    work_dir = "../.tmp"
+    
 
     optimizer = Adam(
         params=herdnet.parameters(), lr=args.lr0, weight_decay=args.weight_decay
@@ -291,8 +293,9 @@ def run():
 
 
 if __name__ == "__main__":
+    
+    
     run()
 
     # run_ligthning()
 
-    pass
