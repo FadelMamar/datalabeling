@@ -4,7 +4,7 @@ from datalabeling.dataset import (
     convert_obb_to_yolo,
     convert_yolo_to_obb,
     create_yolo_seg_directory,
-    convert_yolo_to_coco
+    convert_yolo_to_coco,
 )
 from datargs import parse
 from pathlib import Path
@@ -78,7 +78,7 @@ if __name__ == "__main__":
                 p_new = p.replace("images", "labels")
                 logger.info(f"Converting {p_new}: yolo->obb")
                 convert_yolo_to_obb(yolo_labels_dir=p_new, output_dir=p_new, skip=True)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
                 p_new = p.replace("images", "labels")
                 logger.info(f"Converting {p_new}: obb->yolo")
                 convert_obb_to_yolo(obb_labels_dir=p_new, output_dir=p_new, skip=True)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             device=args.device,
             copy_images_dir=args.copy_images,
         )
-    
+
     if args.yolo_to_coco:
         from ultralytics.data.dataset import YOLODataset, YOLOConcatDataset
         from datalabeling.train.utils import remove_label_cache
@@ -116,26 +116,29 @@ if __name__ == "__main__":
 
         remove_label_cache(args.data_config_yaml)
 
-        for split in ['val','test','train']:
+        for split in ["val", "test", "train"]:
             datasets = list()
             try:
                 for path in data_config[split]:
-                    images_path = os.path.join(data_config['path'], path)
-                    dataset = YOLODataset(img_path=images_path,
-                                        task='detect',
-                                        data={'names':data_config['names']},
-                                        augment=False,
-                                        imgsz=args.imgsz,
-                                        classes=None)
+                    images_path = os.path.join(data_config["path"], path)
+                    dataset = YOLODataset(
+                        img_path=images_path,
+                        task="detect",
+                        data={"names": data_config["names"]},
+                        augment=False,
+                        imgsz=args.imgsz,
+                        classes=None,
+                    )
                     datasets.append(dataset)
                 datasets = YOLOConcatDataset(datasets)
-                
-                convert_yolo_to_coco(datasets,
-                                    output_dir=args.coco_output_dir,
-                                    data_config=data_config,
-                                    split=split,
-                                    clear_data=True
-                                    )
+
+                convert_yolo_to_coco(
+                    datasets,
+                    output_dir=args.coco_output_dir,
+                    data_config=data_config,
+                    split=split,
+                    clear_data=True,
+                )
             except Exception as e:
                 print(e)
                 continue

@@ -1,0 +1,25 @@
+metric: COCO
+num_classes: 1
+
+TrainDataset:
+  name: COCODataSet
+  image_dir: train
+  anno_path: annotations\annotations_train.json
+  dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
+  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
+  allow_empty: false
+  empty_ratio: 0.05
+
+EvalDataset:
+  name: COCODataSet
+  image_dir: val
+  anno_path: annotations\annotations_val.json
+  dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
+  allow_empty: true
+
+TestDataset:
+  name: COCODataSet
+  image_dir: test
+  anno_path: annotations\annotations_test.json
+  dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
+  allow_empty: true

@@ -14,7 +14,7 @@ from sahi.postprocess.combine import (
     NMMPostprocess,
     NMSPostprocess,
 )
-from datalabeling.dataset.sampling import get_uncertainty, load_prediction_results
+from datalabeling.dataset.sampling import load_prediction_results
 
 from sahi.utils.import_utils import check_requirements
 
@@ -299,7 +299,7 @@ def predict_fiftyone(
         # Show samples with most false positives
         session.view = eval_view.sort_by("eval_fp", reverse=True)
 
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
 
     while 1:
@@ -323,7 +323,7 @@ if __name__ == "__main__":
     # images_paths = pd.read_csv(r"D:\general_dataset\original-data\results\hard_samples_train.txt",header=None).iloc[:,0].to_list()
     use_sahi = True
     predict_fiftyone(
-        model_type=f"yolov8-obb",
+        model_type="yolov8-obb",
         dataset_name=dataset_name,
         model_path=model_path,
         compute_preds=False,

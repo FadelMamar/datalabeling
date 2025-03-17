@@ -1,0 +1,23 @@
+epoch: 12
+
+LearningRate:
+  base_lr: 0.01
+  schedulers:
+  - !CosineDecay
+    min_lr_ratio: 0.00001
+    max_epochs: 50
+    last_plateau_epochs: 0
+    use_warmup: true
+  - !LinearWarmup
+    start_factor: 0.1
+    epochs: 1
+
+OptimizerBuilder:
+  optimizer:
+    momentum: 0.9
+    type: Momentum # AdamW, AdamWD
+  regularizer:
+    factor: 0.0001
+    type: L2
+  clip_grad_by_norm: null
+  clip_grad_by_value: null

@@ -49,11 +49,8 @@ def herdnet_val():
     from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
     from datalabeling.arguments import Arguments
     import lightning as L
-    import os, yaml
-    from pathlib import Path
+    import yaml
     import torch
-    import random
-    import pandas as pd
     from lightning.pytorch.loggers import MLFlowLogger
 
     # lowering matrix multiplication precision

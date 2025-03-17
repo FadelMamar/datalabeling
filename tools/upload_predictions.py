@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-import os
 from datalabeling.annotator import Annotator
 from typing import Sequence
 import fire

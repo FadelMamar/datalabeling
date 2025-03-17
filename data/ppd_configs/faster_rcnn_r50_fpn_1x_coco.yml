@@ -1,0 +1,8 @@
+_BASE_: [
+  './coco_detection.yml',
+  './runtime.yml',
+  './optimizer_1x.yml',
+  './faster_rcnn_r50_fpn.yml',
+  './faster_fpn_reader.yml',
+]
+weights: C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\paddlepaddle_output\faster_rcnn_r50_fpn_1x_coco\model_final

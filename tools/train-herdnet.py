@@ -4,9 +4,8 @@ from animaloc.models import LossWrapper
 from animaloc.train.losses import FocalLoss
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
-from animaloc.train import Trainer, FasterRCNNTrainer
+from animaloc.train import Trainer
 from animaloc.eval import PointsMetrics, HerdNetEvaluator
-from tqdm import tqdm
 
 from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
 from datalabeling.arguments import Arguments
@@ -173,14 +172,12 @@ def run():
     args.lr0 = 1e-4
     args.imgsz = 800
     args.batchsize = 32
-    args.path_weights = (
-        r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
-    )
+    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
     down_ratio = 2
     empty_ratio = 0.0
     device = "cuda"
     args.epochs = 30
-    work_dir = "../.tmp" # for HerdNet Trainer
+    work_dir = "../.tmp"  # for HerdNet Trainer
 
     # Data
     datamodule = HerdnetData(
@@ -227,8 +224,6 @@ def run():
     herdnet.load_state_dict(checkpoint["model_state_dict"], strict=True)
     herdnet.model.reshape_classes(num_classes)
     herdnet = herdnet.to(device)
-
-    
 
     optimizer = Adam(
         params=herdnet.parameters(), lr=args.lr0, weight_decay=args.weight_decay
@@ -293,9 +288,6 @@ def run():
 
 
 if __name__ == "__main__":
-    
-    
     run()
 
     # run_ligthning()
-

@@ -1,7 +1,4 @@
-from ultralytics import YOLO, RTDETR
-from datargs import parse
 from arguments import Arguments
-import os
 
 # import mlflow
 import wandb

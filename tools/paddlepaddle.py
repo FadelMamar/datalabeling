@@ -1,9 +1,19 @@
+"""To train using paddlepaddle, do the following:
+    - Create a virtual environment Python 3.10.16
+    - Follow the steps at this page : https://www.paddlepaddle.org.cn/documentation/docs/en/install/pip/windows-pip_en.html & https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/INSTALL.md
+    - Prepare data : https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/data/PrepareDetDataSet_en.md
+    - Customize yaml files for training: https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/advanced_tutorials/customization/detection_en.md & 
+                https://github.com/PaddlePaddle/PaddleDetection/blob/release/2.8.1/docs/tutorials/config_annotation/ppyolo_r50vd_dcn_1x_coco_annotation_en.md
+    - Download the pretrained weights inside one of the yaml profiles
+
+Returns:
+    _type_: _description_
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import os
-import sys
 from dataclasses import dataclass
 
 # ignore warning log
@@ -14,30 +24,29 @@ import ast
 import mlflow
 
 import paddle
-from ppdet.core.workspace import create, load_config, merge_config
+from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer, Trainer_ARSL
-from ppdet.utils.check import check_gpu, check_npu, check_xpu, check_mlu, check_gcu, check_version, check_config
-from ppdet.utils.cli import ArgsParser, merge_args
-from ppdet.slim import build_slim_model
 
 from ppdet.utils.logger import setup_logger
 logger = setup_logger('train')
 
 @dataclass
 class Flags:
+
+    # main ppd yaml config
     config:str= None
 
     # inference
-    slice_size:int=640
-    overlap_ratio:float=0.25
+    slice_size:int=800
+    overlap_ratio:float=0.2
     combine_method:str='nms'
     match_threshold:float=0.6
     match_metric:str='ios'
     draw_threshold:float=0.5
-    save_results:bool=True
+    save_results:bool=False
     slice_infer:bool=False
 
-    visualize:ast.literal_eval=True
+    visualize:ast.literal_eval=False
     save_threshold:float=0.5
     do_eval:ast.literal_eval=False
     rtn_im_file:bool=False
@@ -50,9 +59,15 @@ class Flags:
 
     # training
     resume:bool=False
+    amp:bool=False
+    print_flops:bool=False
+    print_params:bool=False
+    lr0:float=1e-3
+    epoch:int=30
+
 
     # logging
-    output_dir:str=None
+    output_dir:str="output"
     mlflow_tracking_uri: str = "http://localhost:5000"
     project_name: str = "wildAI-detection"
     run_name:str = "run-ppd"
@@ -62,11 +77,33 @@ def train_ppd(args:Flags):
 
     cfg = load_config(args.config)
 
+    cfg['amp'] = args.amp
+    cfg['save_dir'] = args.output_dir
+    cfg['print_flops'] = args.print_flops
+    cfg['print_params'] = args.print_params
+    cfg['epoch'] = args.epoch
+
+    if cfg.use_gpu:
+        place = paddle.set_device('gpu')
+    elif cfg.use_npu:
+        place = paddle.set_device('npu')
+    elif cfg.use_xpu:
+        place = paddle.set_device('xpu')
+    elif cfg.use_mlu:
+        place = paddle.set_device('mlu')
+    else:
+        place = paddle.set_device('cpu')
+
     trainer = Trainer(cfg, mode='train')
 
     if args.resume:
         trainer.resume_weights(args.resume)
-    trainer.load_weights(args.weights)
+    elif args.weights:
+        trainer.load_weights(args.weights)
+    elif 'pretrain_weights' in cfg and cfg.pretrain_weights:
+        trainer.load_weights(cfg.pretrain_weights)
+    else:
+        print('No weights loaded.')
 
     # training
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
@@ -150,3 +187,12 @@ def inference(images,args:Flags):
             visualize=args.visualize,
             save_threshold=args.save_threshold,
             do_eval=args.do_eval)
+
+
+if __name__ == "__main__":
+    from datargs import parse
+
+    args = parse(Flags)
+
+    train_ppd(args)
+

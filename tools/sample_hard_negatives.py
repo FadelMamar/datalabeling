@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 load_dotenv("../.env")
 
 
-import pandas as pd
 import yaml
 import os
 from dataclasses import dataclass

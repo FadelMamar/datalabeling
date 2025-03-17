@@ -15,7 +15,6 @@ from animaloc.data.transforms import (
 import pandas as pd
 from torch.utils.data import ConcatDataset
 from tqdm import tqdm
-from ..arguments import Arguments
 from animaloc.models import HerdNet
 from animaloc.models import LossWrapper
 from animaloc.train.losses import FocalLoss
