@@ -26,8 +26,9 @@ def check_label_format(loaded_df: pd.DataFrame) -> str:
     num_features = len(loaded_df.columns)
 
     # check bounds
-    assert loaded_df[names[1:]].all().max() <= 1.0, "max value <= 1"
-    assert loaded_df[names[1:]].all().min() >= 0.0, "min value >=0"
+    names = list(loaded_df.columns)
+    assert loaded_df.iloc[:,1:].all().max() <= 1.0, "max value <= 1"
+    assert loaded_df.iloc[:,1:].all().min() >= 0.0, "min value >=0"
 
     if num_features == 5:
         return "yolo"
@@ -345,7 +346,8 @@ def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, d
             shutil.rmtree(img_dir)
             img_dir.mkdir(exist_ok=True,parents=False)
             print('Deleting: ',img_dir)
-            os.remove(annot_save_path)
+            if os.path.exists(annot_save_path):
+                os.remove(annot_save_path)
             print('Deleting: ',annot_save_path)
         except Exception as e:
             print(e)
@@ -375,7 +377,6 @@ def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, d
         }
         coco_dataset["images"].append(image_dict)
         
-                
         # Loop through the annotations and add them to the COCO dataset
         for i in range(data['bboxes'].shape[0]):
             x, y, w, h = data['bboxes'][i].tolist()
@@ -384,7 +385,7 @@ def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, d
             ann_dict = {
                 "id": len(coco_dataset["annotations"]),
                 "image_id": image_id,
-                "category_id": data['cls'][0].long().item(),
+                "category_id": data['cls'][i].long().item(),
                 "bbox": [x_min, y_min, x_max - x_min, y_max - y_min],
                 "segmentation":[[x_min,y_min, x_max,y_min, x_max,y_max, x_min,y_max]],
                 "area": (x_max - x_min) * (y_max - y_min),
@@ -394,5 +395,5 @@ def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, d
     
     # Save the COCO dataset to a JSON file
     with open(annot_save_path, 'w') as f:
-        json.dump(coco_dataset, f)
+        json.dump(coco_dataset, f, indent=2)
     
