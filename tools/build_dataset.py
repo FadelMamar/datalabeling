@@ -109,6 +109,7 @@ if __name__ == "__main__":
     
     if args.yolo_to_coco:
         from ultralytics.data.dataset import YOLODataset, YOLOConcatDataset
+        from datalabeling.train.utils import remove_label_cache
 
         with open(args.data_config_yaml, "r") as file:
             data_config = yaml.load(file, Loader=yaml.FullLoader)
