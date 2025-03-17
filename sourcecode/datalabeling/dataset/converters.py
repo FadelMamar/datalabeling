@@ -3,10 +3,11 @@ import pandas as pd
 from tqdm import tqdm
 import cv2
 import numpy as np
-import shutil, os, yaml
+import shutil, os, yaml, json
 from ultralytics import SAM
 from ultralytics.data.dataset import YOLODataset, YOLOConcatDataset
 import torch
+
 
 
 def check_label_format(loaded_df: pd.DataFrame) -> str:
@@ -314,3 +315,85 @@ def create_yolo_seg_directory(
                 num_classes=data_config["nc"],
                 verbose=False,
             )
+
+
+def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, data_config:dict,split='val',clear_data:bool=False):
+    
+    # Define the categories for the COCO dataset
+    categories = [{"id":k, "name":v} for k,v in data_config['names'].items()]
+    
+    # Define the COCO dataset dictionary
+    coco_dataset = {
+        "info": {},
+        "licenses": [],
+        "categories": categories,
+        "images": [],
+        "annotations": []
+    }
+    
+    
+    # mkdir
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True,parents=True)
+    annot_dir = output_dir/'annotations'
+    annot_dir.mkdir(exist_ok=True,parents=False)
+    img_dir = output_dir/f'{split}'
+    img_dir.mkdir(exist_ok=True,parents=False)
+    annot_save_path = annot_dir/f"annotations_{split}.json"
+    
+    if clear_data:
+        try:
+            shutil.rmtree(img_dir)
+            img_dir.mkdir(exist_ok=True,parents=False)
+            print('Deleting: ',img_dir)
+            os.remove(annot_save_path)
+            print('Deleting: ',annot_save_path)
+        except Exception as e:
+            print(e)
+        
+    
+    
+    # Loop through the images in the input directory
+    for i,data in tqdm(enumerate(dataset),desc=f"converting yolo {split} to coco"):
+        
+        # Load the image and get its dimensions
+        image_path = data['im_file']
+        height, width = data['ori_shape']
+        
+        image_file = os.path.relpath(image_path,data_config['path']) 
+        image_file = "#".join([p.name for p in Path(image_file).parents])
+        image_file = image_file + os.path.basename(image_path)
+        
+        shutil.copyfile(image_path, img_dir/image_file)
+        
+        # Add the image to the COCO dataset
+        image_id = i
+        image_dict = {
+            "id": image_id,
+            "width": width,
+            "height": height,
+            "file_name": image_file
+        }
+        coco_dataset["images"].append(image_dict)
+        
+                
+        # Loop through the annotations and add them to the COCO dataset
+        for i in range(data['bboxes'].shape[0]):
+            x, y, w, h = data['bboxes'][i].tolist()
+            x_min, y_min = int((x - w / 2) * width), int((y - h / 2) * height)
+            x_max, y_max = int((x + w / 2) * width), int((y + h / 2) * height)
+            ann_dict = {
+                "id": len(coco_dataset["annotations"]),
+                "image_id": image_id,
+                "category_id": data['cls'][0].long().item(),
+                "bbox": [x_min, y_min, x_max - x_min, y_max - y_min],
+                "segmentation":[[x_min,y_min, x_max,y_min, x_max,y_max, x_min,y_max]],
+                "area": (x_max - x_min) * (y_max - y_min),
+                "iscrowd": 0
+            }
+            coco_dataset["annotations"].append(ann_dict)
+    
+    # Save the COCO dataset to a JSON file
+    with open(annot_save_path, 'w') as f:
+        json.dump(coco_dataset, f)
+    
