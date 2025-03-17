@@ -216,7 +216,6 @@ def convert_segment_masks_to_yolo_seg(
 
 def create_yolo_seg_directory(
     data_config_yaml: str,
-    imgsz: int,
     model_sam: SAM,
     device: str = "cpu",
     copy_images_dir: bool = True,
@@ -270,7 +269,7 @@ def create_yolo_seg_directory(
                                   task='detect',
                                   data={'names':data_config['names']},
                                   augment=False,
-                                  imgsz=imgsz,
+                                  imgsz=640, # used for dataloading only
                                   classes=None)
             datasets.append(dataset)
         dataset = YOLOConcatDataset(datasets)
@@ -286,6 +285,7 @@ def create_yolo_seg_directory(
                 [data["bboxes"][:, :2], data["bboxes"][:, :2] + data["bboxes"][:, 2:]],
                 1,
             )
+            imgsz = data['ori_shape'][0]
             bboxes = (bboxes * imgsz).long().cpu().tolist()
             labels = data["cls"].ravel().long().cpu()+1 # account for background class
             (results,) = model_sam(
