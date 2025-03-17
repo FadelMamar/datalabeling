@@ -22,6 +22,7 @@ warnings.filterwarnings('ignore')
 import glob
 import ast
 import mlflow
+from typing import Sequence
 
 import paddle
 from ppdet.core.workspace import load_config
@@ -71,6 +72,8 @@ class Flags:
     mlflow_tracking_uri: str = "http://localhost:5000"
     project_name: str = "wildAI-detection"
     run_name:str = "run-ppd"
+    use_wandb:bool=False
+    tags:Sequence[str]=None
 
 
 def train_ppd(args:Flags):
@@ -82,6 +85,14 @@ def train_ppd(args:Flags):
     cfg['print_flops'] = args.print_flops
     cfg['print_params'] = args.print_params
     cfg['epoch'] = args.epoch
+    cfg['use_wandb'] = args.use_wandb
+    cfg['LearningRate']['base_lr'] = args.lr0
+    cfg['wandb'] = {    'project':args.project_name, 
+                        'name':args.run_name,
+                        'tags':args.tags
+                        'entity':"ipeo-epfl"
+                }
+                    
 
     if cfg.use_gpu:
         place = paddle.set_device('gpu')
@@ -106,11 +117,11 @@ def train_ppd(args:Flags):
         print('No weights loaded.')
 
     # training
-    mlflow.set_tracking_uri(args.mlflow_tracking_uri)
-    mlflow.set_experiment(args.project_name)
-    mlflow.paddle.autolog(log_every_n_epoch = 5)
-    with mlflow.start_run(run_name=args.run_name) as run:
-        trainer.train(args.do_eval)
+    # mlflow.set_tracking_uri(args.mlflow_tracking_uri)
+    # mlflow.set_experiment(args.project_name)
+    # mlflow.paddle.autolog(log_every_n_epoch = 5)
+    # with mlflow.start_run(run_name=args.run_name) as run:
+    trainer.train(args.do_eval)
 
 
 def get_test_images(infer_dir:str, infer_img:str, infer_list=None):

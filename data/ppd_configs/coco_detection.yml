@@ -7,7 +7,7 @@ TrainDataset:
   anno_path: annotations\annotations_train.json
   dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
   data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
-  allow_empty: false
+  allow_empty: true
   empty_ratio: 0.05
 
 EvalDataset:
@@ -16,6 +16,7 @@ EvalDataset:
   anno_path: annotations\annotations_val.json
   dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
   allow_empty: true
+  empty_ratio: 1.
 
 TestDataset:
   name: COCODataSet
@@ -23,3 +24,4 @@ TestDataset:
   anno_path: annotations\annotations_test.json
   dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
   allow_empty: true
+  empty_ratio: 1.
