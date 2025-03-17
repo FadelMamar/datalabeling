@@ -89,7 +89,7 @@ def train_ppd(args:Flags):
     cfg['LearningRate']['base_lr'] = args.lr0
     cfg['wandb'] = {    'project':args.project_name, 
                         'name':args.run_name,
-                        'tags':args.tags
+                        'tags':args.tags,
                         'entity':"ipeo-epfl"
                 }
                     
