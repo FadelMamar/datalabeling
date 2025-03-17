@@ -261,24 +261,23 @@ def create_yolo_seg_directory(
                 print(f"Deleting existing segmentation labels : {seg_Labels_dir}")
             seg_Labels_dir.mkdir(exist_ok=True, parents=True)
             if copy_images_dir:
-                if (seg_dir / "images").exists():
-                    shutil.rmtree(seg_dir / "images")
-                    print("Deleting directory:", seg_dir / "images")
+                if (seg_dir/'images').exists():
+                    shutil.rmtree(seg_dir/'images')
+                    print('Deleting directory:',seg_dir/'images')
                 shutil.copytree(images_path, seg_dir/'images')
-                print(f"Copying {images_path} into {seg_dir}")
-            dataset = YOLODataset(
-                img_path=images_path,
-                task="detect",
-                data={"names": data_config["names"]},
-                augment=False,
-                imgsz=imgsz,
-                classes=None,
-            )
+                print(f'Copying {images_path} into {seg_dir}')
+            dataset = YOLODataset(img_path=images_path,
+                                  task='detect',
+                                  data={'names':data_config['names']},
+                                  augment=False,
+                                  imgsz=imgsz,
+                                  classes=None)
             datasets.append(dataset)
         dataset = YOLOConcatDataset(datasets)
 
         #  Saving segmentations
-        for data in tqdm(dataset, desc=f"Creating yolo-seg for splut={split}"):
+        for data in tqdm(dataset,desc=f"Creating yolo-seg for split={split}"):
+            
             # skip negative samples
             if data["cls"].nelement() == 0:
                 continue
