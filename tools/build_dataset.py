@@ -101,7 +101,6 @@ if __name__ == "__main__":
         model_sam = SAM(args.sam_model_path)
         create_yolo_seg_directory(
             data_config_yaml=args.data_config_yaml,
-            imgsz=args.imgsz,
             model_sam=model_sam,
             device=args.device,
             copy_images_dir=args.copy_images,
