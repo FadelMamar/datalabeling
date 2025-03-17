@@ -25,6 +25,10 @@ def check_label_format(loaded_df: pd.DataFrame) -> str:
 
     num_features = len(loaded_df.columns)
 
+    # check bounds
+    assert loaded_df[names[1:]].all().max() <= 1.0, "max value <= 1"
+    assert loaded_df[names[1:]].all().min() >= 0.0, "min value >=0"
+
     if num_features == 5:
         return "yolo"
     elif num_features == 9:
@@ -66,9 +70,7 @@ def convert_yolo_to_obb(
             else:
                 raise ValueError(f"{label_path} does not follow yolo format.")
 
-        # check bounds
-        assert df[names[1:]].all().max() <= 1.0, "max value <= 1"
-        assert df[names[1:]].all().min() >= 0.0, "min value >=0"
+        
 
         for col in names[1:]:
             df[col] = df[col].astype(float)
@@ -130,10 +132,7 @@ def convert_obb_to_yolo(
             else:
                 raise ValueError(f"{label_path} does not follow yolo-obb format.")
 
-        # check bounds
-        assert df[names[1:]].all().max() <= 1.0, "max value <= 1"
-        assert df[names[1:]].all().min() >= 0.0, "min value >=0"
-
+        
         # center
         df["x"] = (df["x1"] + df["x2"]) / 2.0
         df["y"] = (df["y1"] + df["y4"]) / 2.0
