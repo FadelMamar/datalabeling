@@ -2,7 +2,7 @@ def ultralytics_val():
     from ultralytics import YOLO
 
     # from pathlib import Path
-    from datalabeling.train import remove_label_cache
+    from datalabeling.train.utils import remove_label_cache
 
     # Getting results for yolov12s : Detection and Identification
     paths = [

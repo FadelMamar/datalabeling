@@ -23,31 +23,7 @@ from animaloc.eval.lmds import HerdNetLMDS
 from torch.nn import CrossEntropyLoss
 from animaloc.eval import PointsMetrics, HerdNetEvaluator
 from PIL import Image
-
-
-def check_label_format(loaded_df: pd.DataFrame) -> str:
-    """checks label format
-
-    Args:
-        loaded_df (pd.DataFrame): target values
-
-    Raises:
-        NotImplementedError: when the format is not yolo or yolo-obb
-
-    Returns:
-        str: yolo or yolo-obb
-    """
-
-    num_features = len(loaded_df.columns)
-
-    if num_features == 5:
-        return "yolo"
-    elif num_features == 9:
-        return "yolo-obb"
-    else:
-        raise NotImplementedError(
-            f"The number of features ({num_features}) in the label file is wrong. Check yolo or yolo-obb format from ultralytics."
-        )
+from ..dataset.converters import check_label_format
 
 
 def get_groundtruth(
