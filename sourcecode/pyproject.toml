@@ -27,7 +27,7 @@ dependencies = [
     "torch>=2.6.0",
     "torchaudio>=2.6.0",
     "torchvision>=0.21.0",
-    "wandb>=0.19.8",
+    "wandb==0.18.7",
 ]
 
 [build-system]
