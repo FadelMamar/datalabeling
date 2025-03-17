@@ -83,7 +83,7 @@ call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0001 
 @REM call uv run  tools\build_dataset.py --obb-to-yolo --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_labeler.yaml" --skip
 
 
-call deactivate
+@REM call deactivate
 
 :: uncomment to disable immediate shutdown
 @REM shutdown -s

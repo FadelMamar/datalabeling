@@ -1,6 +1,10 @@
-call .\activate_label-backend_env.bat
 
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+
+call deactivate
+
+call helper-scripts\activate_label-backend_env.bat
+
 
 :: set to 'offline' when having issues with internet, otherwise use 'online'
 @REM call wandb offline
@@ -136,20 +140,20 @@ call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 @REM     --cl-freeze 0 0 10 18  ^
 @REM     --cl-lr0s 0.0001 0.0001 0.00005 0.00005 ^
 
-call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0005 --optimizer "auto" --optimizer-momentum 0.99 --lr0 0.0003 --lrf 0.01 --patience 30 --is-detector ^
-    --scale 0.0 --mosaic 0.0 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 0 ^
-    --height 800 --width 800^
-    --path-weights "base_models_weights\yolov9c-seg.pt" --task "segment" ^
-    --run-name "yolov9c-seg" --project-name "wildAI-detection"^
-    --tag "CL" ^
-    --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --cl-batch-size 16^
-    --cl-data-config-yaml "data\dataset_identification-detection.yaml" --use-continual-learning ^
-    --cl-ratios 0.2 ^
-    --cl-epochs 50 ^
-    --cl-freeze 0 ^
-    --cl-lr0s 0.0003
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0005 --optimizer "auto" --optimizer-momentum 0.99 --lr0 0.0003 --lrf 0.01 --patience 30 --is-detector ^
+@REM     --scale 0.0 --mosaic 0.0 --copy-paste 0.0 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 0 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "base_models_weights\yolov9c-seg.pt" --task "segment" ^
+@REM     --run-name "yolov9c-seg" --project-name "wildAI-detection"^
+@REM     --tag "CL" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --cl-batch-size 16^
+@REM     --cl-data-config-yaml "data\dataset_identification-detection.yaml" --use-continual-learning ^
+@REM     --cl-ratios 0.2 ^
+@REM     --cl-epochs 50 ^
+@REM     --cl-freeze 0 ^
+@REM     --cl-lr0s 0.0003
 
-@REM call uv run tools\train-herdnet.py
+call uv run tools\train-herdnet.py
 
 @REM @REM convert datasets to yolo-obb
 @REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_identification-detection.yaml" --skip
