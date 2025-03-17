@@ -58,7 +58,7 @@ def get_groundtruth(
             img.close()
         else:  # empty image has no corresponding txt file
             count_empty += 1
-            images_empty.append(os.path.relpath(image_path, yolo_images_dir))
+            images_empty.append(str(image_path))
             continue
             # empty image -> creating pseudo labels
             # df = {'id': [-1], 'x': [0.], 'y': [0.], 'w': [0.], 'h': [0.]}
@@ -79,7 +79,7 @@ def get_groundtruth(
             df["w"] = (df["x2"] - df["x1"]) * img_width
             df["h"] = (df["y4"] - df["y1"]) * img_height
 
-        df["images"] = os.path.relpath(image_path, yolo_images_dir)
+        df["images"] = str(image_path)
         df.rename(columns={"id": "labels"}, inplace=True)
         dfs.append(df)
 
@@ -129,6 +129,7 @@ def load_dataset(
                 if empty_frac is not None
                 else None
             )
+            print('num_empty_sampled',num_empty_sampled)
         if (num_empty_sampled is None) and (empty_frac is None):
             sampled_images_empty = []
         else:
@@ -144,10 +145,10 @@ def load_dataset(
         selected_images = sampled_images_empty + df["images"].to_list()
         dataset = FolderDataset(  # CSVDataset
             csv_file=df,
-            root_dir=None,
+            root_dir="",
             albu_transforms=transforms[split][0],
             end_transforms=transforms[split][1],
-            images_paths=selected_images,
+            images_paths=list(set(selected_images)),
         )
         datasets.append(dataset)
         df_gts.append(df)
@@ -491,7 +492,6 @@ class HerdnetTrainer(L.LightningModule):
             self.num_classes = data_config["nc"] + 1
         self.class_mapping = {str(k + 1): v for k, v in data_config["names"].items()}
 
-        ce_weight = torch.Tensor(ce_weight) if (ce_weight is not None) else None
         losses = [
             {
                 "loss": FocalLoss(reduction="mean"),

@@ -17,6 +17,8 @@ from lightning.pytorch.callbacks import (
     EarlyStopping,
 )
 
+from pathlib import Path
+
 
 def run_ligthning():
     import logging
@@ -38,7 +40,7 @@ def run_ligthning():
     empty_ratio = 0.0
     args.patience = 10
     cl_lr = [
-        5e-5,
+        3e-4,
     ]
     empty_ratios = [
         0,
@@ -54,8 +56,10 @@ def run_ligthning():
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
     # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
+    # checkpoint_num_classes = 7  # num classes includes background
     checkpoint_path = None
-    checkpoint_num_classes = 7  # num classes includes background
+
+    loaded_weights_num_classes=4 # for ennedi weights
 
     # get cross entropy loss weights
     # Data
@@ -72,6 +76,9 @@ def run_ligthning():
     print(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
 
+    work_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp"  # for HerdNet Trainer
+    Path(work_dir).mkdir(exist_ok=True,parents=False)
+
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
             checkpoint_path=checkpoint_path,
@@ -83,7 +90,7 @@ def run_ligthning():
             ce_weight=ce_weight,
             map_location="cpu",
             strict=True,
-            work_dir="../.tmp",
+            work_dir=work_dir,
         )
 
         print(f"\nLoading checkpoint at {checkpoint_path}\n")
@@ -94,9 +101,9 @@ def run_ligthning():
             data_config_yaml=args.data_config_yaml,
             lr=args.lr0,
             weight_decay=args.weight_decay,
-            loaded_weights_num_classes=4,
+            loaded_weights_num_classes=loaded_weights_num_classes,
             ce_weight=ce_weight,
-            work_dir="../.tmp",
+            work_dir=work_dir,
             load_state_dict_strict=True,
         )
 
@@ -152,6 +159,7 @@ def run_ligthning():
             num_sanity_val_steps=10,
             logger=mlf_logger,
             max_epochs=args.epochs,
+            check_val_every_n_epoch=5,
             accumulate_grad_batches=max(int(64 / args.batchsize), 1),
             precision=precision,
             callbacks=callbacks,
@@ -177,7 +185,8 @@ def run():
     empty_ratio = 0.0
     device = "cuda"
     args.epochs = 30
-    work_dir = "../.tmp"  # for HerdNet Trainer
+    work_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp"  # for HerdNet Trainer
+    Path(work_dir).mkdir(exist_ok=True,parents=False)
 
     # Data
     datamodule = HerdnetData(
@@ -288,6 +297,7 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    
+    # run()
 
-    # run_ligthning()
+    run_ligthning()
