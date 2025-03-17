@@ -115,22 +115,26 @@ if __name__ == "__main__":
 
         remove_label_cache(args.data_config_yaml)
 
-        for split in ['val','test']:
+        for split in ['val','test','train']:
             datasets = list()
-            for path in data_config[split]:
-                images_path = os.path.join(data_config['path'], path)
-                dataset = YOLODataset(img_path=images_path,
-                                    task='detect',
-                                    data={'names':data_config['names']},
-                                    augment=False,
-                                    imgsz=args.imgsz,
-                                    classes=None)
-                datasets.append(dataset)
-            datasets = YOLOConcatDataset(datasets)
-            
-            convert_yolo_to_coco(datasets,
-                                output_dir=args.coco_output_dir,
-                                data_config=data_config,
-                                split=split,
-                                clear_data=True
-                                )
+            try:
+                for path in data_config[split]:
+                    images_path = os.path.join(data_config['path'], path)
+                    dataset = YOLODataset(img_path=images_path,
+                                        task='detect',
+                                        data={'names':data_config['names']},
+                                        augment=False,
+                                        imgsz=args.imgsz,
+                                        classes=None)
+                    datasets.append(dataset)
+                datasets = YOLOConcatDataset(datasets)
+                
+                convert_yolo_to_coco(datasets,
+                                    output_dir=args.coco_output_dir,
+                                    data_config=data_config,
+                                    split=split,
+                                    clear_data=True
+                                    )
+            except Exception as e:
+                print(e)
+                continue
