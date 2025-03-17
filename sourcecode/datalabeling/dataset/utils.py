@@ -457,10 +457,13 @@ def sample_data(
     elif labels_to_keep is not None:
         df_non_empty = df[df.labels.isin(labels_to_keep)].copy()
     else:
-        df = df[~df.labels.isin(labels_to_discard)].copy()
+        df_non_empty = df[~df.labels.isin(labels_to_discard)].copy()
         print(
             "sample_data function: No label is discarded, they are all kept", end="\n"
         )
+
+    if len(df_non_empty)<1:
+        print(f"No labels found in {img_dir}. Pease consider checking arguments labels_to_discard or labels_to_keep.")
 
     # get number of images to sample
     non_empty_num = df_non_empty["images"].unique().shape[0]
