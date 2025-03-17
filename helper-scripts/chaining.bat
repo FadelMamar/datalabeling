@@ -6,4 +6,4 @@ call helper-scripts\train_identificator.bat
 
 call uv run tools\train-herdnet.py
 
-shutdown -s
+@REM shutdown -s
