@@ -5,6 +5,7 @@ from datalabeling.dataset import (
     convert_yolo_to_obb,
     create_yolo_seg_directory,
     convert_yolo_to_coco,
+    convert_obb_to_dota
 )
 from datargs import parse
 from pathlib import Path
@@ -16,10 +17,14 @@ import traceback
 from dotenv import load_dotenv
 
 
-def load_datasets(data_config_yaml: str) -> list[str]:
+def load_yaml(data_config_yaml: str)->dict:
     with open(data_config_yaml, "r") as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
+    
+    return data_config
 
+def load_datasets(data_config_yaml: str) -> list[str]:
+    data_config = load_yaml(data_config_yaml)
     paths = list()
     root = data_config["path"]
     for split in ["train", "val", "test"]:
@@ -93,7 +98,27 @@ if __name__ == "__main__":
             except Exception:
                 logger.warning(f"Failed for {p_new}")
                 traceback.print_exc()
-
+    
+    if args.obb_to_dota:
+        
+        data_config = load_yaml(args.data_config_yaml)
+        
+        for split in ['train','val','test']:
+            for img_dir in data_config[split]:
+                try:
+                    obb_img_dir = Path(data_config['path'], img_dir) 
+                    labels_output_dir = Path(obb_img_dir).parent/'dota_labels'
+                    convert_obb_to_dota(obb_img_dir=obb_img_dir,
+                                        output_dir=labels_output_dir,
+                                        label_map=data_config['names'],
+                                        skip=True,
+                                        clear_old_labels=args.clear_dota_labels
+                                        )
+                except:
+                    logger.warning(f"obb->dota failed for {obb_img_dir}")
+                    traceback.print_exc()
+    
+    
     # create yolo-seg labels
     if args.create_yolo_seg_dir:
         from ultralytics import SAM
