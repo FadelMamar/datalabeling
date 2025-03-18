@@ -165,11 +165,13 @@ class Dataprepconfigs:
     # convert dataset formats
     yolo_to_obb: bool = False
     obb_to_yolo: bool = False
+    obb_to_dota: bool = False
     skip: bool = (
         False  # will skip yolo wrongly formatted target files else, interrupts process
     )
     yolo_to_coco: bool = False  # converts yolo dataset to coco dataset
     coco_output_dir: str = "./coco-dataset" # directory path
+    clear_dota_labels: bool = False
 
     # cli
     build_yolo_dataset: bool = False

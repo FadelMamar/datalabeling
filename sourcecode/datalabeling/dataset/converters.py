@@ -10,6 +10,8 @@ import json
 from ultralytics import SAM
 from ultralytics.data.dataset import YOLODataset, YOLOConcatDataset
 import torch
+from PIL import Image
+
 
 
 
@@ -60,16 +62,18 @@ def convert_yolo_to_obb(
         raise FileNotFoundError("Directory does not exist.")
 
     # Iterate through labels
+    skip_count = 0
+    count = 0
     for label_path in tqdm(Path(yolo_labels_dir).glob("*.txt"), desc="yolo->obb"):
         df = pd.read_csv(label_path, sep=" ", header=None)
 
         # check format is yolo
         if check_label_format(loaded_df=df) == "yolo":
             df.columns = names
-            pass
+            count += 1
         else:
             if skip:
-                # print(label_path, " does not follow yolo format. Skipped", end="\n")
+                skip_count += 1
                 continue
             else:
                 raise ValueError(f"{label_path} does not follow yolo format.")
@@ -104,6 +108,9 @@ def convert_yolo_to_obb(
             Path(output_dir) / label_path.name, sep=" ", index=False, header=False
         )
 
+    print(f'Skipping {skip_count} files.\nConverting {count} files.')
+    return None
+
 
 def convert_obb_to_yolo(
     obb_labels_dir: str, output_dir: str, skip: bool = True
@@ -122,16 +129,18 @@ def convert_obb_to_yolo(
         raise FileNotFoundError("Directory does not exist.")
 
     # Iterate through labels
+    skip_count = 0
+    count = 0
     for label_path in tqdm(Path(obb_labels_dir).glob("*.txt"), desc="obb->yolo"):
         df = pd.read_csv(label_path, sep=" ", header=None)
 
         # check format
         if check_label_format(loaded_df=df) == "yolo-obb":
             df.columns = names
-            pass
+            count += 1
         else:
             if skip:
-                # print(label_path, " does not follow yolo-obb format. Skipped", end="\n")
+                skip_count += 1
                 continue
             else:
                 raise ValueError(f"{label_path} does not follow yolo-obb format.")
@@ -156,7 +165,75 @@ def convert_obb_to_yolo(
         df[cols].to_csv(
             Path(output_dir) / label_path.name, sep=" ", index=False, header=False
         )
+    
+    print(f'Skipping {skip_count} files.\nConverting {count} files.')
+    return None
 
+
+def convert_obb_to_dota(obb_img_dir: str, output_dir: str, label_map:dict, skip: bool = True, clear_old_labels:bool=True):
+    
+    # https://github.com/open-mmlab/mmrotate/blob/main/docs/en/tutorials/customize_dataset.md
+    
+    names = ["id", "x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4"]
+    cols = ["x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4", "label_name","difficulty"]
+    
+    if not Path(obb_img_dir).exists():
+        raise FileNotFoundError("Directory does not exist.")
+    
+    if Path(output_dir).exists() and clear_old_labels:
+        shutil.rmtree(output_dir)
+        print('Deleting existing labels.')
+    
+    # create output dir
+    assert str(output_dir) != str(obb_img_dir).replace('images','labels'), "Provide a directory different from yolo-obb labels."
+    Path(output_dir).mkdir(exist_ok=True,parents=False)
+    
+
+    # Iterate through labels
+    skip_count = 0
+    count = 0
+    for img_path in tqdm(Path(obb_img_dir).glob("*"), desc="obb->dota"):
+        
+        # Load labels and check format
+        label_path = Path(str(img_path).replace("images","labels")).with_suffix('.txt')
+        if not label_path.exists():
+            continue
+        df = pd.read_csv(label_path, sep=" ", header=None)
+        
+        # check format
+        if check_label_format(loaded_df=df) == "yolo-obb":
+            df.columns = names
+            count += 1
+        elif skip:
+            skip_count += 1
+            continue
+        else:
+            raise ValueError(f"{label_path} must follow yolo-obb format.")
+        
+        # load image dimension
+        img = Image.open(img_path)
+        img_width, img_height = img.size
+        img.close()     
+        
+        # scale annotations
+        df.loc[:,names[1::2]] = df.loc[:,names[1::2]]*img_width
+        df.loc[:,names[2::2]] = df.loc[:,names[2::2]]*img_height
+        
+        # add label names and difficulty
+        df.sort_values(by='id',ascending=True,inplace=True)
+        df['label_name'] = df['id'].map(label_map)
+        df['difficulty'] = 0 # 1:difficult, 0:no_difficult
+    
+        # changing data types
+        df = df.astype({k:'int32' for k in names})
+
+        # save file
+        df[cols].to_csv(
+            Path(output_dir) / label_path.name, sep=" ", index=False, header=False)
+        
+    print(f'Skipping {skip_count} files.\nConverting {count} files.')
+    return None
+    
 
 def convert_segment_masks_to_yolo_seg(
     masks_sam2: np.ndarray, output_path: str, num_classes: int, verbose: bool = False
@@ -399,4 +476,4 @@ def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, d
     # Save the COCO dataset to a JSON file
     with open(annot_save_path, 'w') as f:
         json.dump(coco_dataset, f, indent=2)
-    
+
