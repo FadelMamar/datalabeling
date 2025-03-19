@@ -1,9 +1,12 @@
 # yapf:disable
+# loggers: https://mmcv.readthedocs.io/en/master/_modules/mmcv/runner/hooks/logger/wandb.html
 log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
-        # dict(type='TensorboardLoggerHook')
+        # dict(type='TensorboardLoggerHook'), # Uncomment this line to enable Tensorboard
+        dict(type='MlflowLoggerHook'), # Uncomment this line to enable Mlflow
+        # dict(type='WandbLoggerHook'), # Uncomment this line to enable wandb
     ])
 # yapf:enable
 

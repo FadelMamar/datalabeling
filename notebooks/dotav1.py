@@ -1,4 +1,4 @@
-# dataset settings
+# dataset settings https://mmrotate.readthedocs.io/en/latest/tutorials/customize_dataset.html
 dataset_type = 'DOTADataset'
 data_root = 'data/split_1024_dota1_0/'
 classes = ('sp1', 'sp2', 'sp3', 'sp4', 'sp5', 'sp6')
@@ -7,7 +7,7 @@ img_norm_cfg = dict(
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='RResize', img_scale=(1024, 1024)),
+    dict(type='RResize', img_scale=(800, 800)),
     dict(type='RRandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
@@ -29,8 +29,8 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=2,
+    samples_per_gpu=2, # Batch size of a single GPU
+    workers_per_gpu=2, # Worker to pre-fetch data for each single GPU
     train=dict(
         type=dataset_type,
         classes=classes,

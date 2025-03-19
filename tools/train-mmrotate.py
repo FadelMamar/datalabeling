@@ -8,7 +8,7 @@ import mmcv
 from mmcv.runner import load_checkpoint
 from mmdet.apis import inference_detector, show_result_pyplot
 from mmrotate.models import build_detector
-
+import yaml
 import glob
 import os
 import os.path as osp
@@ -33,19 +33,79 @@ import torch
 from mmcv.ops import nms_rotated
 from mmdet.datasets.custom import CustomDataset
 from mmdet.apis import set_random_seed
-
 from mmrotate.core import eval_rbbox_map, obb2poly_np, poly2obb_np
 import os.path as osp
-
+from typing import Sequence
 from mmdet.datasets import build_dataset
 from mmdet.models import build_detector
 from mmdet.apis import train_detector
+from datargs import parse
+from dataclasses import dataclass
+
+def load_yaml(data_config_yaml: str)->dict:
+    with open(data_config_yaml, "r") as file:
+        data_config = yaml.load(file, Loader=yaml.FullLoader)
+    
+    return data_config
 
 
-EMPTY_RATIO=0.1
+@dataclass
+class Flags:
+
+    # main config
+    config:str= None # e.g. oriented_rcnn_r50_fpn_1x_dota_le90.py
+
+    # data_config file
+    data_config:str=None
+
+    # inference
+    slice_size:int=800
+    overlap_ratio:float=0.2
+    combine_method:str='nms'
+    match_threshold:float=0.6
+    match_metric:str='ios'
+    draw_threshold:float=0.5
+    save_results:bool=False
+    slice_infer:bool=False
+
+    save_threshold:float=0.5
+    rtn_im_file:bool=False
+
+    weights:str=None
+
+    infer_dir:str=None
+    infer_img:str=None
+    infer_list:str=None
+
+    # training
+    optimizer:str='Adam' # SGD, Adam
+    batch_size:int=16
+    resume:bool=False
+    lr0:float=1e-3
+    epoch:int=30
+    empty_ratio:float=0.0
+    device:str='cuda' if torch.cuda.is_available() else 'cpu'
+    seed:int=41
+    num_workers:int=4
+
+    # evaluation
+    eval_interval:int=3
+    checkpoint_interval:int=3
+
+    # logging
+    output_dir:str="runs-mmrotate"
+    mlflow_tracking_uri: str = "http://localhost:5000"
+    project_name: str = "wildAI-detection"
+    run_name:str = "run"
+    use_wandb:bool=False
+    tags:Sequence[str]=None
+
+# set the empty ratio to 0.0
+os.environ["EMPTY_RATIO"]=str(0.0)
+
 @ROTATED_DATASETS.register_module()
-class TinyDataset(DOTADataset):
-    """SAR ship dataset for detection."""
+class WildAIDataset(DOTADataset):
+    """Dataset for detection."""
 
     def __init__(self,
                  ann_file,
@@ -55,9 +115,9 @@ class TinyDataset(DOTADataset):
                  **kwargs):
         self.version = version
         self.difficulty = difficulty
-        self.empty_ratio = max(EMPTY_RATIO,0.)
+        self.empty_ratio = max(float(os.environ["EMPTY_RATIO"]), 0.)
 
-        super(TinyDataset, self).__init__(ann_file, pipeline, **kwargs)
+        super(WildAIDataset, self).__init__(ann_file, pipeline, **kwargs)
     
     def load_annotations(self, ann_folder):
         """
@@ -79,6 +139,8 @@ class TinyDataset(DOTADataset):
 
         selected_images_paths = negative_images + positive_images
         ann_files = [None]*len(negative_images)   +  ann_files
+
+        # print(len(selected_images_paths))
 
         data_infos = []
         if not ann_files:  # test phase
@@ -155,104 +217,106 @@ class TinyDataset(DOTADataset):
 
         self.img_ids = [*map(lambda x: x['filename'][:-4], data_infos)]
         return data_infos
+    
+if __name__ == "__main__":
+    from datargs import parse
+    import mlflow
 
-# Choose to use a config and initialize the detector
-config = r'D:\datalabeling\notebooks\oriented_rcnn_r50_fpn_1x_dota_le90.py'
-# Setup a checkpoint file to load
-checkpoint = r'D:\datalabeling\notebooks\oriented_rcnn_r50_fpn_1x_dota_le90-6d2b2ce0.pth'
+    args = parse(Flags)
 
-# Set the device to be used for evaluation
-# device='cpu'
+    mlflow.set_tracking_uri(args.mlflow_tracking_uri)
+    mlflow.set_experiment(args.project_name)
 
-# Load the config
-config = mmcv.Config.fromfile(config)
+    os.environ["EMPTY_RATIO"] = str(args.empty_ratio)
 
-# Set pretrained to be None since we do not need pretrained model here
-# config.model.pretrained = None
+    data_config = load_yaml(args.data_config)
+    root_dir = data_config["path"]
+    num_classes = data_config["nc"]
+    classes = [data_config["names"][i] for i in range(num_classes)] # e.g. ['sp1', 'sp2', 'sp3', 'sp4', 'sp5', 'sp6']
+    
+    # Load the config
+    cfg = mmcv.Config.fromfile(args.config)
 
-# # Initialize the detector
-# model = build_detector(config.model)
+    dataset_type = 'WildAIDataset'
+    # Modify dataset type and path
+    cfg.dataset_type = dataset_type
+    cfg.data_root = root_dir
 
-# # Load checkpoint
-# checkpoint = load_checkpoint(model, checkpoint, map_location=device)
+    cfg.data.samples_per_gpu = args.batch_size
+    cfg.data.workers_per_gpu = args.num_workers
 
-# # Set the classes of models for inference
-# model.CLASSES = checkpoint['meta']['CLASSES']
+    cfg.data.test.type = dataset_type
+    cfg.data.test.data_root = root_dir
+    cfg.data.test.img_prefix = data_config["test"][0]
+    cfg.data.test.ann_file = str(data_config["test"][0]).replace('images','dota_labels')
+    cfg.data.test.classes = classes
 
-# # We need to set the model's cfg for inference
-# model.cfg = config
+    cfg.data.train.type = dataset_type
+    cfg.data.train.data_root = root_dir
+    cfg.data.train.img_prefix = data_config["train"][0]
+    cfg.data.train.ann_file =  str(data_config["train"][0]).replace('images','dota_labels')
+    cfg.data.train.classes = classes
 
-# # Convert the model to GPU
-# model.to(device)
+    cfg.data.val.type = dataset_type
+    cfg.data.val.data_root = root_dir
+    cfg.data.val.img_prefix = data_config["val"][0]
+    cfg.data.val.ann_file = str(data_config["val"][0]).replace('images','dota_labels')
+    cfg.data.val.classes = classes
 
-# Convert the model into evaluation mode
-# model.eval()
+    # modify num classes of the model in box head
+    cfg.model.roi_head.bbox_head.num_classes = num_classes
 
+    # use the mask branch
+    cfg.load_from = args.weights
 
-dataset_type = 'TinyDataset'
-# Modify dataset type and path
-cfg.dataset_type = dataset_type
-cfg.data_root = r"D:\general_dataset\tiled-data"
+    # Set up working dir to save files and logs.
+    cfg.work_dir = args.output_dir
 
-cfg.data.test.type = dataset_type
-cfg.data.test.data_root = r"D:\general_dataset\tiled-data\test"
-cfg.data.test.ann_file = 'dota_labels'
-cfg.data.test.img_prefix = 'images/'
+    # optimizer
+    if args.optimizer == 'SGD':
+        cfg.optimizer = dict(type='SGD', lr=args.lr0, momentum=0.9, weight_decay=1e-4)
+    else:
+        cfg.optimizer = dict(type='Adam', lr=args.lr0, betas=(0.9,0.999), weight_decay=1e-4)
+    cfg.lr_config.warmup = None
+    cfg.runner.max_epochs = args.epoch
+    cfg.log_config.interval = 10
 
-cfg.data.train.type = dataset_type
-cfg.data.train.data_root = r"D:\general_dataset\tiled-data\val"
-cfg.data.train.ann_file =  "dota_labels"
-cfg.data.train.img_prefix = "images/"
+    # Change the evaluation metric since we use customized dataset.
+    cfg.evaluation.metric = 'mAP'
+    # We can set the evaluation interval to reduce the evaluation times
+    cfg.evaluation.interval = args.eval_interval
+    # We can set the checkpoint saving interval to reduce the storage cost
+    cfg.checkpoint_config.interval = args.checkpoint_interval
 
-cfg.data.val.type = dataset_type
-cfg.data.val.data_root = r"D:\general_dataset\tiled-data\val"
-cfg.data.val.ann_file = 'dota_labels'
-cfg.data.val.img_prefix = 'images/'
+    # Set seed thus the results are more reproducible
+    cfg.seed = args.seed
+    set_random_seed(cfg.seed, deterministic=False)
+    cfg.gpu_ids = range(1) if torch.cuda.device_count()<2 else torch.cuda.device_count()
+    cfg.device= args.device
 
-# modify num classes of the model in box head
-cfg.model.roi_head.bbox_head.num_classes = 6
-# We can still use the pre-trained Mask RCNN model though we do not need to
-# use the mask branch
-cfg.load_from = 'oriented_rcnn_r50_fpn_1x_dota_le90-6d2b2ce0.pth'
+    # We can also use tensorboard to log the training process
+    cfg.log_config.hooks = [
+        dict(type='TextLoggerHook'),
+        dict(type='TensorboardLoggerHook')
+    ]
 
-# Set up working dir to save files and logs.
-cfg.work_dir = './tutorial_exps'
+    # We can initialize the logger for training and have a look
+    # at the final config used for training
+    print(f'Config:\n{cfg.pretty_text}')
 
-cfg.optimizer.lr = 0.001
-cfg.lr_config.warmup = None
-cfg.runner.max_epochs = 3
-cfg.log_config.interval = 10
+    datasets = [build_dataset(cfg.data.train)]
 
-# Change the evaluation metric since we use customized dataset.
-cfg.evaluation.metric = 'mAP'
-# We can set the evaluation interval to reduce the evaluation times
-cfg.evaluation.interval = 3
-# We can set the checkpoint saving interval to reduce the storage cost
-cfg.checkpoint_config.interval = 3
+    print(datasets)
 
-# Set seed thus the results are more reproducible
-cfg.seed = 0
-set_random_seed(0, deterministic=False)
-cfg.gpu_ids = range(1)
-cfg.device='cpu'
+    # Build the detector
+    model = build_detector(
+        cfg.model, train_cfg=cfg.get('train_cfg'), test_cfg=cfg.get('test_cfg'))
+    # Add an attribute for visualization convenience
+    model.CLASSES = datasets[0].CLASSES
 
-# We can also use tensorboard to log the training process
-cfg.log_config.hooks = [
-    dict(type='TextLoggerHook'),
-    dict(type='TensorboardLoggerHook')]
+    # Load checkpoint
+    model = model.to(cfg.device)
 
-# We can initialize the logger for training and have a look
-# at the final config used for training
-print(f'Config:\n{cfg.pretty_text}')
-
-datasets = [build_dataset(cfg.data.train)]
-
-# Build the detector
-model = build_detector(
-    cfg.model, train_cfg=cfg.get('train_cfg'), test_cfg=cfg.get('test_cfg'))
-# Add an attribute for visualization convenience
-model.CLASSES = datasets[0].CLASSES
-
-# Create work_dir
-mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
-train_detector(model, datasets, cfg, distributed=False, validate=True)
+    # Create work_dir
+    mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
+    train_detector(model, datasets, cfg, distributed=False, validate=True)
