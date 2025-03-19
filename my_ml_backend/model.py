@@ -14,7 +14,6 @@ import mlflow
 # import hashlib
 # import os
 import time
-from datalabeling.annotator import Detector
 
 # Authenticate AWS
 # PROFILE_NAME = 'my-profile' #TODO: update with your profile
