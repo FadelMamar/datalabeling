@@ -18,7 +18,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(
         type='MultiScaleFlipAug',
-        img_scale=(1024, 1024),
+        img_scale=(800, 800),
         flip=False,
         transforms=[
             dict(type='RResize'),
@@ -30,7 +30,7 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=2, # Batch size of a single GPU
-    workers_per_gpu=2, # Worker to pre-fetch data for each single GPU
+    workers_per_gpu=8, # Worker to pre-fetch data for each single GPU
     train=dict(
         type=dataset_type,
         classes=classes,
