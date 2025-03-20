@@ -16,7 +16,7 @@ from __future__ import print_function
 
 import os
 from dataclasses import dataclass
-
+from pathlib import Path
 # ignore warning log
 import warnings
 
@@ -67,6 +67,7 @@ class Flags:
     print_params: bool = False
     lr0: float = 1e-3
     epoch: int = 30
+    device: str = "cuda"
 
     # logging
     output_dir: str = "runs-ppd"
@@ -93,6 +94,9 @@ def train_ppd(args: Flags):
         "tags": args.tags,
         "entity": "ipeo-epfl",
     }
+    cfg['use_gpu'] = (args.device == "cuda")
+
+    cfg['weights'] = Path(args.output_dir) / 'model_final'
 
     if cfg.use_gpu:
         place = paddle.set_device("gpu")
@@ -115,6 +119,8 @@ def train_ppd(args: Flags):
         trainer.load_weights(cfg.pretrain_weights)
     else:
         print("No weights loaded.")
+    
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     # training
     # mlflow.set_tracking_uri(args.mlflow_tracking_uri)
