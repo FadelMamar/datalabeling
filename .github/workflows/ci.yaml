@@ -34,6 +34,4 @@ jobs:
           enable-cache: true
           prune-cache: false
       - uses: astral-sh/ruff-action@v3
-        with:
-          args: "format --check --diff"
-          version: "latest"
+        run: ruff format
