@@ -32,6 +32,5 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
-      - run: uv python install 3.11
       - name: Format codebase
-      - run: uvx ruff format
+        run: uvx ruff format
