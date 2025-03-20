@@ -126,7 +126,7 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
     # check flags
     for flag in (args.cl_ratios, args.cl_epochs, args.cl_freeze):
         assert len(flag) == len(args.cl_lr0s), (
-            "all args.cl_* flags should have the same length."
+            f"all args.cl_* flags should have the same length. {len(flag)} != {len(args.cl_lr0s)}"
         )
 
     # get yaml data_cfg files for CL runs
