@@ -79,7 +79,7 @@ def run_ligthning():
     datamodule = None
 
     work_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp"  # for HerdNet Trainer
-    Path(work_dir).mkdir(exist_ok=True,parents=False)
+    Path(work_dir).mkdir(exist_ok=True, parents=False)
 
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
@@ -189,7 +189,7 @@ def run():
     device = "cuda"
     args.epochs = 30
     work_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp"  # for HerdNet Trainer
-    Path(work_dir).mkdir(exist_ok=True,parents=False)
+    Path(work_dir).mkdir(exist_ok=True, parents=False)
 
     # Data
     datamodule = HerdnetData(
@@ -300,7 +300,6 @@ def run():
 
 
 if __name__ == "__main__":
-    
     # run()
 
     run_ligthning()

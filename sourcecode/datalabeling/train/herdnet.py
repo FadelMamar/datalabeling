@@ -103,10 +103,26 @@ def load_dataset(
     empty_ratio: float | None = None,
     empty_frac: float | None = None,
 ) -> tuple[ConcatDataset, pd.DataFrame, int]:
+    """Load dataset from yaml file.
+
+    Args:
+        data_config_yaml (str): data configuration yaml file.
+        split (str): train, val or test.
+        transforms (dict): transforms for the dataset.
+        empty_ratio (float | None, optional): samples empty images following empty_ratio*num_positive_samples. Defaults to None.
+        empty_frac (float | None, optional): samples empty images following pd.Series(list_empty_images).sample(frac=empty_frac). Defaults to None.
+
+    Returns:
+        tuple[ConcatDataset, pd.DataFrame, int]: _description_
+    """
+
+    assert split in ["train", "val", "test"], "split should be either train, val or test."
     if empty_frac is not None:
         assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
+        assert empty_ratio is None, "empty_ratio should be None if empty_frac is not None."
     if empty_ratio is not None:
         assert empty_ratio >= 0.0, "should be non-negative"
+        assert empty_frac is None, "empty_frac should be None if empty_ratio is not None."
 
     with open(data_config_yaml, "r") as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)

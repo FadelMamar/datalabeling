@@ -177,6 +177,7 @@ class Annotator(object):
                 result=formatted_pred,
                 model_version=self.modelversion,
             )
+            img.close()
 
     def build_upload_json(
         self,
