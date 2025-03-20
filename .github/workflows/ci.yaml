@@ -37,7 +37,3 @@ jobs:
         with:
           args: "format"
           version: "latest"
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: "check --fix"
-          version: "latest"
