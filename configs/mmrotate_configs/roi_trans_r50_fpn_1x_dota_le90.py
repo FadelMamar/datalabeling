@@ -5,7 +5,7 @@ _base_ = [
 ]
 
 angle_version = 'le90'
-num_classes = 2
+num_classes = 1
 model = dict(
     type='RoITransformer',
     backbone=dict(

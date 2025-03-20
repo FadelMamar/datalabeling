@@ -3,7 +3,7 @@ _base_ = [
     'schedule_1x.py',
     'default_runtime.py'
 ]
-num_classes = 2
+num_classes = 1
 angle_version = 'le90'
 model = dict(
     type='ReDet',
