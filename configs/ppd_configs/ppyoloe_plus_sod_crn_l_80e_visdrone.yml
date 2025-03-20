@@ -1,9 +1,9 @@
 _BASE_: [
-  '../../datasets/visdrone_detection.yml',
-  '../../runtime.yml',
-  '../../ppyoloe/_base_/optimizer_80e.yml',
-  '../../ppyoloe/_base_/ppyoloe_plus_crn.yml',
-  '../../ppyoloe/_base_/ppyoloe_plus_reader.yml'
+  'coco_detection.yml',
+  'runtime.yml',
+  'optimizer_80e.yml',
+  'ppyoloe_plus_crn.yml',
+  'ppyoloe_plus_reader.yml'
 ]
 log_iter: 100
 snapshot_epoch: 10
@@ -17,10 +17,10 @@ TrainReader:
   batch_size: 8
 
 EvalReader:
-  batch_size: 1
+  batch_size: 4
 
 TestReader:
-  batch_size: 1
+  batch_size: 4
   fuse_normalize: True
 
 

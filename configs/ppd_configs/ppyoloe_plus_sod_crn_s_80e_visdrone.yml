@@ -14,7 +14,7 @@ depth_mult: 0.33
 width_mult: 0.50
 
 TrainReader:
-  batch_size: 16
+  batch_size: 8
 
 EvalReader:
   batch_size: 8
