@@ -35,5 +35,5 @@ jobs:
           prune-cache: false
       - uses: astral-sh/ruff-action@v3
         with:
-          args: "format"
+          args: "format --check --diff"
           version: "latest"
