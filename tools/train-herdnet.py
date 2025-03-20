@@ -51,15 +51,17 @@ def run_ligthning():
     device = "cuda"
 
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
+    loaded_weights_num_classes=4 # for ennedi weights
+    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
     # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
-    # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
-    # checkpoint_num_classes = 7  # num classes includes background
     checkpoint_path = None
+    # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\mlartifacts\934358897506090439\336b6791130f4873903e924d26beccad\artifacts\epoch=4-step=450\epoch=4-step=450.ckpt"
+    checkpoint_num_classes = 2  # num classes includes background
+    
 
-    loaded_weights_num_classes=4 # for ennedi weights
+    
 
     # get cross entropy loss weights
     # Data
@@ -120,6 +122,7 @@ def run_ligthning():
             monitor="val_f1-score",
             mode="max",
             save_weights_only=True,
+            save_last=True,
             save_top_k=1,
         )
         lr_callback = LearningRateMonitor(logging_interval="epoch")
