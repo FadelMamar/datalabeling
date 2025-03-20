@@ -125,7 +125,7 @@ typing-extensions==4.12.2
 tzdata==2025.1
 urllib3==2.2.3
 waitress==3.0.0
-wandb==0.19.8
+wandb==0.18.7
 wcwidth==0.2.13
 werkzeug==3.0.6
 wrapt==1.17.2
