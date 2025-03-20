@@ -23,7 +23,8 @@ from mmdet.models import build_detector
 from mmdet.apis import train_detector
 from datargs import parse
 from dataclasses import dataclass
-
+from mmrotate.utils import (collect_env, get_root_logger,
+                            setup_multi_processes)
 
 def load_yaml(data_config_yaml: str) -> dict:
     with open(data_config_yaml, "r") as file:
@@ -68,7 +69,8 @@ class Flags:
     empty_ratio: float = 0.0
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     seed: int = 41
-    num_workers: int = 4
+    num_workers: int = 8
+    logging_interval: int = 100
 
     # evaluation
     eval_interval: int = 3
@@ -80,6 +82,7 @@ class Flags:
     project_name: str = "wildAI-detection"
     run_name: str = "run"
     use_wandb: bool = False
+    wandb_entity:str ="ipeo-epfl"
     tags: Sequence[str] = None
 
 
@@ -217,11 +220,11 @@ class WildAIDataset(DOTADataset):
 if __name__ == "__main__":
     from datargs import parse
     import mlflow
+    import time
 
     args = parse(Flags)
 
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
-    mlflow.set_experiment(args.project_name)
 
     os.environ["EMPTY_RATIO"] = str(args.empty_ratio)
 
@@ -230,15 +233,23 @@ if __name__ == "__main__":
     num_classes = data_config["nc"]
     classes = [
         data_config["names"][i] for i in range(num_classes)
-    ]  # e.g. ['sp1', 'sp2', 'sp3', 'sp4', 'sp5', 'sp6']
+    ]
 
     # Load the config
     cfg = mmcv.Config.fromfile(args.config)
+
+    # set multi-process settings
+    setup_multi_processes(cfg)
+
+    # set cudnn_benchmark
+    if cfg.get('cudnn_benchmark', False):
+        torch.backends.cudnn.benchmark = True
 
     dataset_type = "WildAIDataset"
     # Modify dataset type and path
     cfg.dataset_type = dataset_type
     cfg.data_root = root_dir
+    cfg.classes = classes
 
     cfg.data.samples_per_gpu = args.batch_size
     cfg.data.workers_per_gpu = args.num_workers
@@ -266,51 +277,100 @@ if __name__ == "__main__":
     cfg.data.val.classes = classes
 
     # modify num classes of the model in box head
-    cfg.model.roi_head.bbox_head.num_classes = num_classes
+    try:
+        cfg.model.roi_head.bbox_head.num_classes = num_classes
+    except Exception as e:
+        if isinstance(cfg.model.roi_head.bbox_head, list):
+            for head in cfg.model.roi_head.bbox_head:
+                head.num_classes = num_classes
+        else:
+            print(e)
+            raise NotImplementedError("Head type not implemented")
 
     # use the mask branch
     cfg.load_from = args.weights
 
     # Set up working dir to save files and logs.
     cfg.work_dir = args.output_dir
+    mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
+
 
     # optimizer
     if args.optimizer == "SGD":
         cfg.optimizer = dict(type="SGD", lr=args.lr0, momentum=0.9, weight_decay=1e-4)
-    else:
+    elif args.optimizer == "Adam":
         cfg.optimizer = dict(
             type="Adam", lr=args.lr0, betas=(0.9, 0.999), weight_decay=1e-4
         )
+    else:
+        raise NotImplementedError(f"Optimizer {args.optimizer} not implemented")
+
     cfg.lr_config.warmup = None
     cfg.runner.max_epochs = args.epoch
-    cfg.log_config.interval = 10
+    cfg.log_config.interval = args.logging_interval
 
-    # Change the evaluation metric since we use customized dataset.
+    # Change the evaluation settings
     cfg.evaluation.metric = "mAP"
-    # We can set the evaluation interval to reduce the evaluation times
     cfg.evaluation.interval = args.eval_interval
+    cfg.evaluation.save_best = "bbox_mAP"
+    cfg.evaluation.rule = "greater"
     # We can set the checkpoint saving interval to reduce the storage cost
     cfg.checkpoint_config.interval = args.checkpoint_interval
+
+    cfg.dump(osp.join(cfg.work_dir, osp.basename(args.config)))
+    # init the logger before other steps
+    timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+    log_file = osp.join(cfg.work_dir, f'{timestamp}.log')
+    logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
+
+    # init the meta dict to record some important information such as
+    # environment info and seed, which will be logged
+    meta = dict()
+    # log env info
+    env_info_dict = collect_env()
+    env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
+    dash_line = '-' * 60 + '\n'
+    logger.info('Environment info:\n' + dash_line + env_info + '\n' +
+                dash_line)
+    meta['env_info'] = env_info
+    meta['config'] = cfg.pretty_text
+    # log some basic info
+    logger.info(f'Config:\n{cfg.pretty_text}')
 
     # Set seed thus the results are more reproducible
     cfg.seed = args.seed
     set_random_seed(cfg.seed, deterministic=False)
+    meta['seed'] = cfg.seed
+    meta['exp_name'] = osp.basename(args.run_name)
+
+    # set computing device
     cfg.gpu_ids = (
-        range(1) if torch.cuda.device_count() < 2 else torch.cuda.device_count()
+        range(1) if torch.cuda.device_count() < 2 else range(torch.cuda.device_count())
     )
     cfg.device = args.device
 
-    # We can also use tensorboard to log the training process
+    # log the training process
+    # ref: https://mmcv.readthedocs.io/en/v1.3.6/_modules/mmcv/runner/hooks/logger/wandb.html
     cfg.log_config.hooks = [
         dict(type="TextLoggerHook"),
-        dict(type="TensorboardLoggerHook"),
+        dict(type="MlflowLoggerHook",exp_name=args.project_name,by_epoch=True,log_model=True,tags=dict(name=args.run_name)
+        )
     ]
+    if args.use_wandb:
+        cfg.log_config.hooks.append(dict(type="WandbLoggerHook", init_kwargs={"project": args.project_name,
+                                                                              "name": args.run_name,
+                                                                              "tags": args.tags, 
+                                                                              "entity": args.wandb_entity
+                                                                            }       
+                                        )                              
+                                )
 
-    # We can initialize the logger for training and have a look
-    # at the final config used for training
-    print(f"Config:\n{cfg.pretty_text}")
-
+    # build dataset
     datasets = [build_dataset(cfg.data.train)]
+    if len(cfg.workflow) == 2:
+        val_dataset = copy.deepcopy(cfg.data.val)
+        val_dataset.pipeline = cfg.data.train.pipeline
+        datasets.append(build_dataset(val_dataset))
 
     print(datasets)
 
@@ -321,9 +381,7 @@ if __name__ == "__main__":
     # Add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
 
-    # Load checkpoint
-    model = model.to(cfg.device)
+    logger.info(f"Number of parameters:{sum([torch.numel(p) for p in model.parameters()])/1e6:.2f}M")
 
     # Create work_dir
-    mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
     train_detector(model, datasets, cfg, distributed=False, validate=True)
