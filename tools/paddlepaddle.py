@@ -69,7 +69,7 @@ class Flags:
     epoch: int = 30
 
     # logging
-    output_dir: str = "output"
+    output_dir: str = "runs-ppd"
     mlflow_tracking_uri: str = "http://localhost:5000"
     project_name: str = "wildAI-detection"
     run_name: str = "run-ppd"
