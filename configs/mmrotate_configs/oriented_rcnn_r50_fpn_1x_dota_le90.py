@@ -4,7 +4,7 @@ _base_ = [
     'default_runtime.py'
 ]
 # Read here https://mmrotate.readthedocs.io/en/latest/tutorials/customize_config.html
-num_classes = 2
+num_classes = 1
 
 angle_version = 'le90'
 

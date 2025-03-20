@@ -61,7 +61,7 @@ class Flags:
     infer_list: str = None
 
     # training
-    optimizer: str = "Adam"  # SGD, Adam
+    optimizer: str = "SGD"  # SGD, Adam
     batch_size: int = 16
     resume: bool = False
     lr0: float = 1e-3
@@ -73,7 +73,7 @@ class Flags:
     logging_interval: int = 100
 
     # evaluation
-    eval_interval: int = 3
+    eval_interval: int = 1
     checkpoint_interval: int = 3
 
     # logging
@@ -235,6 +235,8 @@ if __name__ == "__main__":
         data_config["names"][i] for i in range(num_classes)
     ]
 
+    cfg.num_classes = num_classes
+
     # Load the config
     cfg = mmcv.Config.fromfile(args.config)
 
@@ -305,8 +307,9 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError(f"Optimizer {args.optimizer} not implemented")
 
-    cfg.lr_config.warmup = None
+    cfg.lr_config.warmup = 'linear'
     cfg.runner.max_epochs = args.epoch
+    cfg.total_epochs = args.epoch
     cfg.log_config.interval = args.logging_interval
 
     # Change the evaluation settings
@@ -367,10 +370,10 @@ if __name__ == "__main__":
 
     # build dataset
     datasets = [build_dataset(cfg.data.train)]
-    if len(cfg.workflow) == 2:
-        val_dataset = copy.deepcopy(cfg.data.val)
-        val_dataset.pipeline = cfg.data.train.pipeline
-        datasets.append(build_dataset(val_dataset))
+    # if len(cfg.workflow) == 2:
+    #     val_dataset = copy.deepcopy(cfg.data.val)
+    #     val_dataset.pipeline = cfg.data.train.pipeline
+    #     datasets.append(build_dataset(val_dataset))
 
     print(datasets)
 
@@ -381,7 +384,7 @@ if __name__ == "__main__":
     # Add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
 
-    logger.info(f"Number of parameters:{sum([torch.numel(p) for p in model.parameters()])/1e6:.2f}M")
+    logger.info(f"\nNumber of parameters:{sum([torch.numel(p) for p in model.parameters()])/1e6:.2f}M\n")
 
     # Create work_dir
     train_detector(model, datasets, cfg, distributed=False, validate=True)
