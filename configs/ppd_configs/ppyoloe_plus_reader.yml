@@ -11,11 +11,11 @@ TrainReader:
     - RandomCrop: {}
     - RandomFlip: {}
   batch_transforms:
-    - BatchRandomResize: {target_size: [640, 800, 1024], random_size: True, random_interp: True, keep_ratio: False}
+    - BatchRandomResize: {target_size: [640, 800, 960], random_size: True, random_interp: True, keep_ratio: False}
     - NormalizeImage: {mean: [0., 0., 0.], std: [1., 1., 1.], norm_type: none}
     - Permute: {}
     - PadGT: {}
-  batch_size: 16
+  batch_size: 8
   shuffle: true
   drop_last: true
   use_shared_memory: true

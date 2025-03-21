@@ -1,12 +1,12 @@
 _BASE_: [
-  './_base_/DOTA_sliced_500_025_detection.yml',
-  '../runtime.yml',
-  '../ppyoloe/_base_/optimizer_300e.yml',
-  '../ppyoloe/_base_/ppyoloe_crn.yml',
-  '../ppyoloe/_base_/ppyoloe_reader.yml',
+  './coco_detection.yml',
+  'runtime.yml',
+  'optimizer_300e.yml',
+  'ppyoloe_crn.yml',
+  'ppyoloe_reader.yml',
 ]
 log_iter: 100
-snapshot_epoch: 10
+snapshot_epoch: 1
 weights: output/ppyoloe_p2_crn_l_80e_sliced_DOTA_500_025/model_final
 
 pretrain_weights: https://paddledet.bj.bcebos.com/models/ppyoloe_crn_l_300e_coco.pdparams
