@@ -30,14 +30,7 @@ jobs:
       - name: Setup uv python package manager
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
           enable-cache: true
-          prune-cache: false
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: "format"
-          version: "latest"
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: "check --fix"
-          version: "latest"
+          python-version: ${{ matrix.python-version }}
+      - name: Format codebase
+        run: uvx ruff format
