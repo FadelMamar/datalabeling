@@ -72,6 +72,7 @@ class Flags:
     seed: int = 41
     num_workers: int = 8
     logging_interval: int = 100
+    freeze_ratio: float = 0.0
 
     # evaluation
     eval_interval: int = 1
@@ -226,22 +227,26 @@ if __name__ == "__main__":
 
     args = parse(Flags)
 
+    # checks
+    assert 0 <= args.freeze_ratio <= 1, "freeze_ratio should be in [0, 1]"
+
+    # set mlflow uri
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
 
+    # set the empty ratio of the dataset: the quantity of empty images
+    # to be sampled from the negative samples
     os.environ["EMPTY_RATIO"] = str(args.empty_ratio)
 
+    # get info on the dataset
     data_config = load_yaml(args.data_config)
     root_dir = data_config["path"]
     num_classes = data_config["nc"]
     classes = [
         data_config["names"][i] for i in range(num_classes)
     ]
-
     
-
     # Load the config
     cfg = mmcv.Config.fromfile(args.config)
-   
 
     # set multi-process settings
     setup_multi_processes(cfg)
@@ -299,7 +304,6 @@ if __name__ == "__main__":
     # Set up working dir to save files and logs.
     cfg.work_dir = args.output_dir
     mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
-
 
     # optimizer
     if args.optimizer == "SGD":
@@ -392,10 +396,21 @@ if __name__ == "__main__":
     model = build_detector(
         cfg.model, train_cfg=cfg.get("train_cfg"), test_cfg=cfg.get("test_cfg")
     )
+
     # Add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
 
-    logger.info(f"\nNumber of parameters:{sum([torch.numel(p) for p in model.parameters()])/1e6:.2f}M\n")
+    logger.info(f"\nNumber of parameters: {sum([torch.numel(p) for p in model.parameters()])/1e6:.2f} M")
+
+    # Freeze params
+    if args.freeze_ratio:
+        num_layers = len(list(model.parameters()))
+        for idx, param in enumerate(model.parameters()):
+            if idx / num_layers < args.freeze_ratio:
+                param.requires_grad = False
+            else:
+                break
+        print(f"{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n")
 
     # Create work_dir
     train_detector(model, datasets, cfg, distributed=False, validate=args.enable_val)
