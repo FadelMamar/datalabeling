@@ -9,6 +9,7 @@ import mmcv
 import yaml
 import os
 import os.path as osp
+import copy
 import numpy as np
 from pathlib import Path
 import pandas as pd
@@ -74,7 +75,8 @@ class Flags:
 
     # evaluation
     eval_interval: int = 1
-    checkpoint_interval: int = 3
+    checkpoint_interval: int = 1
+    enable_val:bool=False
 
     # logging
     output_dir: str = "runs-mmrotate"
@@ -235,10 +237,11 @@ if __name__ == "__main__":
         data_config["names"][i] for i in range(num_classes)
     ]
 
-    cfg.num_classes = num_classes
+    
 
     # Load the config
     cfg = mmcv.Config.fromfile(args.config)
+   
 
     # set multi-process settings
     setup_multi_processes(cfg)
@@ -279,6 +282,7 @@ if __name__ == "__main__":
     cfg.data.val.classes = classes
 
     # modify num classes of the model in box head
+    cfg.num_classes = num_classes
     try:
         cfg.model.roi_head.bbox_head.num_classes = num_classes
     except Exception as e:
@@ -315,7 +319,7 @@ if __name__ == "__main__":
     # Change the evaluation settings
     cfg.evaluation.metric = "mAP"
     cfg.evaluation.interval = args.eval_interval
-    cfg.evaluation.save_best = "bbox_mAP"
+    cfg.evaluation.save_best = "mAP"
     cfg.evaluation.rule = "greater"
     # We can set the checkpoint saving interval to reduce the storage cost
     cfg.checkpoint_config.interval = args.checkpoint_interval
@@ -367,6 +371,11 @@ if __name__ == "__main__":
                                                                             }       
                                         )                              
                                 )
+    # set workflow
+    if args.enable_val:
+        cfg.workflow = [('train', 1), ('val', 1)]
+    else:
+        cfg.workflow = [('train', 1)]
 
     # build dataset
     datasets = [build_dataset(cfg.data.train)]
@@ -389,4 +398,4 @@ if __name__ == "__main__":
     logger.info(f"\nNumber of parameters:{sum([torch.numel(p) for p in model.parameters()])/1e6:.2f}M\n")
 
     # Create work_dir
-    train_detector(model, datasets, cfg, distributed=False, validate=True)
+    train_detector(model, datasets, cfg, distributed=False, validate=args.enable_val)
