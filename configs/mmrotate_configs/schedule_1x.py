@@ -1,5 +1,5 @@
 # evaluation 'acc', 'top', 'AR@', 'auc', 'precision', 'mAP', 'mDice', 'mIoU', 'mAcc', 'aAcc'
-evaluation = dict(interval=1, metric='mAP', save_best='bbox_mAP', rule='greater')
+evaluation = dict(interval=1, metric='mAP', save_best='mAP', rule='greater')
 # optimizer
 optimizer = dict(type='SGD', lr=0.0025, momentum=0.9, weight_decay=1e-4)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
