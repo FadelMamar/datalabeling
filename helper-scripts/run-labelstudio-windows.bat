@@ -5,7 +5,7 @@ call deactivate
 
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
-call label-studio\Scripts\activate
+call .venv-labelstudio\Scripts\activate
 
 @REM call conda env config vars set LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=D:\
 @REM call conda env config vars set LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
