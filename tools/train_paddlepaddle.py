@@ -69,6 +69,9 @@ class Flags:
     epoch: int = 30
     device: str = "cuda"
 
+    # evaluation
+    eval_interval:int=2
+
     # logging
     output_dir: str = "runs-ppd"
     mlflow_tracking_uri: str = "http://localhost:5000"
@@ -97,6 +100,9 @@ def train_ppd(args: Flags):
     cfg['use_gpu'] = (args.device == "cuda")
 
     cfg['weights'] = Path(args.output_dir) / 'model_final'
+
+    # eval metrics computation interval
+    cfg["snapshot_epoch"] = args.eval_interval
 
     if cfg.use_gpu:
         place = paddle.set_device("gpu")
