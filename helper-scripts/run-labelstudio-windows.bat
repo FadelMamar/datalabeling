@@ -1,6 +1,11 @@
 @REM call "C:\Users\Machine Learning\anaconda3\Scripts\activate.bat" "C:\Users\Machine Learning\anaconda3"
 @REM call conda activate label-studio
-call "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\label-studio\Scripts\activate"
+
+call deactivate
+
+call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+
+call label-studio\Scripts\activate
 
 @REM call conda env config vars set LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=D:\
 @REM call conda env config vars set LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
