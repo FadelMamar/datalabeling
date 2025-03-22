@@ -4,7 +4,7 @@ from typing import Sequence
 import fire
 
 
-def main(project_id: int, alias: Sequence[str], confidence_threshold: float = 0.15):
+def main(project_id: int, aliases: Sequence[str], confidence_threshold: float = 0.15):
     DOT_ENV_PATH = "../.env"
     load_dotenv(DOT_ENV_PATH)
 

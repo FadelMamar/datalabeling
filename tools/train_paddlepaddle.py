@@ -9,26 +9,21 @@
 Returns:
     _type_: _description_
 """
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
 import os
 from dataclasses import dataclass
 from pathlib import Path
 # ignore warning log
 import warnings
-
 warnings.filterwarnings("ignore")
 import glob
 import ast
 from typing import Sequence
-
 import paddle
 from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer, Trainer_ARSL
-
 from ppdet.utils.logger import setup_logger
 
 logger = setup_logger("train")
@@ -114,6 +109,8 @@ def train_ppd(args: Flags):
         place = paddle.set_device("mlu")
     else:
         place = paddle.set_device("cpu")
+    
+    print(f"Using device: {place}")
 
     trainer = Trainer(cfg, mode="train")
 

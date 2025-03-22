@@ -1,14 +1,11 @@
 from dotenv import load_dotenv
-
-load_dotenv("../.env")
-
-
 import yaml
 import os
 from dataclasses import dataclass
 from datargs import parse
 from pathlib import Path
 
+load_dotenv("../.env")
 DATA_DIR = "D:\PhD\Data per camp\DetectionDataset\hard_samples"
 
 

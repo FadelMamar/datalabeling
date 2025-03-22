@@ -34,7 +34,7 @@ def ultralytics_val():
             model.info()
 
             # Customize validation settings
-            validation_results = model.val(
+            model.val(
                 data=dataconfig,
                 imgsz=imgsz,
                 batch=64,
@@ -128,6 +128,8 @@ def herdnet_val():
     out = trainer.test(model=herdnet_trainer, datamodule=datamodule)
 
     # out = trainer.predict(model=herdnet_trainer, datamodule=datamodule,)
+
+    print(out)
 
 
 if __name__ == "__main__":
