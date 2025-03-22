@@ -230,6 +230,12 @@ if __name__ == "__main__":
     # checks
     assert 0 <= args.freeze_ratio <= 1, "freeze_ratio should be in [0, 1]"
 
+    # update run_name
+    args.run_name = f"{args.run_name}#empty_{args.empty_ratio}#freeze_{args.freeze_ratio}"
+
+    # update output_dir
+    args.output_dir = osp.join(args.output_dir, args.run_name)
+
     # set mlflow uri
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
 
