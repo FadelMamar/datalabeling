@@ -26,6 +26,8 @@ from datargs import parse
 from dataclasses import dataclass
 from mmrotate.utils import (collect_env, get_root_logger,
                             setup_multi_processes)
+from mmcv.parallel import is_module_wrapper
+from mmcv.runner.hooks import HOOKS, Hook
 
 def load_yaml(data_config_yaml: str) -> dict:
     with open(data_config_yaml, "r") as file:
@@ -220,6 +222,35 @@ class WildAIDataset(DOTADataset):
         return data_infos
 
 
+@HOOKS.register_module()
+class freezeModelHook(Hook):
+    """Freeze backbone network Hook.
+    https://mmdetection.readthedocs.io/en/dev/tutorials/how_to.html#unfreeze-backbone-network-after-freezing-the-backbone-in-the-config
+
+    Args:
+        freeze_ratio (float): the ratio of the model's parameters to be frozen.
+    """
+
+    def __init__(self, freeze_ratio:float=0.):
+        self.freeze_ratio = freeze_ratio
+
+    def before_train_epoch(self, runner):
+        # Freeze the network at the beginning of the training
+        if runner.epoch < 2 :
+            # get model
+            model = runner.model
+            if is_module_wrapper(model):
+                model = model.module
+            # disable grad for some parameters
+            num_layers = len(list(model.parameters()))
+            for idx, param in enumerate(model.parameters()):
+                if idx / num_layers < self.freeze_ratio:
+                    param.requires_grad = False
+                else:
+                    break
+            print(f"{int(num_layers * self.freeze_ratio)}/{num_layers} layers have been frozen.\n")
+
+
 if __name__ == "__main__":
     from datargs import parse
     import mlflow
@@ -256,6 +287,10 @@ if __name__ == "__main__":
 
     # set multi-process settings
     setup_multi_processes(cfg)
+
+    # add cutom hook
+    cfg['custom_hooks'] = [dict(type="freezeModelHook", freeze_ratio=args.freeze_ratio)]
+
 
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
