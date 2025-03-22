@@ -416,7 +416,7 @@ if __name__ == "__main__":
                 param.requires_grad = False
             else:
                 break
-        print(f"{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n")
+        logger.info(f"{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n")
 
     # Create work_dir
     train_detector(model, datasets, cfg, distributed=False, validate=args.enable_val)
