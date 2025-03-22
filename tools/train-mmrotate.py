@@ -358,7 +358,7 @@ if __name__ == "__main__":
     cfg.seed = args.seed
     set_random_seed(cfg.seed, deterministic=False)
     meta['seed'] = cfg.seed
-    meta['exp_name'] = osp.basename(args.run_name)
+    meta['exp_name'] = args.run_name
 
     # set computing device
     cfg.gpu_ids = (
