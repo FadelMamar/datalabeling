@@ -5,6 +5,8 @@ LearningRate:
   schedulers:
     - name: CosineDecay
       max_epochs: 50
+      min_lr_ratio: 0.00001
+      use_warmup: true
     - name: LinearWarmup
       start_factor: 0.
       epochs: 1

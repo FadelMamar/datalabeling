@@ -20,19 +20,26 @@ import warnings
 warnings.filterwarnings("ignore")
 import glob
 import ast
+import json
+import yaml
 from typing import Sequence
 import paddle
 from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer, Trainer_ARSL
 from ppdet.utils.logger import setup_logger
 
-logger = setup_logger("train")
+def load_yaml(data_config_yaml: str) -> dict:
+    with open(data_config_yaml, "r") as file:
+        data_config = yaml.load(file, Loader=yaml.FullLoader)
+
+    return data_config
 
 
 @dataclass
 class Flags:
     # main ppd yaml config
     config: str = None
+    data_config:str = None
 
     # inference
     slice_size: int = 800
@@ -55,6 +62,9 @@ class Flags:
     infer_img: str = None
     infer_list: str = None
 
+    tr_empty_ratio: float = 0.1
+    val_empty_ratio: float = 1.0
+
     # training
     resume: bool = False
     amp: bool = False
@@ -63,6 +73,8 @@ class Flags:
     lr0: float = 1e-3
     epoch: int = 30
     device: str = "cuda"
+    tr_batchsize: int = 8
+    val_batchsize:int = 16
 
     # evaluation
     eval_interval:int=2
@@ -74,18 +86,36 @@ class Flags:
     run_name: str = "run-ppd"
     use_wandb: bool = False
     tags: Sequence[str] = None
+    log_iter:int=100 # log every 100 iterations
 
 
 def train_ppd(args: Flags):
+    logger = setup_logger("train")
+
+    data_config = load_yaml(args.data_config)
+    root_dir = os.path.join(data_config["path"], "coco-dataset")
+
     cfg = load_config(args.config)
+
+    print(type(cfg.__dict__))
+    print(cfg.__dict__)
 
     cfg["amp"] = args.amp
     cfg["save_dir"] = args.output_dir
     cfg["print_flops"] = args.print_flops
     cfg["print_params"] = args.print_params
     cfg["epoch"] = args.epoch
+    cfg["log_iter"] = args.log_iter
     cfg["use_wandb"] = args.use_wandb
     cfg["LearningRate"]["base_lr"] = args.lr0
+    cfg["LearningRate"]["schedulers"] =  [ {"name": "CosineDecay",
+                                            "max_epochs": args.epoch
+                                            },
+                                            {"name": "LinearWarmup", 
+                                            "start_factor": 0.0, 
+                                            "epochs": 1
+                                            }
+                                        ]
     cfg["wandb"] = {
         "project": args.project_name,
         "name": args.run_name,
@@ -94,7 +124,32 @@ def train_ppd(args: Flags):
     }
     cfg['use_gpu'] = (args.device == "cuda")
 
-    cfg['weights'] = Path(args.output_dir) / 'model_final'
+    cfg['weights'] = os.path.join(args.output_dir,'model_final')
+    cfg["pretrain_weights"] = args.weights
+
+    # set batchsize
+    cfg["TrainReader"]["batch_size"] = args.tr_batchsize
+    cfg["EvalReader"]["batch_size"] = args.val_batchsize
+    cfg["TestReader"]["batch_size"] = args.val_batchsize
+
+    # set datasets
+    cfg["TrainDataset"]["dataset_dir"] = root_dir
+    cfg["TrainDataset"]["image_dir"] = "train"
+    cfg["TrainDataset"]["anno_path"] = "annotations/annotations_train.json"
+    cfg["TrainDataset"]["empty_ratio"] = args.tr_empty_ratio
+    cfg["TrainDataset"]["allow_empty"] = args.tr_empty_ratio>0.
+
+    cfg["EvalDataset"]["dataset_dir"] = root_dir
+    cfg["EvalDataset"]["image_dir"] = "val"
+    cfg["EvalDataset"]["anno_path"] = "annotations/annotations_val.json"
+    cfg["EvalDataset"]["empty_ratio"] = args.val_empty_ratio
+    cfg["EvalDataset"]["allow_empty"] = args.val_empty_ratio>0.
+
+    cfg["TestDataset"]["dataset_dir"] = root_dir
+    cfg["TestDataset"]["image_dir"] = "test"
+    cfg["TestDataset"]["empty_ratio"] = 1.0
+    cfg["TestDataset"]["anno_path"] = "annotations/annotations_test.json"
+    cfg["TestDataset"]["allow_empty"] = True
 
     # eval metrics computation interval
     cfg["snapshot_epoch"] = args.eval_interval
@@ -110,33 +165,35 @@ def train_ppd(args: Flags):
     else:
         place = paddle.set_device("cpu")
     
-    print(f"Using device: {place}")
+    logger.info(f"Using device: {place}")
 
     trainer = Trainer(cfg, mode="train")
 
     if args.resume:
         trainer.resume_weights(args.resume)
-    elif args.weights:
-        trainer.load_weights(args.weights)
     elif "pretrain_weights" in cfg and cfg.pretrain_weights:
         trainer.load_weights(cfg.pretrain_weights)
     else:
-        print("No weights loaded.")
+        logger.info("No weights loaded.")
     
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+
+    # logger.info(json.dumps(cfg, indent=4))
 
     # training
     # mlflow.set_tracking_uri(args.mlflow_tracking_uri)
     # mlflow.set_experiment(args.project_name)
     # mlflow.paddle.autolog(log_every_n_epoch = 5)
     # with mlflow.start_run(run_name=args.run_name) as run:
-    trainer.train(args.do_eval)
+
+    # trainer.train(args.do_eval)
 
 
 def get_test_images(infer_dir: str, infer_img: str, infer_list=None):
     """
     Get image path list in TEST mode
     """
+    logger = setup_logger("test")
     assert infer_img is not None or infer_dir is not None, (
         "--infer_img or --infer_dir should be set"
     )

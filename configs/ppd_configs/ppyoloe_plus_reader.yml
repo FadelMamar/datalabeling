@@ -6,12 +6,11 @@ eval_size: &eval_size [*eval_height, *eval_width]
 TrainReader:
   sample_transforms:
     - Decode: {}
-    - RandomDistort: {}
-    - RandomExpand: {fill_value: [123.675, 116.28, 103.53]}
-    - RandomCrop: {}
-    - RandomFlip: {}
+    - RandomRRotate: {angle: [-45,45], angle_mode: "range", scale_mode: "range", scale: [0.5, 1.5], rotate_prob: 0.7 }
+    - RandomDistort: {hue: [-5, 5, 0.5],contrast: [0.5, 1.5, 0.5], saturation: [0.5, 1.5, 0.5], brightness: [0.5, 1.5, 0.5], prob: 0.2}
+    - RandomRFlip: {prob: 0.5}
+    - Mosaic: {prob: 0.2, input_dim: *eval_size, enable_mixup: false, scale: 1.0 }
   batch_transforms:
-    - BatchRandomResize: {target_size: [640, 800, 960], random_size: True, random_interp: True, keep_ratio: False}
     - NormalizeImage: {mean: [0., 0., 0.], std: [1., 1., 1.], norm_type: none}
     - Permute: {}
     - PadGT: {}
