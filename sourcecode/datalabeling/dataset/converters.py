@@ -400,7 +400,7 @@ def create_yolo_seg_directory(
 def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, data_config:dict,split='val',clear_data:bool=False):
     
     # Define the categories for the COCO dataset
-    categories = [{"id":k, "name":v} for k,v in data_config['names'].items()]
+    categories = [{"id":k+1, "name":v} for k,v in data_config['names'].items()]
     
     # Define the COCO dataset dictionary
     coco_dataset = {
