@@ -65,6 +65,8 @@ class Flags:
     tr_empty_ratio: float = 0.1
     val_empty_ratio: float = 1.0
 
+    freeze_ratio: float= 0.
+
     # training
     resume: bool = False
     amp: bool = False
@@ -97,8 +99,8 @@ def train_ppd(args: Flags):
 
     cfg = load_config(args.config)
 
-    print(type(cfg.__dict__))
-    print(cfg.__dict__)
+    args.run_name = args.run_name + f"tr_empty_ratio_{args.tr_empty_ratio}_freeze_{args.freeze_ratio}"
+    args.output_dir = os.path.join("runs_ppd", args.run_name)
 
     cfg["amp"] = args.amp
     cfg["save_dir"] = args.output_dir
@@ -178,7 +180,7 @@ def train_ppd(args: Flags):
     
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    # logger.info(json.dumps(cfg, indent=4))
+    logger.info(json.dumps(cfg, indent=4))
 
     # training
     # mlflow.set_tracking_uri(args.mlflow_tracking_uri)
@@ -186,7 +188,16 @@ def train_ppd(args: Flags):
     # mlflow.paddle.autolog(log_every_n_epoch = 5)
     # with mlflow.start_run(run_name=args.run_name) as run:
 
-    # trainer.train(args.do_eval)
+    # disable grad for some parameters
+    num_layers = len(list(trainer.model.parameters()))
+    for idx, param in enumerate(trainer.model.parameters()):
+        if idx / num_layers < args.freeze_ratio:
+            param.trainable = False
+        else:
+            break
+    logger.info(f"\n{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n")
+
+    trainer.train(args.do_eval)
 
 
 def get_test_images(infer_dir: str, infer_img: str, infer_list=None):
