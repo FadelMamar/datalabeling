@@ -1,6 +1,8 @@
-call .\activate_label-backend_env.bat
-
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
+
+call deactivate
+
+call helper-scripts\activate_label-backend_env.bat
 
 :: set to 'offline' when having issues with internet, otherwise use 'online'
 call wandb offline
