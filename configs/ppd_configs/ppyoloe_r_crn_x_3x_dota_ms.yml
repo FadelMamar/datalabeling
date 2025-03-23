@@ -6,8 +6,8 @@ _BASE_: [
   'ppyoloe_r_crn.yml'
 ]
 
-log_iter: 50
-snapshot_epoch: 1
+# log_iter: 50
+# snapshot_epoch: 1
 weights: output/ppyoloe_r_crn_x_3x_dota/model_final
 
 pretrain_weights: https://paddledet.bj.bcebos.com/models/pretrained/CSPResNetb_x_pretrained.pdparams
