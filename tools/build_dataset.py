@@ -161,7 +161,7 @@ if __name__ == "__main__":
                     output_dir=args.coco_output_dir,
                     data_config=data_config,
                     split=split,
-                    clear_data=True,
+                    clear_data=args.clear_coco_dir,
                 )
             except Exception as e:
                 print(e)

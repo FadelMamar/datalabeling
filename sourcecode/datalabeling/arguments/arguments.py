@@ -172,6 +172,7 @@ class Dataprepconfigs:
     yolo_to_coco: bool = False  # converts yolo dataset to coco dataset
     coco_output_dir: str = "./coco-dataset" # directory path
     clear_dota_labels: bool = False
+    clear_coco_dir:bool = False
 
     # cli
     build_yolo_dataset: bool = False
