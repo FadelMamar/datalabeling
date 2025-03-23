@@ -100,6 +100,7 @@ def train_ppd(args: Flags):
     print(type(cfg.__dict__))
     print(cfg.__dict__)
 
+    cfg["num_classes"] = data_config["nc"]
     cfg["amp"] = args.amp
     cfg["save_dir"] = args.output_dir
     cfg["print_flops"] = args.print_flops
