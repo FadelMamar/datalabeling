@@ -5,34 +5,14 @@ _BASE_: [
   'ppyoloe_plus_crn.yml',
   'ppyoloe_plus_reader.yml'
 ]
-log_iter: 100
-snapshot_epoch: 1
+# log_iter: 100
+# snapshot_epoch: 1
 weights: output/ppyoloe_plus_sod_crn_l_80e_visdrone/model_final
 
 pretrain_weights: https://bj.bcebos.com/v1/paddledet/models/ppyoloe_plus_crn_l_80e_coco.pdparams
 depth_mult: 1.0
 width_mult: 1.0
 
-TrainReader:
-  batch_size: 8
-
-EvalReader:
-  batch_size: 4
-
-TestReader:
-  batch_size: 4
-  fuse_normalize: True
-
-
-epoch: 80
-LearningRate:
-  base_lr: 0.01
-  schedulers:
-    - !CosineDecay
-      max_epochs: 96
-    - !LinearWarmup
-      start_factor: 0.
-      epochs: 1
 
 CustomCSPPAN:
   num_layers: 4
