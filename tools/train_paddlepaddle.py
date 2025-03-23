@@ -102,6 +102,7 @@ def train_ppd(args: Flags):
     args.run_name = args.run_name + f"tr_empty_ratio_{args.tr_empty_ratio}_freeze_{args.freeze_ratio}"
     args.output_dir = os.path.join("runs_ppd", args.run_name)
 
+    cfg["num_classes"] = data_config["nc"]
     cfg["amp"] = args.amp
     cfg["save_dir"] = args.output_dir
     cfg["print_flops"] = args.print_flops
