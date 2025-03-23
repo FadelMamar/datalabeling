@@ -187,7 +187,7 @@ def train_ppd(args: Flags):
     # mlflow.paddle.autolog(log_every_n_epoch = 5)
     # with mlflow.start_run(run_name=args.run_name) as run:
 
-    # trainer.train(args.do_eval)
+    trainer.train(args.do_eval)
 
 
 def get_test_images(infer_dir: str, infer_img: str, infer_list=None):
