@@ -450,7 +450,7 @@ def sample_data(
     df_empty = df[df["x_min"].isna()].copy()
     df_empty.drop_duplicates(subset="images", inplace=True)
 
-    # discard non-animal labels
+    # discard selected labels
     if labels_to_discard is not None:
         df = df[~df.labels.isin(labels_to_discard)].copy()
         df_non_empty = df[~df["x_min"].isna()].copy()
