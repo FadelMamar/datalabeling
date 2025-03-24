@@ -57,7 +57,7 @@ def ultralytics_val(args:Flags):
         model.info()
 
         # Customize validation settings
-        name = args.name+f"#{round(args.conf_threshold*100)}#{round(args.iou_threshold*100)}#{args.augment}#{args.max_det}-"
+        name = args.name + "#" + split + f"#{round(args.conf_threshold*100)}#{round(args.iou_threshold*100)}#{args.augment}#{args.max_det}-"
         model.val(
             name=name,
             project=args.project_name,
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     args = parse(Flags)
 
-    print('args:\n',json.dumps(args.__dict__,indent=2),'\n',flush=True)
+    print('\nargs:\n',json.dumps(args.__dict__,indent=2),'\n',flush=True)
 
     ultralytics_val(args)
 
