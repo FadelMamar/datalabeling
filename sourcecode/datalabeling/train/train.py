@@ -67,6 +67,8 @@ def pretraining_run(model: YOLO, args: Arguments):
     # remove cache
     remove_label_cache(args.ptr_data_config_yaml)
 
+    args.run_name = args.run_name + f"-PTR_freeze_{args.freeze}"
+
     # set parameters
     args.epochs = args.ptr_epochs
     args.lr0 = args.ptr_lr0
@@ -93,6 +95,9 @@ def hard_negative_strategy_run(
     )
     # remove cache
     remove_label_cache(args.hn_data_config_yaml)
+
+    # update run_name
+    args.run_name = args.run_name + f"-HN_freeze_{args.freeze}"
 
     cfg_path = get_data_cfg_paths_for_cl(
         ratio=args.hn_ratio,
@@ -128,6 +133,9 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
         assert len(flag) == len(args.cl_lr0s), (
             f"all args.cl_* flags should have the same length. {len(flag)} != {len(args.cl_lr0s)}"
         )
+    
+    # copy run_name
+    run_name = args.run_name + ""
 
     # get yaml data_cfg files for CL runs
     count = 0
@@ -142,6 +150,8 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
             split="train",
             pattern_glob=img_glob_pattern,
         )
+        # update run_name
+        args.run_name = run_name + f"-CL_emptyRatio_{ratio}_freeze_{args.freeze}"
         # freeze layer. see ultralytics docs :)
         args.freeze = freeze
         args.lr0 = lr
