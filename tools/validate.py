@@ -1,48 +1,83 @@
-def ultralytics_val():
+from datargs import parse
+from dataclasses import dataclass
+from typing import Sequence
+import json
+
+@dataclass
+class Flags:
+    
+    # data_config file
+    data_config: str = None
+
+    # split
+    splits:Sequence[str] = ("val",)
+
+    # weights
+    weights:str=None
+
+    # inference
+    batch_size: int = 32
+    imgsz: int = 800
+    iou_threshold: float = 0.6
+    conf_threshold: float= 0.25
+    device:str = "cuda"
+    max_det:int = 50
+    half=True
+    augment:bool=False # Enables test-time augmentation (TTA) during validation, potentially improving detection accuracy at the cost of inference speed
+    is_detector:bool=False
+
+    # logging
+    save_hybrid = False # Can cause false mAP ! used for autolabeling
+    save_txt: bool = False # saves detection results in text files, with one file per image,
+    save_json:bool = False # saves the results to a JSON file for further analysis, integration with other tools, or submission to evaluation servers like COCO.
+    name:str = "val"
+    project_name:str="wildAI-detection"
+    plots:bool=False
+
+    # model_type
+    model_type:str = "ultralytics" # ultralytics or HerdNet 
+
+
+def ultralytics_val(args:Flags):
     from ultralytics import YOLO
 
     # from pathlib import Path
     from datalabeling.train.utils import remove_label_cache
 
-    # Getting results for yolov12s : Detection and Identification
-    paths = [
-        "../runs/mlflow/140168774036374062/e0ea49b51ce34cfe9de6b482a2180037/artifacts/weights/best.pt",  # Identification model weights
-        "../runs/mlflow/140168774036374062/a59eda79d9444ff4befc561ac21da6b4/artifacts/weights/best.pt",  # Detection model weights
-    ]
-
-    dataconfigs = [
-        r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml",
-        r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml",
-    ]
-
-    imgsz = 800
-    iou_threshold = 0.45
-    conf_threshold = 0.235
-    splits = [
-        "val",
-        "test",
-    ]
+    
+    
 
     # remove label.cache files
-    for dataconfig in dataconfigs:
-        remove_label_cache(data_config_yaml=dataconfig)
+    remove_label_cache(data_config_yaml=args.data_config)
 
-    for split in splits:
-        for path, dataconfig in zip(paths, dataconfigs):
-            print("\n", "-" * 20, split, "-" * 20)
-            model = YOLO(path)
-            model.info()
+    for split in args.splits:
+        print("-" * 20, split, "-" * 20)
+        print('\n',args.weights,'\n',args.data_config,)
+        model = YOLO(args.weights)
+        model.info()
 
-            # Customize validation settings
-            model.val(
-                data=dataconfig,
-                imgsz=imgsz,
-                batch=64,
-                split=split,
-                conf=conf_threshold,
-                iou=iou_threshold,
-                device="cuda",
-            )
+        # Customize validation settings
+        name = args.name+f"#{round(args.conf_threshold*100)}#{round(args.iou_threshold*100)}#{args.augment}#{args.max_det}-"
+        model.val(
+            name=name,
+            project=args.project_name,
+            data=args.data_config,
+            imgsz=args.imgsz,
+            batch=args.batch_size,
+            split=split,
+            conf=args.conf_threshold,
+            iou=args.iou_threshold,
+            device=args.device,
+            single_cls=args.is_detector,
+            agnostic_nms=args.is_detector,
+            augment=args.augment,
+            save_conf=args.save_txt,
+            save_crop=False,
+            save_json=False,
+            plots=args.plots,
+            save_hybrid=args.save_hybrid,
+            save_txt=args.save_txt
+        )
 
 
 def herdnet_val():
@@ -133,6 +168,13 @@ def herdnet_val():
 
 
 if __name__ == "__main__":
-    # ultralytics_val()
 
-    herdnet_val()
+    args = parse(Flags)
+
+    print('args:\n',json.dumps(args.__dict__,indent=2),'\n',flush=True)
+
+    ultralytics_val(args)
+
+    # herdnet_val()
+
+    pass
