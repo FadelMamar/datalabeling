@@ -28,7 +28,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import paddle
-
+import json
 from ppdet.core.workspace import create, load_config, merge_config
 from ppdet.utils.check import check_gpu, check_npu, check_xpu, check_mlu, check_gcu, check_version, check_config
 from ppdet.utils.cli import ArgsParser, merge_args
@@ -47,6 +47,12 @@ def parse_args():
         default=None,
         type=str,
         help="Evaluation directory, default is current directory.")
+    
+    parser.add_argument(
+        "--mode",
+        default="eval",
+        type=str,
+        help="Mode should be eval or test")
 
     parser.add_argument(
         '--json_eval',
@@ -82,11 +88,12 @@ def parse_args():
         action='store_true',
         default=False,
         help="Enable auto mixed precision eval.")
-
+    
     # for smalldet slice_infer
     parser.add_argument(
         "--slice_infer",
         action='store_true',
+        default=False,
         help="Whether to slice the image and merge the inference results for small object detection."
     )
     parser.add_argument(
@@ -138,14 +145,17 @@ def run(FLAGS, cfg):
     ssod_method = cfg.get('ssod_method', None)
     if ssod_method == 'ARSL':
         # build ARSL_trainer
-        trainer = Trainer_ARSL(cfg, mode='eval')
+        trainer = Trainer_ARSL(cfg, mode=FLAGS.mode)
         # load ARSL_weights
         trainer.load_weights(cfg.weights, ARSL_eval=True)
     else:
         # build trainer
-        trainer = Trainer(cfg, mode='eval')
+        trainer = Trainer(cfg, mode=FLAGS.mode)
         #load weights
         trainer.load_weights(cfg.weights)
+
+    logger.info(json.dumps(cfg, indent=4))
+
 
     # training
     if FLAGS.slice_infer:
@@ -198,7 +208,7 @@ def main():
         place = paddle.set_device('cpu')
 
     if FLAGS.slim_config:
-        cfg = build_slim_model(cfg, FLAGS.slim_config, mode='eval')
+        cfg = build_slim_model(cfg, FLAGS.slim_config, mode=FLAGS.mode)
 
     check_config(cfg)
     check_gpu(cfg.use_gpu)

@@ -2,9 +2,12 @@
 import argparse
 import os
 import os.path as osp
+from pathlib import Path
+import pandas as pd
+import numpy as np
+import json
 import time
 import warnings
-
 import mmcv
 import torch
 from mmcv import Config, DictAction
@@ -13,13 +16,138 @@ from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
                          wrap_fp16_model)
 from mmdet.apis import multi_gpu_test, single_gpu_test
 from mmdet.datasets import build_dataloader, replace_ImageToTensor
-
+from mmrotate.datasets.builder import ROTATED_DATASETS
+from mmrotate.datasets.dota import DOTADataset
+from mmrotate.core import poly2obb_np
 from mmrotate.datasets import build_dataset
 from mmrotate.models import build_detector
 from mmrotate.utils import (build_ddp, build_dp, compat_cfg, get_device,
                             setup_multi_processes)
 
 
+@ROTATED_DATASETS.register_module()
+class WildAIDataset(DOTADataset):
+    """Dataset for detection."""
+
+    def __init__(self, ann_file, pipeline, version="oc", difficulty=100, **kwargs):
+        self.version = version
+        self.difficulty = difficulty
+        self.empty_frac = 1.
+
+        super(WildAIDataset, self).__init__(ann_file, pipeline, **kwargs)
+
+    def load_annotations(self, ann_folder):
+        """
+        Args:
+            ann_folder: folder that contains DOTA v1 annotations txt files
+        """
+        cls_map = {
+            c: i for i, c in enumerate(self.CLASSES)
+        }  # in mmdet v2.0 label is 0-based
+        # ann_files = Path(ann_folder).glob('*.txt')
+        image_paths = list(
+            (Path(ann_folder).parent / "images").glob("*")
+        )  # negative and positive samples
+        positive_images = [
+            img
+            for img in image_paths
+            if Path(str(img).replace("images", "dota_labels"))
+            .with_suffix(".txt")
+            .exists()
+        ]
+        ann_files = [
+            Path(str(img).replace("images", "dota_labels")).with_suffix(".txt")
+            for img in positive_images
+        ]
+
+        negative_images = list(set(image_paths) - set(positive_images))
+
+        negative_images = (
+            pd.Series(negative_images).sample(frac=self.empty_frac).to_list()
+        )
+
+        selected_images_paths = negative_images + positive_images
+        ann_files = [None] * len(negative_images) + ann_files
+
+        # print(len(selected_images_paths))
+
+        data_infos = []
+        if not ann_files:  # test phase
+            for img in selected_images_paths:
+                data_info = {}
+                data_info["filename"] = img.name
+                data_info["ann"] = {}
+                data_info["ann"]["bboxes"] = []
+                data_info["ann"]["labels"] = []
+                data_infos.append(data_info)
+        else:
+            for image_path, ann_file in zip(selected_images_paths, ann_files):
+                data_info = {}
+                data_info["filename"] = image_path.name
+                data_info["ann"] = {}
+                gt_bboxes = []
+                gt_labels = []
+                gt_polygons = []
+                gt_bboxes_ignore = []
+                gt_labels_ignore = []
+                gt_polygons_ignore = []
+
+                if ann_file is not None:
+                    with open(ann_file) as f:
+                        s = f.readlines()
+                        for si in s:
+                            bbox_info = si.split()
+                            poly = np.array(bbox_info[:8], dtype=np.float32)
+                            try:
+                                x, y, w, h, a = poly2obb_np(poly, self.version)
+                            except Exception as e:  # noqa: E722
+                                print(e)
+                                continue
+                            cls_name = bbox_info[8]
+                            difficulty = int(bbox_info[9])
+                            label = cls_map[cls_name]
+                            if difficulty > self.difficulty:
+                                pass
+                            else:
+                                gt_bboxes.append([x, y, w, h, a])
+                                gt_labels.append(label)
+                                gt_polygons.append(poly)
+
+                if gt_bboxes:
+                    data_info["ann"]["bboxes"] = np.array(gt_bboxes, dtype=np.float32)
+                    data_info["ann"]["labels"] = np.array(gt_labels, dtype=np.int64)
+                    data_info["ann"]["polygons"] = np.array(
+                        gt_polygons, dtype=np.float32
+                    )
+                else:
+                    data_info["ann"]["bboxes"] = np.zeros((0, 5), dtype=np.float32)
+                    data_info["ann"]["labels"] = np.array([], dtype=np.int64)
+                    data_info["ann"]["polygons"] = np.zeros((0, 8), dtype=np.float32)
+
+                if gt_polygons_ignore:
+                    data_info["ann"]["bboxes_ignore"] = np.array(
+                        gt_bboxes_ignore, dtype=np.float32
+                    )
+                    data_info["ann"]["labels_ignore"] = np.array(
+                        gt_labels_ignore, dtype=np.int64
+                    )
+                    data_info["ann"]["polygons_ignore"] = np.array(
+                        gt_polygons_ignore, dtype=np.float32
+                    )
+                else:
+                    data_info["ann"]["bboxes_ignore"] = np.zeros(
+                        (0, 5), dtype=np.float32
+                    )
+                    data_info["ann"]["labels_ignore"] = np.array([], dtype=np.int64)
+                    data_info["ann"]["polygons_ignore"] = np.zeros(
+                        (0, 8), dtype=np.float32
+                    )
+
+                data_infos.append(data_info)
+
+        self.img_ids = [*map(lambda x: x["filename"][:-4], data_infos)]
+        return data_infos
+    
 def parse_args():
     """Parse parameters."""
     parser = argparse.ArgumentParser(
@@ -206,6 +334,9 @@ def main():
     # build the dataloader
     dataset = build_dataset(cfg.data.test)
     data_loader = build_dataloader(dataset, **test_loader_cfg)
+
+    print("Dataset: ",dataset)
+    print(cfg.pretty_text)
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
