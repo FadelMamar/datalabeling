@@ -99,7 +99,7 @@ def train_ppd(args: Flags):
 
     cfg = load_config(args.config)
 
-    args.run_name = args.run_name + f"tr_empty_ratio_{args.tr_empty_ratio}_freeze_{args.freeze_ratio}"
+    args.run_name = args.run_name + f"-tr_empty_ratio_{args.tr_empty_ratio}_freeze_{args.freeze_ratio}"
     args.output_dir = os.path.join("runs_ppd", args.run_name)
 
     cfg["num_classes"] = data_config["nc"]
@@ -183,12 +183,7 @@ def train_ppd(args: Flags):
 
     logger.info(json.dumps(cfg, indent=4))
 
-    # training
-    # mlflow.set_tracking_uri(args.mlflow_tracking_uri)
-    # mlflow.set_experiment(args.project_name)
-    # mlflow.paddle.autolog(log_every_n_epoch = 5)
-    # with mlflow.start_run(run_name=args.run_name) as run:
-
+    
     # disable grad for some parameters
     num_layers = len(list(trainer.model.parameters()))
     for idx, param in enumerate(trainer.model.parameters()):
