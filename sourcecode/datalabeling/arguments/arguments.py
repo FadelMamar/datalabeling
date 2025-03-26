@@ -54,6 +54,7 @@ class Arguments:
     optimizer_momentum: float = 0.99
     device: str = 0
     patience: int = 10
+    val: str = "True" 
 
     # pretraining
     use_pretraining: bool = False
