@@ -14,6 +14,7 @@ def training_routine(
     resume: bool = False,
 ):  
     assert args.val in ['True','False']
+    print('Disabling validation run.')
     # Train the model
     model.train(
         data=data_cfg or args.data_config_yaml,
@@ -152,7 +153,7 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
             pattern_glob=img_glob_pattern,
         )
         # update run_name
-        args.run_name = run_name + f"-CL_emptyRatio_{ratio}_freeze_{args.freeze}"
+        args.run_name = run_name + f"-CL_emptyRatio_{ratio}_freeze_{freeze}"
         # freeze layer. see ultralytics docs :)
         args.freeze = freeze
         args.lr0 = lr
