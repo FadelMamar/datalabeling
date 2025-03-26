@@ -12,7 +12,8 @@ def training_routine(
     batchsize: int = None,
     data_cfg: str | None = None,
     resume: bool = False,
-):
+):  
+    assert args.val in ['True','False']
     # Train the model
     model.train(
         data=data_cfg or args.data_config_yaml,
@@ -29,7 +30,7 @@ def training_routine(
         warmup_epochs=args.warmup_epochs,
         dropout=args.dropout,
         batch=batchsize or args.batchsize,
-        val=True,
+        val=args.val == 'True',
         plots=True,
         cos_lr=args.cos_annealing,
         deterministic=False,
