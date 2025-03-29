@@ -43,6 +43,7 @@ def training_routine(
         degrees=args.rotation_degree,
         mixup=args.mixup,
         scale=args.scale,
+        iou=args.iou_threshold,
         mosaic=args.mosaic,
         augment=False,
         erasing=args.erasing,
