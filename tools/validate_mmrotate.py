@@ -229,6 +229,8 @@ def parse_args():
 def main():
     args = parse_args()
 
+    
+
     assert args.out or args.eval or args.format_only or args.show \
         or args.show_dir, \
         ('Please specify at least one operation (save/eval/format/show the '
@@ -373,6 +375,9 @@ def main():
             find_unused_parameters=find_unused_parameters)
         outputs = multi_gpu_test(model, data_loader, args.tmpdir,
                                  args.gpu_collect)
+
+    # save inference results
+    args.out = os.path.join(args.work_dir,"results.pkl")
 
     rank, _ = get_dist_info()
     if rank == 0:
