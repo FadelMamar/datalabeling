@@ -164,13 +164,13 @@ model = dict(
     test_cfg=dict(
         rpn=dict(
             nms_pre=2000,
-            max_per_img=2000,
-            nms=dict(type='nms', iou_threshold=0.7),
+            max_per_img=300,
+            nms=dict(type='nms', iou_threshold=0.6),
             min_bbox_size=0),
         rcnn=dict(
             nms_pre=2000,
             min_bbox_size=0,
-            score_thr=0.05,
-            nms=dict(iou_thr=0.1),
-            max_per_img=2000)))
+            score_thr=0.25,
+            nms=dict(iou_thr=0.5),
+            max_per_img=300)))
 
