@@ -48,7 +48,7 @@ def run_ligthning():
     freeze_layers = [
         0.0,
     ]
-    device = "cuda"
+    device = "cuda" if torch.cuda.is_available() else 'cpu'
 
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
     loaded_weights_num_classes=4 # for ennedi weights
@@ -113,7 +113,7 @@ def run_ligthning():
         # loggers and callbacks
         mlf_logger = MLFlowLogger(
             experiment_name="Herdnet",
-            run_name=f"herdnet-{empty_ratio}-{lr}-{freeze_ratio}",
+            run_name=f"herdnet-emptyRatio_{empty_ratio}-freezeRatio_{freeze_ratio}",
             tracking_uri=args.mlflow_tracking_uri,
             log_model=True,
         )
