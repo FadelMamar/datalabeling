@@ -484,7 +484,8 @@ class HerdnetTrainer(L.LightningModule):
         classification_threshold: float = 0.25,
         load_state_dict_strict: bool = True,
         herdnet_model_path: str | None = None,
-        ce_weight: list = None,
+        ce_weight: torch.Tensor = None,
+        losses: list = None,
     ):
         super().__init__()
 
@@ -508,22 +509,24 @@ class HerdnetTrainer(L.LightningModule):
             self.num_classes = data_config["nc"] + 1
         self.class_mapping = {str(k + 1): v for k, v in data_config["names"].items()}
 
-        losses = [
-            {
-                "loss": FocalLoss(reduction="mean"),
-                "idx": 0,
-                "idy": 0,
-                "lambda": 1.0,
-                "name": "focal_loss",
-            },
-            {
-                "loss": CrossEntropyLoss(reduction="mean", weight=ce_weight),
-                "idx": 1,
-                "idy": 1,
-                "lambda": 1.0,
-                "name": "ce_loss",
-            },
-        ]
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if losses is None:
+            losses = [
+                {
+                    "loss": FocalLoss(reduction="mean"),
+                    "idx": 0,
+                    "idy": 0,
+                    "lambda": 1.0,
+                    "name": "focal_loss",
+                },
+                {
+                    "loss": CrossEntropyLoss(reduction="mean", weight=ce_weight),
+                    "idx": 1,
+                    "idy": 1,
+                    "lambda": 1.0,
+                    "name": "ce_loss",
+                },
+            ]
         # Load herdnet object
         self.model = HerdNet(
             pretrained=False,
@@ -538,13 +541,15 @@ class HerdnetTrainer(L.LightningModule):
             success = self.model.load_state_dict(
                 checkpoint["model_state_dict"], strict=load_state_dict_strict
             )
+            print("Warning! load_state_dict_strict should be set to False, if re-adapting classification head.")
             print("Loading ckpt:", success)
 
         if self.num_classes != self.loaded_weights_num_classes:
             print(
                 f"Classification head of herdnet will be modified to handle {self.num_classes}."
             )
-            # reshaping done inside self.shared_step
+            self.model.model.reshape_classes(self.num_classes)
+            
 
         # metrics
         self.metrics_val = PointsMetrics(
@@ -610,10 +615,7 @@ class HerdnetTrainer(L.LightningModule):
         return dict(gt=gt, preds=preds, est_count=counts)
 
     def shared_step(self, stage, batch, batch_idx):
-        if self.num_classes != self.loaded_weights_num_classes:
-            self.model.model.reshape_classes(self.num_classes)
-            self.num_classes = self.loaded_weights_num_classes
-            self.model = self.model.to(self.device)
+        
 
         # compute losses
         if stage == "train":
