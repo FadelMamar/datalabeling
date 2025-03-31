@@ -446,6 +446,7 @@ class HerdnetData(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
+            sampler=torch.utils.data.SequentialSampler(self.val_dataset),
             num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
             persistent_workers=True
@@ -464,10 +465,11 @@ class HerdnetData(L.LightningDataModule):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
+            sampler=torch.utils.data.SequentialSampler(self.test_dataset),
             shuffle=False,
-            num_workers=self.num_workers,
+            # num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
-            persistent_workers=True
+            # persistent_workers=True
         )
 
     def predict_dataloader(self):
@@ -491,6 +493,8 @@ class HerdnetTrainer(L.LightningModule):
         herdnet_model_path: str | None = None,
         ce_weight: torch.Tensor = None,
         losses: list = None,
+        epochs: int=None,
+        lrf:float=1e-1
     ):
         super().__init__()
 
@@ -501,6 +505,8 @@ class HerdnetTrainer(L.LightningModule):
             "down_ratio",
             "ce_weight",
             "eval_radius",
+            "lrf",
+            "epochs"
         )
 
         self.work_dir = work_dir
@@ -540,18 +546,28 @@ class HerdnetTrainer(L.LightningModule):
         )
         self.model = LossWrapper(self.model, losses=losses, mode="both")
         if herdnet_model_path is not None:
-            checkpoint = torch.load(
-                herdnet_model_path, map_location="cpu", weights_only=True
-            )
-            success = self.model.load_state_dict(
-                checkpoint["model_state_dict"], strict=load_state_dict_strict
-            )
-            print("Warning! load_state_dict_strict should be set to False, if re-adapting classification head.")
-            print("Loading ckpt:", success)
+            try:
+                checkpoint = torch.load(
+                    herdnet_model_path, map_location=device, weights_only=True
+                )
+                success = self.model.load_state_dict(
+                    checkpoint["model_state_dict"], strict=load_state_dict_strict
+                )
+                print("Loading ckpt:", herdnet_model_path)
+            except:
+                checkpoint = torch.load(
+                    herdnet_model_path, map_location=device, weights_only=True
+                )
+                success = self.model.load_state_dict(
+                    checkpoint["model_state_dict"], strict=False
+                )
+                print("Warning! load_state_dict_strict is being set to False")
+                print(success)
+                
 
         if self.num_classes != self.loaded_weights_num_classes:
             print(
-                f"Classification head of herdnet will be modified to handle {self.num_classes}."
+                f"Classification head of herdnet will be modified to handle {self.num_classes} classes."
             )
             self.model.model.reshape_classes(self.num_classes)
             
@@ -728,10 +744,10 @@ class HerdnetTrainer(L.LightningModule):
             weight_decay=self.hparams.weight_decay,
         )
 
-        # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-        #                                                                     T_0=self.args.epochs,
-        #                                                                     T_mult=1,
-        #                                                                     eta_min=self.args.lr0*self.args.lrf,
-        #                                                                 )
-        # return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
-        return optimizer
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                            T_0=self.hparams.epochs,
+                                                                            T_mult=1,
+                                                                            eta_min=self.hparams.lr*self.hparams.lrf,
+                                                                        )
+        return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        # return optimizer
