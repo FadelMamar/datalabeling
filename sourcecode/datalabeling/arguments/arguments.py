@@ -54,6 +54,10 @@ class Arguments:
     optimizer_momentum: float = 0.99
     device: str = 0
     patience: int = 10
+    val: str = "True" 
+
+    # eval flag
+    iou_threshold:float=0.6
 
     # pretraining
     use_pretraining: bool = False
