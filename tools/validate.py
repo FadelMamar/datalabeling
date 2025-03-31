@@ -34,9 +34,6 @@ class Flags:
     project_name:str="wildAI-detection"
     plots:bool=False
 
-    # model_type
-    model_type:str = "ultralytics" # ultralytics or HerdNet 
-
 
 def ultralytics_val(args:Flags):
     from ultralytics import YOLO
@@ -80,91 +77,6 @@ def ultralytics_val(args:Flags):
         )
 
 
-def herdnet_val():
-    from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
-    from datalabeling.arguments import Arguments
-    import lightning as L
-    import yaml
-    import torch
-    from lightning.pytorch.loggers import MLFlowLogger
-
-    # lowering matrix multiplication precision
-    if torch.cuda.is_available():
-        torch.set_float32_matmul_precision("high")
-
-    args = Arguments()
-    args.imgsz = 800
-    args.batchsize = 32
-    down_ratio = 2
-
-    # =============================================================================
-    #     Identification
-    # =============================================================================
-
-    # args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
-    # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\tools\lightning-ckpts\epoch=11-step=1740.ckpt"
-
-    # =============================================================================
-    #     # Pretrained
-    # =============================================================================
-    # args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
-
-    # =============================================================================
-    #     Detection
-    # =============================================================================
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
-    checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\mlartifacts\934358897506090439\1f0f0be9be1a406c8df8978331a99915\artifacts\epoch=2-step=1815\epoch=2-step=1815.ckpt"
-
-    # Get number of classes
-    with open(args.data_config_yaml, "r") as file:
-        data_config = yaml.load(file, Loader=yaml.FullLoader)
-    num_classes = data_config["nc"] + 1
-
-    # set model
-    mlf_logger = MLFlowLogger(
-        experiment_name="Herdnet",
-        run_name="herdnet-validate",
-        tracking_uri=args.mlflow_tracking_uri,
-        log_model=True,
-    )
-    herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
-        checkpoint_path=checkpoint_path,
-        data_config_yaml=args.data_config_yaml,
-        lr=None,
-        weight_decay=None,
-        herdnet_model_path=None,
-        loaded_weights_num_classes=num_classes,
-        ce_weight=None,
-        map_location="cpu",
-        strict=True,
-        work_dir="../.tmp",
-    )
-
-    # Data
-    datamodule = HerdnetData(
-        data_config_yaml=args.data_config_yaml,
-        patch_size=args.imgsz,
-        batch_size=args.batchsize,
-        down_ratio=down_ratio,
-        train_empty_ratio=0.0,
-    )
-    # Validation
-    # datamodule.setup('fit')
-
-    # Predict
-    # images_path = os.path.join(data_config['path'],data_config['test'][0])
-    # images_path = list(Path(images_path).glob('*'))
-    # datamodule.set_predict_dataset(images_path=images_path,batchsize=1)
-
-    trainer = L.Trainer(accelerator="auto", profiler="simple", logger=mlf_logger)
-
-    # out = trainer.validate(model=herdnet_trainer,datamodule=datamodule)
-
-    out = trainer.test(model=herdnet_trainer, datamodule=datamodule)
-
-    # out = trainer.predict(model=herdnet_trainer, datamodule=datamodule,)
-
-    print(out)
 
 
 if __name__ == "__main__":
@@ -175,6 +87,3 @@ if __name__ == "__main__":
 
     ultralytics_val(args)
 
-    # herdnet_val()
-
-    pass
