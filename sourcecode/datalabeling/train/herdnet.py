@@ -78,6 +78,7 @@ def get_groundtruth(
             df["y"] = (df["y1"] + df["y4"]) * img_height * 0.5
             df["w"] = (df["x2"] - df["x1"]) * img_width
             df["h"] = (df["y4"] - df["y1"]) * img_height
+            df.drop(columns=cols1[1:],inplace=True)
 
         df["images"] = str(image_path)
         df.rename(columns={"id": "labels"}, inplace=True)
@@ -445,7 +446,9 @@ class HerdnetData(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
+            num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
+            persistent_workers=True
         )
 
     def test_dataloader(self):
@@ -462,7 +465,9 @@ class HerdnetData(L.LightningDataModule):
             self.test_dataset,
             batch_size=self.batch_size,
             shuffle=False,
+            num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
+            persistent_workers=True
         )
 
     def predict_dataloader(self):
