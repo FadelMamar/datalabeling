@@ -6,7 +6,6 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from animaloc.train import Trainer
 from animaloc.eval import PointsMetrics, HerdNetEvaluator
-
 from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
 from datalabeling.arguments import Arguments
 import lightning as L
@@ -16,12 +15,13 @@ from lightning.pytorch.callbacks import (
     LearningRateMonitor,
     EarlyStopping,
 )
-
 from pathlib import Path
 
 
-def run_ligthning():
+def run_ligthning(args:Arguments):
     import logging
+    import segmentation_models_pytorch as smp
+
 
     logger = logging.getLogger("mlflow")
     logger.setLevel(logging.DEBUG)
@@ -30,56 +30,78 @@ def run_ligthning():
     if torch.cuda.is_available():
         torch.set_float32_matmul_precision("high")
 
-    args = Arguments()
-    args.lr0 = 1e-4
-    args.epochs = 30
+    # args = Arguments()
+    # args.lr0 = 1e-4
+    args.lrf = 0.1
+    # args.epochs = 30
     args.imgsz = 800
-    args.batchsize = 32
+    args.batchsize = 16
     down_ratio = 2
-    precision = "16-mixed"
+    precision = "bf16-mixed"
     empty_ratio = 0.0
     args.patience = 10
-    cl_lr = [
-        3e-4,
+    args.cl_batch_size = 16
+    args.cl_lr0s = [
+        3e-4, 1e-4, 5e-5
     ]
-    empty_ratios = [
-        0,
+    args.cl_ratios = [
+        0, 1, 2.5
     ]
-    freeze_layers = [
-        0.0,
+    args.cl_freeze = [
+        0.0, 0.5, 0.75
+    ]
+    args.cl_epochs = [
+        30, 10, 7
     ]
     device = "cuda" if torch.cuda.is_available() else 'cpu'
+    args.project_name = "Herdnet"
 
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
+    accelerator = "auto"
+    detect_anomaly = False
+
+    normalization="standard" # "standard min_max
+    mean=(0.485, 0.456, 0.406)
+    std=(0.229, 0.224, 0.225)
+    # mean=(0., 0., 0.)
+    # std=(1., 1., 1.)
+    
+    check_val_every_n_epoch = 3
+    num_sanity_val_steps = 10
+    
+    work_dir = Path("runs_herdnet")  # for HerdNet Trainer
+    work_dir.mkdir(exist_ok=True, parents=False)
+
+    args.path_weights = r"base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
     loaded_weights_num_classes=4 # for ennedi weights
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
+    # args.data_config_yaml = r"configs\yolo_configs\dataset_identification.yaml"
+    # args.run_name = "herdnet-Identif"
+
     # args.data_config_yaml = r"D:\datalabeling\data\data_config.yaml"
     # args.path_weights = r"D:\datalabeling\models\20220329_HerdNet_Ennedi_dataset_2023.pth"
 
     checkpoint_path = None
     # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\mlartifacts\934358897506090439\336b6791130f4873903e924d26beccad\artifacts\epoch=4-step=450\epoch=4-step=450.ckpt"
-    checkpoint_num_classes = 2  # num classes includes background
-    
-
-    
+    # loaded_weights_num_classes = 2  # num classes includes background 
 
     # get cross entropy loss weights
     # Data
-    datamodule = HerdnetData(
-        data_config_yaml=args.data_config_yaml,
-        patch_size=args.imgsz,
-        batch_size=args.batchsize,
-        down_ratio=down_ratio,
-        train_empty_ratio=empty_ratio,
-    )
-    datamodule.setup("fit")
-    ce_weight = datamodule.get_labels_weights.to(device)
-    # ce_weight = None
-    print(f"cross entropy loss class importance weights: {ce_weight}")
+    # datamodule = HerdnetData(
+    #     data_config_yaml=args.data_config_yaml,
+    #     patch_size=args.imgsz,
+    #     batch_size=args.batchsize,
+    #     down_ratio=down_ratio,
+    #     train_empty_ratio=empty_ratio,
+    # )
+    # datamodule.setup("fit")
+    # ce_weight = datamodule.get_labels_weights.clamp(min=1.1).log()
+    # ce_weight[0] = 0.01
+    # ce_weight = ce_weight.to(device)
+
+    ce_weight = None
+    logger.info(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
 
-    work_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp"  # for HerdNet Trainer
-    Path(work_dir).mkdir(exist_ok=True, parents=False)
+    
 
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
@@ -87,8 +109,8 @@ def run_ligthning():
             lr=args.lr0,
             weight_decay=args.weight_decay,
             data_config_yaml=args.data_config_yaml,
-            herdnet_model_path=None,
-            loaded_weights_num_classes=checkpoint_num_classes,
+            herdnet_model_path=None, # should be None!
+            loaded_weights_num_classes=loaded_weights_num_classes,
             ce_weight=ce_weight,
             map_location="cpu",
             strict=True,
@@ -97,6 +119,7 @@ def run_ligthning():
 
         print(f"\nLoading checkpoint at {checkpoint_path}\n")
     else:
+        losses = None # uses the default
         # Training logic
         herdnet_trainer = HerdnetTrainer(
             herdnet_model_path=args.path_weights,
@@ -106,19 +129,26 @@ def run_ligthning():
             loaded_weights_num_classes=loaded_weights_num_classes,
             ce_weight=ce_weight,
             work_dir=work_dir,
+            losses=losses,
             load_state_dict_strict=True,
         )
 
-    for empty_ratio, lr, freeze_ratio in zip(empty_ratios, cl_lr, freeze_layers):
+    # continuous learning
+    for empty_ratio, lr, freeze_ratio, epochs in zip(args.cl_ratios, args.cl_lr0s, args.cl_freeze, args.cl_epochs):
+
+        args.run_name = args.run_name + f"-emptyRatio_{empty_ratio}-freezeRatio_{freeze_ratio}"
+        args.cl_save_dir = work_dir/args.run_name
+        args.cl_save_dir.mkdir(parents=True, exist_ok=True)
+
         # loggers and callbacks
         mlf_logger = MLFlowLogger(
-            experiment_name="Herdnet",
-            run_name=f"herdnet-emptyRatio_{empty_ratio}-freezeRatio_{freeze_ratio}",
+            experiment_name=args.project_name,
+            run_name=args.run_name,
             tracking_uri=args.mlflow_tracking_uri,
             log_model=True,
         )
         checkpoint_callback = ModelCheckpoint(
-            dirpath="./lightning-ckpts",
+            dirpath=args.cl_save_dir,
             monitor="val_f1-score",
             mode="max",
             save_weights_only=True,
@@ -138,7 +168,9 @@ def run_ligthning():
         ]
 
         herdnet_trainer.hparams.lr = lr
-
+        herdnet_trainer.hparams.epochs = epochs
+        herdnet_trainer.hparams.lrr = args.lrf
+        
         # Freeze params
         num_layers = len(list(herdnet_trainer.parameters()))
         for idx, param in enumerate(herdnet_trainer.parameters()):
@@ -152,21 +184,27 @@ def run_ligthning():
         datamodule = HerdnetData(
             data_config_yaml=args.data_config_yaml,
             patch_size=args.imgsz,
-            batch_size=args.batchsize,
+            batch_size=args.cl_batch_size,
             down_ratio=down_ratio,
             train_empty_ratio=empty_ratio,
+            normalization=normalization, # 
+            mean=mean,
+            std=std
         )
 
         # Trainer
         trainer = L.Trainer(
-            num_sanity_val_steps=10,
+            num_sanity_val_steps=num_sanity_val_steps,
             logger=mlf_logger,
-            max_epochs=args.epochs,
-            check_val_every_n_epoch=5,
-            accumulate_grad_batches=max(int(64 / args.batchsize), 1),
+            max_epochs=epochs,
+            check_val_every_n_epoch=check_val_every_n_epoch,
+            # accumulate_grad_batches=max(int(64 / args.batchsize), 1),
             precision=precision,
             callbacks=callbacks,
-            accelerator=device,
+            gradient_clip_val=10, 
+            gradient_clip_algorithm="value",
+            detect_anomaly=detect_anomaly,
+            accelerator=accelerator,
         )
         trainer.fit(
             model=herdnet_trainer,
@@ -175,21 +213,24 @@ def run_ligthning():
         # trainer.validate(model=herdnet_trainer,
         #             datamodule=datamodule,
         #             )
+        # Reset param.requires_grad
+        for param in herdnet_trainer.parameters():
+            param.requires_grad = True
 
 
-def run():
-    args = Arguments()
-    args.data_config_yaml = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification-detection.yaml"
-    args.lr0 = 1e-4
+def run(args:Arguments):
+    # args = Arguments()
+    # args.data_config_yaml = r"configs\yolo_configs\dataset_identification.yaml"
+    args.lr0 = 3e-4
     args.imgsz = 800
-    args.batchsize = 32
+    args.batchsize = 16
     args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
     down_ratio = 2
     empty_ratio = 0.0
     device = "cuda"
     args.epochs = 30
-    work_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp"  # for HerdNet Trainer
-    Path(work_dir).mkdir(exist_ok=True, parents=False)
+    work_dir = r"runs_herdnet"  # for HerdNet Trainer
+    (Path(work_dir) / args.run_name).mkdir(exist_ok=True, parents=True)
 
     # Data
     datamodule = HerdnetData(
@@ -210,7 +251,8 @@ def run():
 
     num_classes = datamodule.num_classes
 
-    ce_weights = datamodule.get_labels_weights.to(device)
+    # ce_weights = datamodule.get_labels_weights.to(device)
+    ce_weights = None
 
     losses = [
         {
@@ -258,6 +300,7 @@ def run():
         dataloader=datamodule.val_dataloader(),
         metrics=metrics,
         device_name=device,
+        print_freq=100,
         stitcher=stitcher,
         work_dir=work_dir,
         header="validation",
@@ -270,8 +313,10 @@ def run():
         model=herdnet,
         train_dataloader=datamodule.train_dataloader(),
         val_dataloader=None,
+        valid_freq=5,
+        print_freq=50,
         lr_milestones=[
-            20,
+            25,
         ],
         optimizer=optimizer,
         auto_lr=True,
@@ -281,25 +326,16 @@ def run():
         work_dir=work_dir,
     )
 
-    # FasterRCNN Training
-    # FasterRCNNTrainer(model=...,
-    #                 train_dataloader=datamodule.train_dataloader(),
-    #                 val_dataloader=None,
-    #                 lr_milestones=[20,],
-    #                 optimizer=optimizer,
-    #                 auto_lr=True,
-    #                 device_name=device,
-    #                 num_epochs=args.epochs,
-    #                 evaluator=evaluator,
-    #                 work_dir=work_dir
-    #                 )
-
+    
     herdnet = trainer.start(
-        warmup_iters=30, checkpoints="best", select="max", validate_on="f1_score"
+        warmup_iters=50, checkpoints="best", select="max", validate_on="f1_score"
     )
 
 
 if __name__ == "__main__":
-    # run()
+  
+    from datargs import parse
+    args = parse(Arguments)
+    # run_ligthning(args)
 
-    run_ligthning()
+    run(args)
