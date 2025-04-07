@@ -268,10 +268,10 @@ def run(args:Arguments):
     ]
 
     # Load model
-    herdnet = HerdNet(pretrained=False, down_ratio=down_ratio, num_classes=4)
+    herdnet = HerdNet(pretrained=False, down_ratio=down_ratio, num_classes=args.herdnet_num_classes)
     herdnet = LossWrapper(herdnet, losses=losses)
     checkpoint = torch.load(args.path_weights, map_location=args.device, weights_only=True)
-    success = herdnet.load_state_dict(checkpoint["model_state_dict"], strict=False)
+    success = herdnet.load_state_dict(checkpoint["model_state_dict"], strict=True)
 
     print(f"Loading weights from {args.path_weights} with success: {success}")
 
@@ -338,13 +338,17 @@ if __name__ == "__main__":
 
     args = parse(Arguments)
 
-    args.run_name += f"_emptyRatio_{args.cl_ratios[0]}"
 
+    # training using lightning
     # run_ligthning(args)
 
+
+    # training using original pipeline
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
     mlflow.set_experiment(args.project_name)
     mlflow.pytorch.autolog()
+
+    args.run_name += f"_emptyRatio_{args.cl_ratios[0]}"
 
     with mlflow.start_run(
         run_name=args.run_name,
