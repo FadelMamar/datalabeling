@@ -565,6 +565,7 @@ class HerdnetTrainer(L.LightningModule):
                     checkpoint["model_state_dict"], strict=load_state_dict_strict
                 )
                 print("Loading ckpt:", herdnet_model_path)
+                
             except:
                 checkpoint = torch.load(
                     herdnet_model_path, map_location=device, weights_only=True
@@ -582,7 +583,8 @@ class HerdnetTrainer(L.LightningModule):
             )
             self.model.model.reshape_classes(self.num_classes)
             
-
+        self.model = self.model.to(device)
+        
         # metrics
         self.metrics_val = PointsMetrics(
             radius=eval_radius, num_classes=self.num_classes
