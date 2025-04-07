@@ -219,18 +219,14 @@ def run_ligthning(args:Arguments):
 
 
 def run(args:Arguments):
-    # args = Arguments()
-    # args.data_config_yaml = r"configs\yolo_configs\dataset_identification.yaml"
-    args.lr0 = 3e-4
-    args.imgsz = 800
-    args.batchsize = 16
-    args.path_weights = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"
+    
     down_ratio = 2
-    empty_ratio = 0.0
-    device = "cuda"
-    args.epochs = 30
+    empty_ratio = args.cl_ratios[0]
+    valid_freq=4
     work_dir = r"runs_herdnet"  # for HerdNet Trainer
-    (Path(work_dir) / args.run_name).mkdir(exist_ok=True, parents=True)
+    work_dir = Path(work_dir) / (args.run_name)
+    work_dir.mkdir(exist_ok=True, parents=True)
+    
 
     # Data
     datamodule = HerdnetData(
@@ -251,7 +247,7 @@ def run(args:Arguments):
 
     num_classes = datamodule.num_classes
 
-    # ce_weights = datamodule.get_labels_weights.to(device)
+    # ce_weights = datamodule.get_labels_weights.to(args.device)
     ce_weights = None
 
     losses = [
@@ -274,10 +270,13 @@ def run(args:Arguments):
     # Load model
     herdnet = HerdNet(pretrained=False, down_ratio=down_ratio, num_classes=4)
     herdnet = LossWrapper(herdnet, losses=losses)
-    checkpoint = torch.load(args.path_weights, map_location=device, weights_only=True)
-    herdnet.load_state_dict(checkpoint["model_state_dict"], strict=True)
+    checkpoint = torch.load(args.path_weights, map_location=args.device, weights_only=True)
+    success = herdnet.load_state_dict(checkpoint["model_state_dict"], strict=False)
+
+    print(f"Loading weights from {args.path_weights} with success: {success}")
+
     herdnet.model.reshape_classes(num_classes)
-    herdnet = herdnet.to(device)
+    herdnet = herdnet.to(args.device)
 
     optimizer = Adam(
         params=herdnet.parameters(), lr=args.lr0, weight_decay=args.weight_decay
@@ -299,7 +298,7 @@ def run(args:Arguments):
         model=herdnet,
         dataloader=datamodule.val_dataloader(),
         metrics=metrics,
-        device_name=device,
+        device_name=args.device,
         print_freq=100,
         stitcher=stitcher,
         work_dir=work_dir,
@@ -313,14 +312,14 @@ def run(args:Arguments):
         model=herdnet,
         train_dataloader=datamodule.train_dataloader(),
         val_dataloader=None,
-        valid_freq=5,
-        print_freq=50,
+        valid_freq=valid_freq,
+        print_freq=100,
         lr_milestones=[
-            25,
+            20,
         ],
         optimizer=optimizer,
         auto_lr=True,
-        device_name=device,
+        device_name=args.device,
         num_epochs=args.epochs,
         evaluator=evaluator,
         work_dir=work_dir,
@@ -335,7 +334,22 @@ def run(args:Arguments):
 if __name__ == "__main__":
   
     from datargs import parse
+    import mlflow
+
     args = parse(Arguments)
+
+    args.run_name += f"_emptyRatio_{args.cl_ratios[0]}"
+
     # run_ligthning(args)
 
-    run(args)
+    mlflow.set_tracking_uri(args.mlflow_tracking_uri)
+    mlflow.set_experiment(args.project_name)
+    mlflow.pytorch.autolog()
+
+    with mlflow.start_run(
+        run_name=args.run_name,
+        experiment_id=mlflow.get_experiment_by_name(args.project_name).experiment_id,
+    ):
+        mlflow.log_params(vars(args))
+        
+        run(args)
