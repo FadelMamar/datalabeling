@@ -146,7 +146,7 @@ def load_dataset(
                 if empty_frac is not None
                 else None
             )
-            print('num_empty_sampled',num_empty_sampled)
+            print('num_empty_sampled: ',num_empty_sampled)
         if (num_empty_sampled is None) and (empty_frac is None):
             sampled_images_empty = []
         else:
@@ -157,18 +157,27 @@ def load_dataset(
                 )
                 .to_list()
             )
-        num_empty_images += len(sampled_images_empty)
+            # df_empty = pd.DataFrame()
+            # df_empty['images'] = sampled_images_empty
+            # for col in ["labels", "x", "y", "w", "h"]:
+            #     df_empty[col] = 0
+            # df = pd.concat([df, df_empty])
+        
         # selected images
         selected_images = sampled_images_empty + df["images"].to_list()
-        dataset = FolderDataset(  # CSVDataset
+        selected_images = list(set(selected_images))
+        dataset = FolderDataset(  # CSVDataset FolderDataset
             csv_file=df,
             root_dir="",
             albu_transforms=transforms[split][0],
             end_transforms=transforms[split][1],
-            images_paths=list(set(selected_images)),
+            images_paths=selected_images, # FolderDataset
         )
+
         datasets.append(dataset)
         df_gts.append(df)
+        
+        num_empty_images += len(sampled_images_empty)
 
     return ConcatDataset(datasets=datasets), pd.concat(df_gts), num_empty_images
 
@@ -220,6 +229,8 @@ class HerdnetData(L.LightningDataModule):
         transforms: dict[str, tuple] = None,
         train_empty_ratio: float = 0.0,
         normalization: str = "standard",
+        mean=(0.485, 0.456, 0.406),
+        std=(0.229, 0.224, 0.225)
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -263,8 +274,8 @@ class HerdnetData(L.LightningDataModule):
                     A.Normalize(
                         normalization=normalization,
                         p=1.0,
-                        mean=(0.485, 0.456, 0.406),
-                        std=(0.229, 0.224, 0.225),
+                        mean=mean,
+                        std=std,
                     ),
                 ],
                 [
@@ -287,8 +298,8 @@ class HerdnetData(L.LightningDataModule):
                     A.Normalize(
                         normalization=normalization,
                         p=1.0,
-                        mean=(0.485, 0.456, 0.406),
-                        std=(0.229, 0.224, 0.225),
+                        mean=mean,
+                        std=std,
                     ),
                 ],
                 [
