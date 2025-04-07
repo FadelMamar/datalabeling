@@ -105,7 +105,7 @@ def plot_conf_matrix(array:np.ndarray, labels:list, save_dir:str):
         results_per_cls[label] = results
         print(f"results for {label} : ", results,end='\n')
 
-    with open(Path(save_dir)/'metrics_updated.json','w') as file:
+    with open(Path(save_dir)/'metrics_per_class.json','w') as file:
         json.dump(results_per_cls,file,indent=2)
 
 def herdnet_val(args:Flags):
@@ -138,22 +138,6 @@ def herdnet_val(args:Flags):
     if torch.cuda.is_available():
         map_location = torch.device('cuda')
 
-    herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
-        checkpoint_path=args.weights,
-        data_config_yaml=args.data_config,
-        losses = [],
-        lr=None,
-        weight_decay=None,
-        herdnet_model_path=None,
-        loaded_weights_num_classes=num_classes,
-        ce_weight=None,
-        eval_radius=args.eval_radius,
-        map_location=map_location,
-        strict=True,
-        work_dir=args.save_dir,
-    )
-
-
     # Data
     datamodule = HerdnetData(
         data_config_yaml=args.data_config,
@@ -162,6 +146,40 @@ def herdnet_val(args:Flags):
         down_ratio=args.down_ratio,
         train_empty_ratio=0.0,
     )
+
+    if args.engine != 'original':
+        herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
+            checkpoint_path=args.weights,
+            data_config_yaml=args.data_config,
+            losses = [],
+            lr=None,
+            weight_decay=None,
+            herdnet_model_path=None,
+            loaded_weights_num_classes=num_classes,
+            ce_weight=None,
+            eval_radius=args.eval_radius,
+            map_location=map_location,
+            strict=True,
+            work_dir=args.save_dir,
+        )
+    else:
+        herdnet_trainer = HerdnetTrainer(
+            herdnet_model_path=args.weights,
+            data_config_yaml=args.data_config,
+            lr=0.,
+            weight_decay=0.,
+            down_ratio=args.down_ratio,
+            loaded_weights_num_classes=datamodule.num_classes,
+            ce_weight=None,
+            work_dir=args.save_dir,
+            losses=None,
+            eval_radius=args.eval_radius,
+            load_state_dict_strict=True,
+        )
+
+
+
+    
     
     # Predict
     # images_path = os.path.join(data_config['path'],data_config['test'][0])
