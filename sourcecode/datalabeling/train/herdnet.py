@@ -146,7 +146,7 @@ def load_dataset(
                 if empty_frac is not None
                 else None
             )
-            print('num_empty_sampled: ',num_empty_sampled)
+            # print('num_empty_sampled: ',num_empty_sampled)
         if (num_empty_sampled is None) and (empty_frac is None):
             sampled_images_empty = []
         else:
