@@ -87,8 +87,8 @@ def get_groundtruth(
     # concat dfs
     dfs = pd.concat(dfs)
     # fix label range
-    assert dfs["labels"].min() >= -1, "Check yolo label format."
-    # shift to range [0,num_classes] so that 0 is the background class for empty images
+    assert dfs["labels"].min() >= 0, "Check yolo label format."
+    # shift to range [1,num_classes] so that 0 is the background class for empty images
     dfs["labels"] = dfs["labels"] + 1
 
     if save_path is not None:
@@ -644,7 +644,7 @@ class HerdnetTrainer(L.LightningModule):
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
             self.log_dict(loss_dict)
-            return loss
+            return loss.clamp(-5., 5.) # preventing exploding gradient
 
         else:
             images, targets = batch
