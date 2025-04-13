@@ -90,7 +90,6 @@ pydantic-core==2.27.2
 pyparsing==3.2.1
 python-dateutil==2.9.0.post0
 pytz==2025.1
-pywin32==310
 pyyaml==6.0.2
 rarfile==4.2
 requests==2.32.3

@@ -94,7 +94,6 @@ pygments==2.19.1
 pyparsing==3.1.4
 python-dateutil==2.9.0.post0
 pytz==2024.2
-pywin32==310
 pyyaml==6.0.2
 pyzmq==26.3.0
 querystring-parser==1.2.4
