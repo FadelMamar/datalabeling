@@ -22,9 +22,82 @@ import tempfile
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from PIL.Image import Exif
-from copy import deepcopy
-import geopy
 
+def get_exif(file_name) -> dict|None:
+    
+    with (Image.open(file_name) as img):
+        exif_data = img._getexif()
+
+    if exif_data is None:
+        return None
+
+    extracted_exif = dict()
+    for k, v in exif_data.items():
+        extracted_exif[TAGS.get(k)] = v
+    
+    return extracted_exif
+
+def get_gps_info(labeled_exif:dict) -> dict|None:
+
+    # https://exiftool.org/TagNames/GPS.html
+    
+    gps_info = labeled_exif.get("GPSInfo", None)
+
+    if gps_info is None:
+        return None
+
+    info =  {
+        GPSTAGS.get(key, key): value
+        for key, value in gps_info.items()
+    }
+        
+    info['GPSAltitude'] = info['GPSAltitude'].__repr__()
+
+    # convert bytes types
+    for k,v in info.items():
+        if isinstance(v,bytes):
+            info[k] =  list(v)
+    
+    return info
+
+def get_gps_coord(file_name:str,altitude:str=None)->tuple|None:
+
+    extracted_exif = get_exif(file_name=file_name)
+
+    if extracted_exif is None:
+        return None
+    
+    gps_info = get_gps_info(extracted_exif)
+
+    if gps_info is None:
+        return None
+        
+    altitude_map = {0 : 'Above Sea Level',
+                    1 : 'Below Sea Level',
+                    2 : 'Positive Sea Level (sea-level ref)',
+                    3 : 'Negative Sea Level (sea-level ref)'
+    }
+
+    # map GPSAltitudeRef
+    gps_info['GPSAltitudeRef'] = altitude_map[gps_info['GPSAltitudeRef'][0]]
+
+    # rewite latitude
+    gps_coords = dict()
+    for coord in ['GPSLatitude','GPSLongitude']:
+        degrees, minutes, seconds = gps_info[coord]
+        ref = gps_info[coord+'Ref']
+        gps_coords[coord] = f"{degrees} {minutes}m {seconds}s {ref}"
+
+    coords = gps_coords['GPSLatitude'] + ' ' + gps_coords['GPSLongitude']
+    
+    if altitude is None:
+        alt = f"{gps_info['GPSAltitude']}m"
+    else:
+        alt = altitude
+    
+    coords = gps_coords['GPSLatitude'] + ' ' + gps_coords['GPSLongitude'] + ' ' + alt
+
+    return coords, gps_info
 
 def load_ls_annotations(input_dir: str) -> tuple[list, list]:
     """Loads label studio annotations
