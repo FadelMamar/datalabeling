@@ -59,6 +59,9 @@ class Arguments:
     # eval flag
     iou_threshold:float=0.6
 
+    # herdnet
+    herdnet_num_classes: int = 2 # binary
+
     # pretraining
     use_pretraining: bool = False
     ptr_data_config_yaml: str = None

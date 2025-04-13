@@ -78,6 +78,7 @@ def get_groundtruth(
             df["y"] = (df["y1"] + df["y4"]) * img_height * 0.5
             df["w"] = (df["x2"] - df["x1"]) * img_width
             df["h"] = (df["y4"] - df["y1"]) * img_height
+            df.drop(columns=cols1[1:],inplace=True)
 
         df["images"] = str(image_path)
         df.rename(columns={"id": "labels"}, inplace=True)
@@ -86,8 +87,8 @@ def get_groundtruth(
     # concat dfs
     dfs = pd.concat(dfs)
     # fix label range
-    assert dfs["labels"].min() >= -1, "Check yolo label format."
-    # shift to range [0,num_classes] so that 0 is the background class for empty images
+    assert dfs["labels"].min() >= 0, "Check yolo label format."
+    # shift to range [1,num_classes] so that 0 is the background class for empty images
     dfs["labels"] = dfs["labels"] + 1
 
     if save_path is not None:
@@ -145,7 +146,7 @@ def load_dataset(
                 if empty_frac is not None
                 else None
             )
-            print('num_empty_sampled',num_empty_sampled)
+            # print('num_empty_sampled: ',num_empty_sampled)
         if (num_empty_sampled is None) and (empty_frac is None):
             sampled_images_empty = []
         else:
@@ -156,18 +157,27 @@ def load_dataset(
                 )
                 .to_list()
             )
-        num_empty_images += len(sampled_images_empty)
+            # df_empty = pd.DataFrame()
+            # df_empty['images'] = sampled_images_empty
+            # for col in ["labels", "x", "y", "w", "h"]:
+            #     df_empty[col] = 0
+            # df = pd.concat([df, df_empty])
+        
         # selected images
         selected_images = sampled_images_empty + df["images"].to_list()
-        dataset = FolderDataset(  # CSVDataset
+        selected_images = list(set(selected_images))
+        dataset = FolderDataset(  # CSVDataset FolderDataset
             csv_file=df,
             root_dir="",
             albu_transforms=transforms[split][0],
             end_transforms=transforms[split][1],
-            images_paths=list(set(selected_images)),
+            images_paths=selected_images, # FolderDataset
         )
+
         datasets.append(dataset)
         df_gts.append(df)
+        
+        num_empty_images += len(sampled_images_empty)
 
     return ConcatDataset(datasets=datasets), pd.concat(df_gts), num_empty_images
 
@@ -219,6 +229,8 @@ class HerdnetData(L.LightningDataModule):
         transforms: dict[str, tuple] = None,
         train_empty_ratio: float = 0.0,
         normalization: str = "standard",
+        mean=(0.485, 0.456, 0.406),
+        std=(0.229, 0.224, 0.225)
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -262,8 +274,8 @@ class HerdnetData(L.LightningDataModule):
                     A.Normalize(
                         normalization=normalization,
                         p=1.0,
-                        mean=(0.485, 0.456, 0.406),
-                        std=(0.229, 0.224, 0.225),
+                        mean=mean,
+                        std=std,
                     ),
                 ],
                 [
@@ -286,8 +298,8 @@ class HerdnetData(L.LightningDataModule):
                     A.Normalize(
                         normalization=normalization,
                         p=1.0,
-                        mean=(0.485, 0.456, 0.406),
-                        std=(0.229, 0.224, 0.225),
+                        mean=mean,
+                        std=std,
                     ),
                 ],
                 [
@@ -445,7 +457,10 @@ class HerdnetData(L.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             shuffle=False,
+            sampler=torch.utils.data.SequentialSampler(self.val_dataset),
+            num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
+            persistent_workers=True
         )
 
     def test_dataloader(self):
@@ -461,8 +476,11 @@ class HerdnetData(L.LightningDataModule):
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
+            sampler=torch.utils.data.SequentialSampler(self.test_dataset),
             shuffle=False,
+            # num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
+            # persistent_workers=True
         )
 
     def predict_dataloader(self):
@@ -486,6 +504,8 @@ class HerdnetTrainer(L.LightningModule):
         herdnet_model_path: str | None = None,
         ce_weight: torch.Tensor = None,
         losses: list = None,
+        epochs: int=None,
+        lrf:float=1e-1
     ):
         super().__init__()
 
@@ -496,6 +516,8 @@ class HerdnetTrainer(L.LightningModule):
             "down_ratio",
             "ce_weight",
             "eval_radius",
+            "lrf",
+            "epochs"
         )
 
         self.work_dir = work_dir
@@ -535,22 +557,34 @@ class HerdnetTrainer(L.LightningModule):
         )
         self.model = LossWrapper(self.model, losses=losses, mode="both")
         if herdnet_model_path is not None:
-            checkpoint = torch.load(
-                herdnet_model_path, map_location="cpu", weights_only=True
-            )
-            success = self.model.load_state_dict(
-                checkpoint["model_state_dict"], strict=load_state_dict_strict
-            )
-            print("Warning! load_state_dict_strict should be set to False, if re-adapting classification head.")
-            print("Loading ckpt:", success)
+            try:
+                checkpoint = torch.load(
+                    herdnet_model_path, map_location=device, weights_only=True
+                )
+                success = self.model.load_state_dict(
+                    checkpoint["model_state_dict"], strict=load_state_dict_strict
+                )
+                print("Loading ckpt:", herdnet_model_path)
+                
+            except:
+                checkpoint = torch.load(
+                    herdnet_model_path, map_location=device, weights_only=True
+                )
+                success = self.model.load_state_dict(
+                    checkpoint["model_state_dict"], strict=False
+                )
+                print("Warning! load_state_dict_strict is being set to False")
+                print(success)
+                
 
         if self.num_classes != self.loaded_weights_num_classes:
             print(
-                f"Classification head of herdnet will be modified to handle {self.num_classes}."
+                f"Classification head of herdnet will be modified to handle {self.num_classes} classes."
             )
             self.model.model.reshape_classes(self.num_classes)
             
-
+        self.model = self.model.to(device)
+        
         # metrics
         self.metrics_val = PointsMetrics(
             radius=eval_radius, num_classes=self.num_classes
@@ -623,7 +657,7 @@ class HerdnetTrainer(L.LightningModule):
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
             self.log_dict(loss_dict)
-            return loss
+            return loss.clamp(-5., 5.) # preventing exploding gradient
 
         else:
             images, targets = batch
@@ -723,10 +757,10 @@ class HerdnetTrainer(L.LightningModule):
             weight_decay=self.hparams.weight_decay,
         )
 
-        # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-        #                                                                     T_0=self.args.epochs,
-        #                                                                     T_mult=1,
-        #                                                                     eta_min=self.args.lr0*self.args.lrf,
-        #                                                                 )
-        # return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
-        return optimizer
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                            T_0=self.hparams.epochs,
+                                                                            T_mult=1,
+                                                                            eta_min=self.hparams.lr*self.hparams.lrf,
+                                                                        )
+        return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        # return optimizer

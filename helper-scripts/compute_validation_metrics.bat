@@ -6,7 +6,14 @@ call deactivate
 call helper-scripts\activate_label-backend_env.bat
 
 
-@REM Ultralytics and HerdNet
+@REM HerdNet
+@REM --engine original, lightning
+call uv run tools\validate_herdnet.py --name "herdnet-identif" --batch-size 1 --data-config "configs\yolo_configs\dataset_identification.yaml" --splits "val" ^
+            --imgsz 800 --weights "mlartifacts/934358897506090439/b93b0e55010348be89f55bb27b99fd91/artifacts/epoch=11-step=1740/epoch=11-step=1740.ckpt" ^
+            --save-dir ".\runs_herdnet" --print-freq 500 --engine "lightning"
+
+
+@REM Ultralytics 
 
 @REM yolov5s
 @REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "configs\yolo_configs\dataset_identification-detection.yaml" --skip
@@ -100,11 +107,28 @@ call .venv-mmrotate\Scripts\activate.bat
 @REM call uv run tools\validate_mmrotate.py "runs-mmrotate\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\oriented_rcnn_r50_fpn_1x_dota_le90.py" "runs-mmrotate\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\best_mAP_epoch_12.pth" ^
 @REM         --eval "mAP" --work-dir "runs-mmrotate\test\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn 
 
+@REM call uv run tools\mmrotate_confusion_matrix.py "runs-mmrotate\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\oriented_rcnn_r50_fpn_1x_dota_le90.py" ^
+@REM                                                 "runs-mmrotate\test\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\results.pkl" ^
+@REM                                                 "runs-mmrotate\test\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75" ^
+@REM                                                 --score-thr 0.3 --tp-iou-thr 0.6 --nms-iou-thr 0.5
+
 @REM call uv run tools\validate_mmrotate.py "runs-mmrotate\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\roi_trans_r50_fpn_1x_dota_ms_rr_le90.py" "runs-mmrotate\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\best_mAP_epoch_12.pth" ^
 @REM         --eval "mAP" --work-dir "runs-mmrotate\test\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn 
 
+@REM call uv run tools\mmrotate_confusion_matrix.py "runs-mmrotate\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\roi_trans_r50_fpn_1x_dota_ms_rr_le90.py" ^
+@REM                                                 "runs-mmrotate\test\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\results.pkl" ^
+@REM                                                 "runs-mmrotate\test\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75"  ^
+@REM                                                 --score-thr 0.3 --tp-iou-thr 0.6 --nms-iou-thr 0.5
+
 @REM call uv run tools\validate_mmrotate.py "runs-mmrotate\redet_re50_fpn\redet_re50_fpn_identif#empty_0.1#freeze_0.75\redet_re50_refpn_1x_dota_le90.py" "runs-mmrotate\redet_re50_fpn\redet_re50_fpn_identif#empty_0.1#freeze_0.75\best_mAP_epoch_13.pth" ^
 @REM         --eval "mAP" --work-dir "runs-mmrotate\test\redet_re50_fpn\redet_re50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn
+
+@REM call uv run tools\mmrotate_confusion_matrix.py "runs-mmrotate\redet_re50_fpn\redet_re50_fpn_identif#empty_0.1#freeze_0.75\redet_re50_refpn_1x_dota_le90.py" ^
+@REM                                                 "runs-mmrotate\test\redet_re50_fpn\redet_re50_fpn_identif#empty_0.1#freeze_0.75\results.pkl" ^
+@REM                                                 "runs-mmrotate\test\redet_re50_fpn\redet_re50_fpn_identif#empty_0.1#freeze_0.75" ^
+@REM                                                 --score-thr 0.3 --tp-iou-thr 0.6 --nms-iou-thr 0.5
+
+
 
 
 
