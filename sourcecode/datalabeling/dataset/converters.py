@@ -13,8 +13,6 @@ import torch
 from PIL import Image
 
 
-
-
 def check_label_format(loaded_df: pd.DataFrame) -> str:
     """checks label format
 
@@ -32,8 +30,8 @@ def check_label_format(loaded_df: pd.DataFrame) -> str:
 
     # check bounds
     names = list(loaded_df.columns)
-    assert loaded_df.iloc[:,1:].all().max() <= 1.0, "max value <= 1"
-    assert loaded_df.iloc[:,1:].all().min() >= 0.0, "min value >=0"
+    assert loaded_df.iloc[:, 1:].all().max() <= 1.0, "max value <= 1"
+    assert loaded_df.iloc[:, 1:].all().min() >= 0.0, "min value >=0"
 
     if num_features == 5:
         return "yolo"
@@ -78,8 +76,6 @@ def convert_yolo_to_obb(
             else:
                 raise ValueError(f"{label_path} does not follow yolo format.")
 
-        
-
         for col in names[1:]:
             df[col] = df[col].astype(float)
         df = df.astype({"id": "int32"})
@@ -108,7 +104,7 @@ def convert_yolo_to_obb(
             Path(output_dir) / label_path.name, sep=" ", index=False, header=False
         )
 
-    print(f'Skipping {skip_count} files.\nConverting {count} files.')
+    print(f"Skipping {skip_count} files.\nConverting {count} files.")
     return None
 
 
@@ -145,7 +141,6 @@ def convert_obb_to_yolo(
             else:
                 raise ValueError(f"{label_path} does not follow yolo-obb format.")
 
-        
         # center
         df["x"] = (df["x1"] + df["x2"]) / 2.0
         df["y"] = (df["y1"] + df["y4"]) / 2.0
@@ -165,41 +160,46 @@ def convert_obb_to_yolo(
         df[cols].to_csv(
             Path(output_dir) / label_path.name, sep=" ", index=False, header=False
         )
-    
-    print(f'Skipping {skip_count} files.\nConverting {count} files.')
+
+    print(f"Skipping {skip_count} files.\nConverting {count} files.")
     return None
 
 
-def convert_obb_to_dota(obb_img_dir: str, output_dir: str, label_map:dict, skip: bool = True, clear_old_labels:bool=True):
-    
+def convert_obb_to_dota(
+    obb_img_dir: str,
+    output_dir: str,
+    label_map: dict,
+    skip: bool = True,
+    clear_old_labels: bool = True,
+):
     # https://github.com/open-mmlab/mmrotate/blob/main/docs/en/tutorials/customize_dataset.md
-    
+
     names = ["id", "x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4"]
-    cols = ["x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4", "label_name","difficulty"]
-    
+    cols = ["x1", "y1", "x2", "y2", "x3", "y3", "x4", "y4", "label_name", "difficulty"]
+
     if not Path(obb_img_dir).exists():
         raise FileNotFoundError("Directory does not exist.")
-    
+
     if Path(output_dir).exists() and clear_old_labels:
         shutil.rmtree(output_dir)
-        print('Deleting existing labels.')
-    
+        print("Deleting existing labels.")
+
     # create output dir
-    assert str(output_dir) != str(obb_img_dir).replace('images','labels'), "Provide a directory different from yolo-obb labels."
-    Path(output_dir).mkdir(exist_ok=True,parents=False)
-    
+    assert str(output_dir) != str(obb_img_dir).replace("images", "labels"), (
+        "Provide a directory different from yolo-obb labels."
+    )
+    Path(output_dir).mkdir(exist_ok=True, parents=False)
 
     # Iterate through labels
     skip_count = 0
     count = 0
     for img_path in tqdm(Path(obb_img_dir).glob("*"), desc="obb->dota"):
-        
         # Load labels and check format
-        label_path = Path(str(img_path).replace("images","labels")).with_suffix('.txt')
+        label_path = Path(str(img_path).replace("images", "labels")).with_suffix(".txt")
         if not label_path.exists():
             continue
         df = pd.read_csv(label_path, sep=" ", header=None)
-        
+
         # check format
         if check_label_format(loaded_df=df) == "yolo-obb":
             df.columns = names
@@ -209,31 +209,32 @@ def convert_obb_to_dota(obb_img_dir: str, output_dir: str, label_map:dict, skip:
             continue
         else:
             raise ValueError(f"{label_path} must follow yolo-obb format.")
-        
+
         # load image dimension
         img = Image.open(img_path)
         img_width, img_height = img.size
-        img.close()     
-        
+        img.close()
+
         # scale annotations
-        df.loc[:,names[1::2]] = df.loc[:,names[1::2]]*img_width
-        df.loc[:,names[2::2]] = df.loc[:,names[2::2]]*img_height
-        
+        df.loc[:, names[1::2]] = df.loc[:, names[1::2]] * img_width
+        df.loc[:, names[2::2]] = df.loc[:, names[2::2]] * img_height
+
         # add label names and difficulty
-        df.sort_values(by='id',ascending=True,inplace=True)
-        df['label_name'] = df['id'].map(label_map)
-        df['difficulty'] = 0 # 1:difficult, 0:no_difficult
-    
+        df.sort_values(by="id", ascending=True, inplace=True)
+        df["label_name"] = df["id"].map(label_map)
+        df["difficulty"] = 0  # 1:difficult, 0:no_difficult
+
         # changing data types
-        df = df.astype({k:'int32' for k in names})
+        df = df.astype({k: "int32" for k in names})
 
         # save file
         df[cols].to_csv(
-            Path(output_dir) / label_path.name, sep=" ", index=False, header=False)
-        
-    print(f'Skipping {skip_count} files.\nConverting {count} files.')
+            Path(output_dir) / label_path.name, sep=" ", index=False, header=False
+        )
+
+    print(f"Skipping {skip_count} files.\nConverting {count} files.")
     return None
-    
+
 
 def convert_segment_masks_to_yolo_seg(
     masks_sam2: np.ndarray, output_path: str, num_classes: int, verbose: bool = False
@@ -340,23 +341,24 @@ def create_yolo_seg_directory(
                 print(f"Deleting existing segmentation labels : {seg_Labels_dir}")
             seg_Labels_dir.mkdir(exist_ok=True, parents=True)
             if copy_images_dir:
-                if (seg_dir/'images').exists():
-                    shutil.rmtree(seg_dir/'images')
-                    print('Deleting directory:',seg_dir/'images')
-                shutil.copytree(images_path, seg_dir/'images')
-                print(f'Copying {images_path} into {seg_dir}')
-            dataset = YOLODataset(img_path=images_path,
-                                  task='detect',
-                                  data={'names':data_config['names']},
-                                  augment=False,
-                                  imgsz=640, # used for dataloading only
-                                  classes=None)
+                if (seg_dir / "images").exists():
+                    shutil.rmtree(seg_dir / "images")
+                    print("Deleting directory:", seg_dir / "images")
+                shutil.copytree(images_path, seg_dir / "images")
+                print(f"Copying {images_path} into {seg_dir}")
+            dataset = YOLODataset(
+                img_path=images_path,
+                task="detect",
+                data={"names": data_config["names"]},
+                augment=False,
+                imgsz=640,  # used for dataloading only
+                classes=None,
+            )
             datasets.append(dataset)
         dataset = YOLOConcatDataset(datasets)
 
         #  Saving segmentations
-        for data in tqdm(dataset,desc=f"Creating yolo-seg for split={split}"):
-            
+        for data in tqdm(dataset, desc=f"Creating yolo-seg for split={split}"):
             # skip negative samples
             if data["cls"].nelement() == 0:
                 continue
@@ -365,9 +367,11 @@ def create_yolo_seg_directory(
                 [data["bboxes"][:, :2], data["bboxes"][:, :2] + data["bboxes"][:, 2:]],
                 1,
             )
-            imgsz = data['ori_shape'][0]
+            imgsz = data["ori_shape"][0]
             bboxes = (bboxes * imgsz).long().cpu().tolist()
-            labels = data["cls"].ravel().long().cpu()+1 # account for background class
+            labels = (
+                data["cls"].ravel().long().cpu() + 1
+            )  # account for background class
             (results,) = model_sam(
                 data["im_file"],
                 bboxes=bboxes,
@@ -380,9 +384,13 @@ def create_yolo_seg_directory(
             mask = mask.numpy()
             try:
                 assert len(mask.shape) == 3
-                assert mask.min()>=0 and mask.max()>0, f"Error in mask. Please check {data['im_file']}"
+                assert mask.min() >= 0 and mask.max() > 0, (
+                    f"Error in mask. Please check {data['im_file']}"
+                )
             except Exception as e:
-                print(f"Error in mask min={mask.min()},max={mask.max()}. Please check {data['im_file']}. Skipping")
+                print(
+                    f"Error in mask min={mask.min()},max={mask.max()}. Please check {data['im_file']}. Skipping"
+                )
                 print(e)
                 continue
             # convert masks to yolo-seg
@@ -397,83 +405,85 @@ def create_yolo_seg_directory(
             )
 
 
-def convert_yolo_to_coco(dataset:YOLOConcatDataset|YOLODataset,output_dir:str, data_config:dict,split='val',clear_data:bool=False):
-    
+def convert_yolo_to_coco(
+    dataset: YOLOConcatDataset | YOLODataset,
+    output_dir: str,
+    data_config: dict,
+    split="val",
+    clear_data: bool = False,
+):
     # Define the categories for the COCO dataset
-    categories = [{"id":k, "name":v} for k,v in data_config['names'].items()]
-    
+    categories = [{"id": k, "name": v} for k, v in data_config["names"].items()]
+
     # Define the COCO dataset dictionary
     coco_dataset = {
         "info": {},
         "licenses": [],
         "categories": categories,
         "images": [],
-        "annotations": []
+        "annotations": [],
     }
-    
-    
+
     # mkdir
     output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True,parents=True)
-    annot_dir = output_dir/'annotations'
-    annot_dir.mkdir(exist_ok=True,parents=False)
-    img_dir = output_dir/f'{split}'
-    img_dir.mkdir(exist_ok=True,parents=False)
-    annot_save_path = annot_dir/f"annotations_{split}.json"
-    
+    output_dir.mkdir(exist_ok=True, parents=True)
+    annot_dir = output_dir / "annotations"
+    annot_dir.mkdir(exist_ok=True, parents=False)
+    img_dir = output_dir / f"{split}"
+    img_dir.mkdir(exist_ok=True, parents=False)
+    annot_save_path = annot_dir / f"annotations_{split}.json"
+
     if clear_data:
         try:
             shutil.rmtree(img_dir)
-            img_dir.mkdir(exist_ok=True,parents=False)
-            print('Deleting: ',img_dir)
+            img_dir.mkdir(exist_ok=True, parents=False)
+            print("Deleting: ", img_dir)
             if os.path.exists(annot_save_path):
                 os.remove(annot_save_path)
-            print('Deleting: ',annot_save_path)
+            print("Deleting: ", annot_save_path)
         except Exception as e:
             print(e)
-        
-    
-    
+
     # Loop through the images in the input directory
-    for i,data in tqdm(enumerate(dataset),desc=f"converting yolo {split} to coco"):
-        
+    for i, data in tqdm(enumerate(dataset), desc=f"converting yolo {split} to coco"):
         # Load the image and get its dimensions
-        image_path = data['im_file']
-        height, width = data['ori_shape']
-        
-        image_file = os.path.relpath(image_path,data_config['path']) 
+        image_path = data["im_file"]
+        height, width = data["ori_shape"]
+
+        image_file = os.path.relpath(image_path, data_config["path"])
         image_file = "#".join([p.name for p in Path(image_file).parents])
         image_file = image_file + os.path.basename(image_path)
-        
-        shutil.copyfile(image_path, img_dir/image_file)
-        
+
+        shutil.copyfile(image_path, img_dir / image_file)
+
         # Add the image to the COCO dataset
         image_id = i
         image_dict = {
             "id": image_id,
             "width": width,
             "height": height,
-            "file_name": image_file
+            "file_name": image_file,
         }
         coco_dataset["images"].append(image_dict)
-        
+
         # Loop through the annotations and add them to the COCO dataset
-        for i in range(data['bboxes'].shape[0]):
-            x, y, w, h = data['bboxes'][i].tolist()
+        for i in range(data["bboxes"].shape[0]):
+            x, y, w, h = data["bboxes"][i].tolist()
             x_min, y_min = int((x - w / 2) * width), int((y - h / 2) * height)
             x_max, y_max = int((x + w / 2) * width), int((y + h / 2) * height)
             ann_dict = {
                 "id": len(coco_dataset["annotations"]),
                 "image_id": image_id,
-                "category_id": data['cls'][i].long().item(),
+                "category_id": data["cls"][i].long().item(),
                 "bbox": [x_min, y_min, x_max - x_min, y_max - y_min],
-                "segmentation":[[x_min,y_min, x_max,y_min, x_max,y_max, x_min,y_max]],
+                "segmentation": [
+                    [x_min, y_min, x_max, y_min, x_max, y_max, x_min, y_max]
+                ],
                 "area": (x_max - x_min) * (y_max - y_min),
-                "iscrowd": 0
+                "iscrowd": 0,
             }
             coco_dataset["annotations"].append(ann_dict)
-    
-    # Save the COCO dataset to a JSON file
-    with open(annot_save_path, 'w') as f:
-        json.dump(coco_dataset, f, indent=2)
 
+    # Save the COCO dataset to a JSON file
+    with open(annot_save_path, "w") as f:
+        json.dump(coco_dataset, f, indent=2)

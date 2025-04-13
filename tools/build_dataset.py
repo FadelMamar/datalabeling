@@ -115,7 +115,7 @@ if __name__ == "__main__":
                         skip=True,
                         clear_old_labels=args.clear_dota_labels,
                     )
-                except Exception: 
+                except Exception:
                     logger.warning(f"obb->dota failed for {obb_img_dir}")
                     traceback.print_exc()
 

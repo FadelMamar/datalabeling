@@ -24,10 +24,10 @@ from mmdet.models import build_detector
 from mmdet.apis import train_detector
 from datargs import parse
 from dataclasses import dataclass
-from mmrotate.utils import (collect_env, get_root_logger,
-                            setup_multi_processes)
+from mmrotate.utils import collect_env, get_root_logger, setup_multi_processes
 from mmcv.parallel import is_module_wrapper
 from mmcv.runner.hooks import HOOKS, Hook
+
 
 def load_yaml(data_config_yaml: str) -> dict:
     with open(data_config_yaml, "r") as file:
@@ -79,7 +79,7 @@ class Flags:
     # evaluation
     eval_interval: int = 1
     checkpoint_interval: int = 1
-    enable_val:bool=False
+    enable_val: bool = False
 
     # logging
     output_dir: str = "runs-mmrotate"
@@ -87,7 +87,7 @@ class Flags:
     project_name: str = "wildAI-detection"
     run_name: str = "run"
     use_wandb: bool = False
-    wandb_entity:str ="ipeo-epfl"
+    wandb_entity: str = "ipeo-epfl"
     tags: Sequence[str] = None
 
 
@@ -231,12 +231,12 @@ class freezeModelHook(Hook):
         freeze_ratio (float): the ratio of the model's parameters to be frozen.
     """
 
-    def __init__(self, freeze_ratio:float=0.):
+    def __init__(self, freeze_ratio: float = 0.0):
         self.freeze_ratio = freeze_ratio
 
     def before_train_epoch(self, runner):
         # Freeze the network at the beginning of the training
-        if runner.epoch < 2 :
+        if runner.epoch < 2:
             # get model
             model = runner.model
             if is_module_wrapper(model):
@@ -248,7 +248,9 @@ class freezeModelHook(Hook):
                     param.requires_grad = False
                 else:
                     break
-            print(f"{int(num_layers * self.freeze_ratio)}/{num_layers} layers have been frozen.\n")
+            print(
+                f"{int(num_layers * self.freeze_ratio)}/{num_layers} layers have been frozen.\n"
+            )
 
 
 if __name__ == "__main__":
@@ -262,7 +264,9 @@ if __name__ == "__main__":
     assert 0 <= args.freeze_ratio <= 1, "freeze_ratio should be in [0, 1]"
 
     # update run_name
-    args.run_name = f"{args.run_name}#empty_{args.empty_ratio}#freeze_{args.freeze_ratio}"
+    args.run_name = (
+        f"{args.run_name}#empty_{args.empty_ratio}#freeze_{args.freeze_ratio}"
+    )
 
     # update output_dir
     args.output_dir = osp.join(args.output_dir, args.run_name)
@@ -278,10 +282,8 @@ if __name__ == "__main__":
     data_config = load_yaml(args.data_config)
     root_dir = data_config["path"]
     num_classes = data_config["nc"]
-    classes = [
-        data_config["names"][i] for i in range(num_classes)
-    ]
-    
+    classes = [data_config["names"][i] for i in range(num_classes)]
+
     # Load the config
     cfg = mmcv.Config.fromfile(args.config)
 
@@ -289,11 +291,10 @@ if __name__ == "__main__":
     setup_multi_processes(cfg)
 
     # add cutom hook
-    cfg['custom_hooks'] = [dict(type="freezeModelHook", freeze_ratio=args.freeze_ratio)]
-
+    cfg["custom_hooks"] = [dict(type="freezeModelHook", freeze_ratio=args.freeze_ratio)]
 
     # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
+    if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
 
     dataset_type = "WildAIDataset"
@@ -356,7 +357,7 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError(f"Optimizer {args.optimizer} not implemented")
 
-    cfg.lr_config.warmup = 'linear'
+    cfg.lr_config.warmup = "linear"
     cfg.runner.max_epochs = args.epoch
     cfg.total_epochs = args.epoch
     cfg.log_config.interval = args.logging_interval
@@ -371,8 +372,8 @@ if __name__ == "__main__":
 
     cfg.dump(osp.join(cfg.work_dir, osp.basename(args.config)))
     # init the logger before other steps
-    timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-    log_file = osp.join(cfg.work_dir, f'{timestamp}.log')
+    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    log_file = osp.join(cfg.work_dir, f"{timestamp}.log")
     logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
 
     # init the meta dict to record some important information such as
@@ -380,20 +381,19 @@ if __name__ == "__main__":
     meta = dict()
     # log env info
     env_info_dict = collect_env()
-    env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
-    dash_line = '-' * 60 + '\n'
-    logger.info('Environment info:\n' + dash_line + env_info + '\n' +
-                dash_line)
-    meta['env_info'] = env_info
-    meta['config'] = cfg.pretty_text
+    env_info = "\n".join([(f"{k}: {v}") for k, v in env_info_dict.items()])
+    dash_line = "-" * 60 + "\n"
+    logger.info("Environment info:\n" + dash_line + env_info + "\n" + dash_line)
+    meta["env_info"] = env_info
+    meta["config"] = cfg.pretty_text
     # log some basic info
-    logger.info(f'Config:\n{cfg.pretty_text}')
+    logger.info(f"Config:\n{cfg.pretty_text}")
 
     # Set seed thus the results are more reproducible
     cfg.seed = args.seed
     set_random_seed(cfg.seed, deterministic=False)
-    meta['seed'] = cfg.seed
-    meta['exp_name'] = args.run_name
+    meta["seed"] = cfg.seed
+    meta["exp_name"] = args.run_name
 
     # set computing device
     cfg.gpu_ids = (
@@ -405,22 +405,31 @@ if __name__ == "__main__":
     # ref: https://mmcv.readthedocs.io/en/v1.3.6/_modules/mmcv/runner/hooks/logger/wandb.html
     cfg.log_config.hooks = [
         dict(type="TextLoggerHook"),
-        dict(type="MlflowLoggerHook",exp_name=args.project_name,by_epoch=True,log_model=True,tags=dict(name=args.run_name)
-        )
+        dict(
+            type="MlflowLoggerHook",
+            exp_name=args.project_name,
+            by_epoch=True,
+            log_model=True,
+            tags=dict(name=args.run_name),
+        ),
     ]
     if args.use_wandb:
-        cfg.log_config.hooks.append(dict(type="WandbLoggerHook", init_kwargs={"project": args.project_name,
-                                                                              "name": args.run_name,
-                                                                              "tags": args.tags, 
-                                                                              "entity": args.wandb_entity
-                                                                            }       
-                                        )                              
-                                )
+        cfg.log_config.hooks.append(
+            dict(
+                type="WandbLoggerHook",
+                init_kwargs={
+                    "project": args.project_name,
+                    "name": args.run_name,
+                    "tags": args.tags,
+                    "entity": args.wandb_entity,
+                },
+            )
+        )
     # set workflow
     if args.enable_val:
-        cfg.workflow = [('train', 1), ('val', 1)]
+        cfg.workflow = [("train", 1), ("val", 1)]
     else:
-        cfg.workflow = [('train', 1)]
+        cfg.workflow = [("train", 1)]
 
     # build dataset
     datasets = [build_dataset(cfg.data.train)]
@@ -441,7 +450,9 @@ if __name__ == "__main__":
     # Add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
 
-    logger.info(f"\nNumber of parameters: {sum([torch.numel(p) for p in model.parameters()])/1e6:.2f} M")
+    logger.info(
+        f"\nNumber of parameters: {sum([torch.numel(p) for p in model.parameters()]) / 1e6:.2f} M"
+    )
 
     # Freeze params
     if args.freeze_ratio:
@@ -451,7 +462,9 @@ if __name__ == "__main__":
                 param.requires_grad = False
             else:
                 break
-        logger.info(f"{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n")
+        logger.info(
+            f"{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n"
+        )
 
     # Create work_dir
     train_detector(model, datasets, cfg, distributed=False, validate=args.enable_val)

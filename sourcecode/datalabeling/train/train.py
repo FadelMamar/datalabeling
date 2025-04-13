@@ -4,7 +4,6 @@ import os
 from .utils import *
 
 
-
 def training_routine(
     model: YOLO | RTDETR,
     args: Arguments,
@@ -12,9 +11,9 @@ def training_routine(
     batchsize: int = None,
     data_cfg: str | None = None,
     resume: bool = False,
-):  
-    assert args.val in ['True','False']
-    print('Disabling validation run.')
+):
+    assert args.val in ["True", "False"]
+    print("Disabling validation run.")
     # Train the model
     model.train(
         data=data_cfg or args.data_config_yaml,
@@ -31,7 +30,7 @@ def training_routine(
         warmup_epochs=args.warmup_epochs,
         dropout=args.dropout,
         batch=batchsize or args.batchsize,
-        val=args.val == 'True',
+        val=args.val == "True",
         plots=True,
         cos_lr=args.cos_annealing,
         deterministic=False,
@@ -136,7 +135,7 @@ def continual_learning_run(model: YOLO, args: Arguments, img_glob_pattern: str =
         assert len(flag) == len(args.cl_lr0s), (
             f"all args.cl_* flags should have the same length. {len(flag)} != {len(args.cl_lr0s)}"
         )
-    
+
     # copy run_name
     run_name = args.run_name + ""
 

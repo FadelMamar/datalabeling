@@ -20,24 +20,34 @@ import os
 import sys
 
 # add python path of PaddleDetection to sys.path
-parent_path = os.path.abspath(os.path.join(__file__, *(['..'] * 2)))
+parent_path = os.path.abspath(os.path.join(__file__, *([".."] * 2)))
 sys.path.insert(0, parent_path)
 
 # ignore warning log
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 import paddle
 import json
 from ppdet.core.workspace import create, load_config, merge_config
-from ppdet.utils.check import check_gpu, check_npu, check_xpu, check_mlu, check_gcu, check_version, check_config
+from ppdet.utils.check import (
+    check_gpu,
+    check_npu,
+    check_xpu,
+    check_mlu,
+    check_gcu,
+    check_version,
+    check_config,
+)
 from ppdet.utils.cli import ArgsParser, merge_args
 from ppdet.engine import Trainer, Trainer_ARSL, init_parallel_env
 from ppdet.metrics.coco_utils import json_eval_results
 from ppdet.slim import build_slim_model
 
 from ppdet.utils.logger import setup_logger
-logger = setup_logger('eval')
+
+logger = setup_logger("eval")
 
 
 def parse_args():
@@ -46,84 +56,93 @@ def parse_args():
         "--output_eval",
         default=None,
         type=str,
-        help="Evaluation directory, default is current directory.")
-    
-    parser.add_argument(
-        "--mode",
-        default="eval",
-        type=str,
-        help="Mode should be eval or test")
+        help="Evaluation directory, default is current directory.",
+    )
 
     parser.add_argument(
-        '--json_eval',
-        action='store_true',
+        "--mode", default="eval", type=str, help="Mode should be eval or test"
+    )
+
+    parser.add_argument(
+        "--json_eval",
+        action="store_true",
         default=False,
-        help='Whether to re eval with already exists bbox.json or mask.json')
+        help="Whether to re eval with already exists bbox.json or mask.json",
+    )
 
     parser.add_argument(
         "--slim_config",
         default=None,
         type=str,
-        help="Configuration file of slim method.")
+        help="Configuration file of slim method.",
+    )
 
     # TODO: bias should be unified
     parser.add_argument(
         "--bias",
         action="store_true",
-        help="whether add bias or not while getting w and h")
+        help="whether add bias or not while getting w and h",
+    )
 
     parser.add_argument(
         "--classwise",
         action="store_true",
-        help="whether per-category AP and draw P-R Curve or not.")
+        help="whether per-category AP and draw P-R Curve or not.",
+    )
 
     parser.add_argument(
-        '--save_prediction_only',
-        action='store_true',
+        "--save_prediction_only",
+        action="store_true",
         default=False,
-        help='Whether to save the evaluation results only')
+        help="Whether to save the evaluation results only",
+    )
 
     parser.add_argument(
         "--amp",
-        action='store_true',
+        action="store_true",
         default=False,
-        help="Enable auto mixed precision eval.")
-    
+        help="Enable auto mixed precision eval.",
+    )
+
     # for smalldet slice_infer
     parser.add_argument(
         "--slice_infer",
-        action='store_true',
+        action="store_true",
         default=False,
-        help="Whether to slice the image and merge the inference results for small object detection."
+        help="Whether to slice the image and merge the inference results for small object detection.",
     )
     parser.add_argument(
-        '--slice_size',
-        nargs='+',
+        "--slice_size",
+        nargs="+",
         type=int,
         default=[640, 640],
-        help="Height of the sliced image.")
+        help="Height of the sliced image.",
+    )
     parser.add_argument(
         "--overlap_ratio",
-        nargs='+',
+        nargs="+",
         type=float,
         default=[0.25, 0.25],
-        help="Overlap height ratio of the sliced image.")
+        help="Overlap height ratio of the sliced image.",
+    )
     parser.add_argument(
         "--combine_method",
         type=str,
-        default='nms',
-        help="Combine method of the sliced images' detection results, choose in ['nms', 'nmm', 'concat']."
+        default="nms",
+        help="Combine method of the sliced images' detection results, choose in ['nms', 'nmm', 'concat'].",
     )
     parser.add_argument(
         "--match_threshold",
         type=float,
         default=0.6,
-        help="Combine method matching threshold.")
+        help="Combine method matching threshold.",
+    )
     parser.add_argument(
         "--match_metric",
         type=str,
-        default='ios',
-        help="Combine method matching metric, choose in ['iou', 'ios'].")
+        default="ios",
+        help="Combine method matching metric, choose in ['iou', 'ios'].",
+    )
     args = parser.parse_args()
     return args
 
@@ -133,17 +152,19 @@ def run(FLAGS, cfg):
         logger.info(
             "In json_eval mode, PaddleDetection will evaluate json files in "
             "output_eval directly. And proposal.json, bbox.json and mask.json "
-            "will be detected by default.")
+            "will be detected by default."
+        )
         json_eval_results(
             cfg.metric,
             json_directory=FLAGS.output_eval,
-            dataset=create('EvalDataset')())
+            dataset=create("EvalDataset")(),
+        )
         return
 
     # init parallel environment if nranks > 1
     init_parallel_env()
-    ssod_method = cfg.get('ssod_method', None)
-    if ssod_method == 'ARSL':
+    ssod_method = cfg.get("ssod_method", None)
+    if ssod_method == "ARSL":
         # build ARSL_trainer
         trainer = Trainer_ARSL(cfg, mode=FLAGS.mode)
         # load ARSL_weights
@@ -151,11 +172,10 @@ def run(FLAGS, cfg):
     else:
         # build trainer
         trainer = Trainer(cfg, mode=FLAGS.mode)
-        #load weights
+        # load weights
         trainer.load_weights(cfg.weights)
 
     logger.info(json.dumps(cfg, indent=4))
-
 
     # training
     if FLAGS.slice_infer:
@@ -164,7 +184,8 @@ def run(FLAGS, cfg):
             overlap_ratio=FLAGS.overlap_ratio,
             combine_method=FLAGS.combine_method,
             match_threshold=FLAGS.match_threshold,
-            match_metric=FLAGS.match_metric)
+            match_metric=FLAGS.match_metric,
+        )
     else:
         trainer.evaluate()
 
@@ -176,36 +197,36 @@ def main():
     merge_config(FLAGS.opt)
 
     # disable npu in config by default
-    if 'use_npu' not in cfg:
+    if "use_npu" not in cfg:
         cfg.use_npu = False
 
     # disable xpu in config by default
-    if 'use_xpu' not in cfg:
+    if "use_xpu" not in cfg:
         cfg.use_xpu = False
 
-    if 'use_gpu' not in cfg:
+    if "use_gpu" not in cfg:
         cfg.use_gpu = False
 
     # disable mlu in config by default
-    if 'use_mlu' not in cfg:
+    if "use_mlu" not in cfg:
         cfg.use_mlu = False
 
     # disable gcu in config by default
-    if 'use_gcu' not in cfg:
+    if "use_gcu" not in cfg:
         cfg.use_gcu = False
 
     if cfg.use_gpu:
-        place = paddle.set_device('gpu')
+        place = paddle.set_device("gpu")
     elif cfg.use_npu:
-        place = paddle.set_device('npu')
+        place = paddle.set_device("npu")
     elif cfg.use_xpu:
-        place = paddle.set_device('xpu')
+        place = paddle.set_device("xpu")
     elif cfg.use_mlu:
-        place = paddle.set_device('mlu')
+        place = paddle.set_device("mlu")
     elif cfg.use_gcu:
-        place = paddle.set_device('gcu')
+        place = paddle.set_device("gcu")
     else:
-        place = paddle.set_device('cpu')
+        place = paddle.set_device("cpu")
 
     if FLAGS.slim_config:
         cfg = build_slim_model(cfg, FLAGS.slim_config, mode=FLAGS.mode)
@@ -221,5 +242,5 @@ def main():
     run(FLAGS, cfg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

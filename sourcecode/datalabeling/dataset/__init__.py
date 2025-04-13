@@ -12,7 +12,7 @@ from .converters import (
     convert_obb_to_yolo,
     create_yolo_seg_directory,
     convert_yolo_to_coco,
-    convert_obb_to_dota
+    convert_obb_to_dota,
 )
 from .sampling import select_hard_samples, compute_detector_performance
 
@@ -30,5 +30,5 @@ __all__ = [
     "convert_json_annotations_to_coco",
     "create_yolo_seg_directory",
     "convert_yolo_to_coco",
-    "convert_obb_to_dota"
+    "convert_obb_to_dota",
 ]

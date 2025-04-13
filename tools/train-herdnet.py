@@ -18,10 +18,9 @@ from lightning.pytorch.callbacks import (
 from pathlib import Path
 
 
-def run_ligthning(args:Arguments):
+def run_ligthning(args: Arguments):
     import logging
     import segmentation_models_pytorch as smp
-
 
     logger = logging.getLogger("mlflow")
     logger.setLevel(logging.DEBUG)
@@ -41,38 +40,30 @@ def run_ligthning(args:Arguments):
     empty_ratio = 0.0
     args.patience = 10
     args.cl_batch_size = 16
-    args.cl_lr0s = [
-        3e-4, 1e-4, 5e-5
-    ]
-    args.cl_ratios = [
-        0, 1, 2.5
-    ]
-    args.cl_freeze = [
-        0.0, 0.5, 0.75
-    ]
-    args.cl_epochs = [
-        30, 10, 7
-    ]
-    device = "cuda" if torch.cuda.is_available() else 'cpu'
+    args.cl_lr0s = [3e-4, 1e-4, 5e-5]
+    args.cl_ratios = [0, 1, 2.5]
+    args.cl_freeze = [0.0, 0.5, 0.75]
+    args.cl_epochs = [30, 10, 7]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     args.project_name = "Herdnet"
 
     accelerator = "auto"
     detect_anomaly = False
 
-    normalization="standard" # "standard min_max
-    mean=(0.485, 0.456, 0.406)
-    std=(0.229, 0.224, 0.225)
+    normalization = "standard"  # "standard min_max
+    mean = (0.485, 0.456, 0.406)
+    std = (0.229, 0.224, 0.225)
     # mean=(0., 0., 0.)
     # std=(1., 1., 1.)
-    
+
     check_val_every_n_epoch = 3
     num_sanity_val_steps = 10
-    
+
     work_dir = Path("runs_herdnet")  # for HerdNet Trainer
     work_dir.mkdir(exist_ok=True, parents=False)
 
     args.path_weights = r"base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  # initialization
-    loaded_weights_num_classes=4 # for ennedi weights
+    loaded_weights_num_classes = 4  # for ennedi weights
     # args.data_config_yaml = r"configs\yolo_configs\dataset_identification.yaml"
     # args.run_name = "herdnet-Identif"
 
@@ -81,7 +72,7 @@ def run_ligthning(args:Arguments):
 
     checkpoint_path = None
     # checkpoint_path = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\mlartifacts\934358897506090439\336b6791130f4873903e924d26beccad\artifacts\epoch=4-step=450\epoch=4-step=450.ckpt"
-    # loaded_weights_num_classes = 2  # num classes includes background 
+    # loaded_weights_num_classes = 2  # num classes includes background
 
     # get cross entropy loss weights
     # Data
@@ -101,15 +92,13 @@ def run_ligthning(args:Arguments):
     logger.info(f"cross entropy loss class importance weights: {ce_weight}")
     datamodule = None
 
-    
-
     if checkpoint_path is not None:
         herdnet_trainer = HerdnetTrainer.load_from_checkpoint(
             checkpoint_path=checkpoint_path,
             lr=args.lr0,
             weight_decay=args.weight_decay,
             data_config_yaml=args.data_config_yaml,
-            herdnet_model_path=None, # should be None!
+            herdnet_model_path=None,  # should be None!
             loaded_weights_num_classes=loaded_weights_num_classes,
             ce_weight=ce_weight,
             map_location="cpu",
@@ -119,7 +108,7 @@ def run_ligthning(args:Arguments):
 
         print(f"\nLoading checkpoint at {checkpoint_path}\n")
     else:
-        losses = None # uses the default
+        losses = None  # uses the default
         # Training logic
         herdnet_trainer = HerdnetTrainer(
             herdnet_model_path=args.path_weights,
@@ -134,10 +123,13 @@ def run_ligthning(args:Arguments):
         )
 
     # continuous learning
-    for empty_ratio, lr, freeze_ratio, epochs in zip(args.cl_ratios, args.cl_lr0s, args.cl_freeze, args.cl_epochs):
-
-        args.run_name = args.run_name + f"-emptyRatio_{empty_ratio}-freezeRatio_{freeze_ratio}"
-        args.cl_save_dir = work_dir/args.run_name
+    for empty_ratio, lr, freeze_ratio, epochs in zip(
+        args.cl_ratios, args.cl_lr0s, args.cl_freeze, args.cl_epochs
+    ):
+        args.run_name = (
+            args.run_name + f"-emptyRatio_{empty_ratio}-freezeRatio_{freeze_ratio}"
+        )
+        args.cl_save_dir = work_dir / args.run_name
         args.cl_save_dir.mkdir(parents=True, exist_ok=True)
 
         # loggers and callbacks
@@ -170,7 +162,7 @@ def run_ligthning(args:Arguments):
         herdnet_trainer.hparams.lr = lr
         herdnet_trainer.hparams.epochs = epochs
         herdnet_trainer.hparams.lrr = args.lrf
-        
+
         # Freeze params
         num_layers = len(list(herdnet_trainer.parameters()))
         for idx, param in enumerate(herdnet_trainer.parameters()):
@@ -187,9 +179,9 @@ def run_ligthning(args:Arguments):
             batch_size=args.cl_batch_size,
             down_ratio=down_ratio,
             train_empty_ratio=empty_ratio,
-            normalization=normalization, # 
+            normalization=normalization,  #
             mean=mean,
-            std=std
+            std=std,
         )
 
         # Trainer
@@ -201,7 +193,7 @@ def run_ligthning(args:Arguments):
             # accumulate_grad_batches=max(int(64 / args.batchsize), 1),
             precision=precision,
             callbacks=callbacks,
-            gradient_clip_val=10, 
+            gradient_clip_val=10,
             gradient_clip_algorithm="value",
             detect_anomaly=detect_anomaly,
             accelerator=accelerator,
@@ -218,15 +210,13 @@ def run_ligthning(args:Arguments):
             param.requires_grad = True
 
 
-def run(args:Arguments):
-    
+def run(args: Arguments):
     down_ratio = 2
     empty_ratio = args.cl_ratios[0]
-    valid_freq=4
+    valid_freq = 4
     work_dir = r"runs_herdnet"  # for HerdNet Trainer
     work_dir = Path(work_dir) / (args.run_name)
     work_dir.mkdir(exist_ok=True, parents=True)
-    
 
     # Data
     datamodule = HerdnetData(
@@ -268,9 +258,13 @@ def run(args:Arguments):
     ]
 
     # Load model
-    herdnet = HerdNet(pretrained=False, down_ratio=down_ratio, num_classes=args.herdnet_num_classes)
+    herdnet = HerdNet(
+        pretrained=False, down_ratio=down_ratio, num_classes=args.herdnet_num_classes
+    )
     herdnet = LossWrapper(herdnet, losses=losses)
-    checkpoint = torch.load(args.path_weights, map_location=args.device, weights_only=True)
+    checkpoint = torch.load(
+        args.path_weights, map_location=args.device, weights_only=True
+    )
     success = herdnet.load_state_dict(checkpoint["model_state_dict"], strict=True)
 
     print(f"Loading weights from {args.path_weights} with success: {success}")
@@ -325,23 +319,19 @@ def run(args:Arguments):
         work_dir=work_dir,
     )
 
-    
     herdnet = trainer.start(
         warmup_iters=50, checkpoints="best", select="max", validate_on="f1_score"
     )
 
 
 if __name__ == "__main__":
-  
     from datargs import parse
     import mlflow
 
     args = parse(Arguments)
 
-
     # training using lightning
     # run_ligthning(args)
-
 
     # training using original pipeline
     mlflow.set_tracking_uri(args.mlflow_tracking_uri)
@@ -355,5 +345,5 @@ if __name__ == "__main__":
         experiment_id=mlflow.get_experiment_by_name(args.project_name).experiment_id,
     ):
         mlflow.log_params(vars(args))
-        
+
         run(args)

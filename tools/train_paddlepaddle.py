@@ -9,14 +9,17 @@
 Returns:
     _type_: _description_
 """
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
 # ignore warning log
 import warnings
+
 warnings.filterwarnings("ignore")
 import glob
 import ast
@@ -27,6 +30,7 @@ import paddle
 from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer, Trainer_ARSL
 from ppdet.utils.logger import setup_logger
+
 
 def load_yaml(data_config_yaml: str) -> dict:
     with open(data_config_yaml, "r") as file:
@@ -39,7 +43,7 @@ def load_yaml(data_config_yaml: str) -> dict:
 class Flags:
     # main ppd yaml config
     config: str = None
-    data_config:str = None
+    data_config: str = None
 
     # inference
     slice_size: int = 800
@@ -65,7 +69,7 @@ class Flags:
     tr_empty_ratio: float = 0.1
     val_empty_ratio: float = 1.0
 
-    freeze_ratio: float= 0.
+    freeze_ratio: float = 0.0
 
     # training
     resume: bool = False
@@ -76,10 +80,10 @@ class Flags:
     epoch: int = 30
     device: str = "cuda"
     tr_batchsize: int = 8
-    val_batchsize:int = 16
+    val_batchsize: int = 16
 
     # evaluation
-    eval_interval:int=2
+    eval_interval: int = 2
 
     # logging
     output_dir: str = "runs-ppd"
@@ -88,7 +92,7 @@ class Flags:
     run_name: str = "run-ppd"
     use_wandb: bool = False
     tags: Sequence[str] = None
-    log_iter:int=100 # log every 100 iterations
+    log_iter: int = 100  # log every 100 iterations
 
 
 def train_ppd(args: Flags):
@@ -99,7 +103,10 @@ def train_ppd(args: Flags):
 
     cfg = load_config(args.config)
 
-    args.run_name = args.run_name + f"-tr_empty_ratio_{args.tr_empty_ratio}_freeze_{args.freeze_ratio}"
+    args.run_name = (
+        args.run_name
+        + f"-tr_empty_ratio_{args.tr_empty_ratio}_freeze_{args.freeze_ratio}"
+    )
     args.output_dir = os.path.join("runs_ppd", args.run_name)
 
     cfg["num_classes"] = data_config["nc"]
@@ -111,23 +118,19 @@ def train_ppd(args: Flags):
     cfg["log_iter"] = args.log_iter
     cfg["use_wandb"] = args.use_wandb
     cfg["LearningRate"]["base_lr"] = args.lr0
-    cfg["LearningRate"]["schedulers"] =  [ {"name": "CosineDecay",
-                                            "max_epochs": args.epoch
-                                            },
-                                            {"name": "LinearWarmup", 
-                                            "start_factor": 0.0, 
-                                            "epochs": 1
-                                            }
-                                        ]
+    cfg["LearningRate"]["schedulers"] = [
+        {"name": "CosineDecay", "max_epochs": args.epoch},
+        {"name": "LinearWarmup", "start_factor": 0.0, "epochs": 1},
+    ]
     cfg["wandb"] = {
         "project": args.project_name,
         "name": args.run_name,
         "tags": args.tags,
         "entity": "ipeo-epfl",
     }
-    cfg['use_gpu'] = (args.device == "cuda")
+    cfg["use_gpu"] = args.device == "cuda"
 
-    cfg['weights'] = os.path.join(args.output_dir,'model_final')
+    cfg["weights"] = os.path.join(args.output_dir, "model_final")
     cfg["pretrain_weights"] = args.weights
 
     # set batchsize
@@ -140,13 +143,13 @@ def train_ppd(args: Flags):
     cfg["TrainDataset"]["image_dir"] = "train"
     cfg["TrainDataset"]["anno_path"] = "annotations/annotations_train.json"
     cfg["TrainDataset"]["empty_ratio"] = args.tr_empty_ratio
-    cfg["TrainDataset"]["allow_empty"] = args.tr_empty_ratio>0.
+    cfg["TrainDataset"]["allow_empty"] = args.tr_empty_ratio > 0.0
 
     cfg["EvalDataset"]["dataset_dir"] = root_dir
     cfg["EvalDataset"]["image_dir"] = "val"
     cfg["EvalDataset"]["anno_path"] = "annotations/annotations_val.json"
     cfg["EvalDataset"]["empty_ratio"] = args.val_empty_ratio
-    cfg["EvalDataset"]["allow_empty"] = args.val_empty_ratio>0.
+    cfg["EvalDataset"]["allow_empty"] = args.val_empty_ratio > 0.0
 
     cfg["TestDataset"]["dataset_dir"] = root_dir
     cfg["TestDataset"]["image_dir"] = "test"
@@ -167,7 +170,7 @@ def train_ppd(args: Flags):
         place = paddle.set_device("mlu")
     else:
         place = paddle.set_device("cpu")
-    
+
     logger.info(f"Using device: {place}")
 
     trainer = Trainer(cfg, mode="train")
@@ -178,12 +181,11 @@ def train_ppd(args: Flags):
         trainer.load_weights(cfg.pretrain_weights)
     else:
         logger.info("No weights loaded.")
-    
+
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     logger.info(json.dumps(cfg, indent=4))
 
-    
     # disable grad for some parameters
     num_layers = len(list(trainer.model.parameters()))
     for idx, param in enumerate(trainer.model.parameters()):
@@ -191,7 +193,9 @@ def train_ppd(args: Flags):
             param.trainable = False
         else:
             break
-    logger.info(f"\n{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n")
+    logger.info(
+        f"\n{int(num_layers * args.freeze_ratio)}/{num_layers} layers have been frozen.\n"
+    )
 
     trainer.train(args.do_eval)
 

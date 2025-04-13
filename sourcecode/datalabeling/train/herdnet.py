@@ -78,7 +78,7 @@ def get_groundtruth(
             df["y"] = (df["y1"] + df["y4"]) * img_height * 0.5
             df["w"] = (df["x2"] - df["x1"]) * img_width
             df["h"] = (df["y4"] - df["y1"]) * img_height
-            df.drop(columns=cols1[1:],inplace=True)
+            df.drop(columns=cols1[1:], inplace=True)
 
         df["images"] = str(image_path)
         df.rename(columns={"id": "labels"}, inplace=True)
@@ -117,13 +117,19 @@ def load_dataset(
         tuple[ConcatDataset, pd.DataFrame, int]: _description_
     """
 
-    assert split in ["train", "val", "test"], "split should be either train, val or test."
+    assert split in ["train", "val", "test"], (
+        "split should be either train, val or test."
+    )
     if empty_frac is not None:
         assert empty_frac >= 0.0 and empty_frac <= 1.0, "should be between 0 and 1."
-        assert empty_ratio is None, "empty_ratio should be None if empty_frac is not None."
+        assert empty_ratio is None, (
+            "empty_ratio should be None if empty_frac is not None."
+        )
     if empty_ratio is not None:
         assert empty_ratio >= 0.0, "should be non-negative"
-        assert empty_frac is None, "empty_frac should be None if empty_ratio is not None."
+        assert empty_frac is None, (
+            "empty_frac should be None if empty_ratio is not None."
+        )
 
     with open(data_config_yaml, "r") as file:
         data_config = yaml.load(file, Loader=yaml.FullLoader)
@@ -162,7 +168,7 @@ def load_dataset(
             # for col in ["labels", "x", "y", "w", "h"]:
             #     df_empty[col] = 0
             # df = pd.concat([df, df_empty])
-        
+
         # selected images
         selected_images = sampled_images_empty + df["images"].to_list()
         selected_images = list(set(selected_images))
@@ -171,12 +177,12 @@ def load_dataset(
             root_dir="",
             albu_transforms=transforms[split][0],
             end_transforms=transforms[split][1],
-            images_paths=selected_images, # FolderDataset
+            images_paths=selected_images,  # FolderDataset
         )
 
         datasets.append(dataset)
         df_gts.append(df)
-        
+
         num_empty_images += len(sampled_images_empty)
 
     return ConcatDataset(datasets=datasets), pd.concat(df_gts), num_empty_images
@@ -230,7 +236,7 @@ class HerdnetData(L.LightningDataModule):
         train_empty_ratio: float = 0.0,
         normalization: str = "standard",
         mean=(0.485, 0.456, 0.406),
-        std=(0.229, 0.224, 0.225)
+        std=(0.229, 0.224, 0.225),
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -413,7 +419,7 @@ class HerdnetData(L.LightningDataModule):
         # Creating batch
         for k in keys:
             batched[k] = []  # initialize to be empty list
-            if k == "points" or k=='labels':
+            if k == "points" or k == "labels":
                 batched[k] = [a[k].cpu().tolist() for a in targets]
                 if len(targets_empty) > 0:
                     batched[k] = batched[k] + [[]] * len(targets_empty)
@@ -460,7 +466,7 @@ class HerdnetData(L.LightningDataModule):
             sampler=torch.utils.data.SequentialSampler(self.val_dataset),
             num_workers=self.num_workers,
             collate_fn=self.val_collate_fn,
-            persistent_workers=True
+            persistent_workers=True,
         )
 
     def test_dataloader(self):
@@ -504,8 +510,8 @@ class HerdnetTrainer(L.LightningModule):
         herdnet_model_path: str | None = None,
         ce_weight: torch.Tensor = None,
         losses: list = None,
-        epochs: int=None,
-        lrf:float=1e-1
+        epochs: int = None,
+        lrf: float = 1e-1,
     ):
         super().__init__()
 
@@ -517,7 +523,7 @@ class HerdnetTrainer(L.LightningModule):
             "ce_weight",
             "eval_radius",
             "lrf",
-            "epochs"
+            "epochs",
         )
 
         self.work_dir = work_dir
@@ -531,7 +537,7 @@ class HerdnetTrainer(L.LightningModule):
             self.num_classes = data_config["nc"] + 1
         self.class_mapping = {str(k + 1): v for k, v in data_config["names"].items()}
 
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         if losses is None:
             losses = [
                 {
@@ -565,7 +571,7 @@ class HerdnetTrainer(L.LightningModule):
                     checkpoint["model_state_dict"], strict=load_state_dict_strict
                 )
                 print("Loading ckpt:", herdnet_model_path)
-                
+
             except:
                 checkpoint = torch.load(
                     herdnet_model_path, map_location=device, weights_only=True
@@ -575,16 +581,15 @@ class HerdnetTrainer(L.LightningModule):
                 )
                 print("Warning! load_state_dict_strict is being set to False")
                 print(success)
-                
 
         if self.num_classes != self.loaded_weights_num_classes:
             print(
                 f"Classification head of herdnet will be modified to handle {self.num_classes} classes."
             )
             self.model.model.reshape_classes(self.num_classes)
-            
+
         self.model = self.model.to(device)
-        
+
         # metrics
         self.metrics_val = PointsMetrics(
             radius=eval_radius, num_classes=self.num_classes
@@ -649,15 +654,13 @@ class HerdnetTrainer(L.LightningModule):
         return dict(gt=gt, preds=preds, est_count=counts)
 
     def shared_step(self, stage, batch, batch_idx):
-        
-
         # compute losses
         if stage == "train":
             images, targets = batch
             predictions, loss_dict = self.model(images, targets)
             loss = sum(loss for loss in loss_dict.values())
             self.log_dict(loss_dict)
-            return loss.clamp(-5., 5.) # preventing exploding gradient
+            return loss.clamp(-5.0, 5.0)  # preventing exploding gradient
 
         else:
             images, targets = batch
@@ -757,10 +760,11 @@ class HerdnetTrainer(L.LightningModule):
             weight_decay=self.hparams.weight_decay,
         )
 
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
-                                                                            T_0=self.hparams.epochs,
-                                                                            T_mult=1,
-                                                                            eta_min=self.hparams.lr*self.hparams.lrf,
-                                                                        )
-        return [optimizer],  [{"scheduler": lr_scheduler, "interval": "epoch"}]
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=self.hparams.epochs,
+            T_mult=1,
+            eta_min=self.hparams.lr * self.hparams.lrf,
+        )
+        return [optimizer], [{"scheduler": lr_scheduler, "interval": "epoch"}]
         # return optimizer

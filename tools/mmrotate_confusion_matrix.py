@@ -18,53 +18,57 @@ from mmrotate.core.bbox import rbbox_overlaps
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Generate confusion matrix from detection results')
-    parser.add_argument('config', help='test config file path')
+        description="Generate confusion matrix from detection results"
+    )
+    parser.add_argument("config", help="test config file path")
     parser.add_argument(
-        'prediction_path', help='prediction path where test .pkl result')
+        "prediction_path", help="prediction path where test .pkl result"
+    )
     parser.add_argument(
-        'save_dir', help='directory where confusion matrix will be saved')
-    parser.add_argument(
-        '--show', action='store_true', help='show confusion matrix')
+        "save_dir", help="directory where confusion matrix will be saved"
+    )
+    parser.add_argument("--show", action="store_true", help="show confusion matrix")
     # parser.add_argument(
     #     '--color-theme',
     #     default='plasma',
     #     help='theme of the matrix color map')
     parser.add_argument(
-        '--score-thr',
+        "--score-thr",
         type=float,
         default=0.3,
-        help='score threshold to filter detection bboxes')
+        help="score threshold to filter detection bboxes",
+    )
     parser.add_argument(
-        '--tp-iou-thr',
+        "--tp-iou-thr",
         type=float,
         default=0.6,
-        help='IoU threshold to be considered as matched')
+        help="IoU threshold to be considered as matched",
+    )
     parser.add_argument(
-        '--nms-iou-thr',
+        "--nms-iou-thr",
         type=float,
         default=0.5,
-        help='nms IoU threshold, only applied when users want to change the'
-        'nms IoU threshold.')
+        help="nms IoU threshold, only applied when users want to change the"
+        "nms IoU threshold.",
+    )
     parser.add_argument(
-        '--cfg-options',
-        nargs='+',
+        "--cfg-options",
+        nargs="+",
         action=DictAction,
-        help='override some settings in the used config, the key-value pair '
-        'in xxx=yyy format will be merged into config file. If the value to '
+        help="override some settings in the used config, the key-value pair "
+        "in xxx=yyy format will be merged into config file. If the value to "
         'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
         'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
-        'Note that the quotation marks are necessary and that no white space '
-        'is allowed.')
+        "Note that the quotation marks are necessary and that no white space "
+        "is allowed.",
+    )
     args = parser.parse_args()
     return args
 
 
-def calculate_confusion_matrix(dataset,
-                               results,
-                               score_thr=0,
-                               nms_iou_thr=None,
-                               tp_iou_thr=0.5):
+def calculate_confusion_matrix(
+    dataset, results, score_thr=0, nms_iou_thr=None, tp_iou_thr=0.5
+):
     """Calculate the confusion matrix.
 
     Args:
@@ -88,21 +92,30 @@ def calculate_confusion_matrix(dataset,
         else:
             res_bboxes = per_img_res
         ann = dataset.get_ann_info(idx)
-        gt_bboxes = ann['bboxes']
-        labels = ann['labels']
-        analyze_per_img_dets(confusion_matrix, gt_bboxes, labels, res_bboxes,
-                             score_thr, tp_iou_thr, nms_iou_thr)
+        gt_bboxes = ann["bboxes"]
+        labels = ann["labels"]
+        analyze_per_img_dets(
+            confusion_matrix,
+            gt_bboxes,
+            labels,
+            res_bboxes,
+            score_thr,
+            tp_iou_thr,
+            nms_iou_thr,
+        )
         prog_bar.update()
     return confusion_matrix
 
 
-def analyze_per_img_dets(confusion_matrix,
-                         gt_bboxes,
-                         gt_labels,
-                         result,
-                         score_thr=0,
-                         tp_iou_thr=0.5,
-                         nms_iou_thr=None):
+def analyze_per_img_dets(
+    confusion_matrix,
+    gt_bboxes,
+    gt_labels,
+    result,
+    score_thr=0,
+    tp_iou_thr=0.5,
+    nms_iou_thr=None,
+):
     """Analyze detection results on each image.
 
     Args:
@@ -130,7 +143,7 @@ def analyze_per_img_dets(confusion_matrix,
                 scores=det_bboxes[:, -1],
                 iou_threshold=nms_iou_thr,
                 # score_threshold=score_thr
-                )
+            )
         ious = rbbox_overlaps(det_bboxes[:, :5], gt_bboxes)
         for i, det_bbox in enumerate(det_bboxes):
             score = det_bbox[5]
@@ -149,12 +162,14 @@ def analyze_per_img_dets(confusion_matrix,
             confusion_matrix[gt_label, -1] += 1
 
 
-def plot_confusion_matrix(confusion_matrix,
-                          labels,
-                          save_dir=None,
-                          show=True,
-                          title='Normalized Confusion Matrix',
-                          color_theme='plasma'):
+def plot_confusion_matrix(
+    confusion_matrix,
+    labels,
+    save_dir=None,
+    show=True,
+    title="Normalized Confusion Matrix",
+    color_theme="plasma",
+):
     """Draw confusion matrix with matplotlib.
 
     Args:
@@ -168,7 +183,7 @@ def plot_confusion_matrix(confusion_matrix,
     """
 
     array = confusion_matrix.T
-    
+
     fig, ax = plt.subplots(1, 1, figsize=(12, 9), tight_layout=True)
     seaborn.set_theme(font_scale=1.0)  # for label size
     nc = len(labels)
@@ -192,33 +207,36 @@ def plot_confusion_matrix(confusion_matrix,
     plot_fname = Path(save_dir) / f"{title.lower().replace(' ', '_')}.png"
     fig.savefig(plot_fname, dpi=250)
 
-
     # Compute precision, recall, f1-score
     results_per_cls = dict()
-    for i,label in enumerate(labels):
-        if label == 'background':
+    for i, label in enumerate(labels):
+        if label == "background":
             break
-        tp = array[i,i]
-        actual_positive = array[:,i].sum()
-        predicted_positive  = array[i,:].sum()
+        tp = array[i, i]
+        actual_positive = array[:, i].sum()
+        predicted_positive = array[i, :].sum()
         # fp = predicted_positive - tp
         # fn = actual_positive - tp
-        precision = tp/(predicted_positive + 1e-8)
-        recall = tp/(actual_positive + 1e-8)
-        f1score = 2*precision*recall / (precision + recall + 1e-8)
+        precision = tp / (predicted_positive + 1e-8)
+        recall = tp / (actual_positive + 1e-8)
+        f1score = 2 * precision * recall / (precision + recall + 1e-8)
 
-        results = dict(precision=round(precision,4), recall=round(recall,4), f1score=round(f1score,4))
+        results = dict(
+            precision=round(precision, 4),
+            recall=round(recall, 4),
+            f1score=round(f1score, 4),
+        )
         results_per_cls[label] = results
-        print(f"results for {label} : ", results,end='\n')
+        print(f"results for {label} : ", results, end="\n")
 
-    with open(Path(save_dir)/'metrics_updated.json','w') as file:
-        json.dump(results_per_cls,file,indent=2)
+    with open(Path(save_dir) / "metrics_updated.json", "w") as file:
+        json.dump(results_per_cls, file, indent=2)
 
     if show:
         plt.show()
-    
+
     plt.close(fig)
-    
+
     # normalize the confusion matrix
     # per_label_sums = confusion_matrix.sum(axis=1)[:, np.newaxis]
     # confusion_matrix = \
@@ -286,7 +304,6 @@ def plot_confusion_matrix(confusion_matrix,
 
 
 def main():
-
     args = parse_args()
 
     cfg = Config.fromfile(args.config)
@@ -300,7 +317,7 @@ def main():
     elif isinstance(results[0], tuple):
         results = [result[0] for result in results]
     else:
-        raise TypeError('invalid type of prediction results')
+        raise TypeError("invalid type of prediction results")
 
     if isinstance(cfg.data.test, dict):
         cfg.data.test.test_mode = True
@@ -309,16 +326,16 @@ def main():
             ds_cfg.test_mode = True
     dataset = build_dataset(cfg.data.test)
 
-    confusion_matrix = calculate_confusion_matrix(dataset, results,
-                                                  args.score_thr,
-                                                  args.nms_iou_thr,
-                                                  args.tp_iou_thr)
+    confusion_matrix = calculate_confusion_matrix(
+        dataset, results, args.score_thr, args.nms_iou_thr, args.tp_iou_thr
+    )
     plot_confusion_matrix(
         confusion_matrix,
-        dataset.CLASSES + ['background'],
+        dataset.CLASSES + ["background"],
         save_dir=args.save_dir,
-        show=args.show)
+        show=args.show,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

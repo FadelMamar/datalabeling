@@ -19,6 +19,11 @@ from label_studio_converter import Converter
 from label_studio_sdk import Client
 import traceback
 import tempfile
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
+from PIL.Image import Exif
+from copy import deepcopy
+import geopy
 
 
 def load_ls_annotations(input_dir: str) -> tuple[list, list]:
@@ -462,8 +467,10 @@ def sample_data(
             "sample_data function: No label is discarded, they are all kept", end="\n"
         )
 
-    if len(df_non_empty)<1:
-        print(f"No labels found in {img_dir}. Pease consider checking arguments labels_to_discard or labels_to_keep.")
+    if len(df_non_empty) < 1:
+        print(
+            f"No labels found in {img_dir}. Pease consider checking arguments labels_to_discard or labels_to_keep."
+        )
 
     # get number of images to sample
     non_empty_num = df_non_empty["images"].unique().shape[0]

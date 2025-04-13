@@ -54,13 +54,13 @@ class Arguments:
     optimizer_momentum: float = 0.99
     device: str = 0
     patience: int = 10
-    val: str = "True" 
+    val: str = "True"
 
     # eval flag
-    iou_threshold:float=0.6
+    iou_threshold: float = 0.6
 
     # herdnet
-    herdnet_num_classes: int = 2 # binary
+    herdnet_num_classes: int = 2  # binary
 
     # pretraining
     use_pretraining: bool = False
@@ -177,9 +177,9 @@ class Dataprepconfigs:
         False  # will skip yolo wrongly formatted target files else, interrupts process
     )
     yolo_to_coco: bool = False  # converts yolo dataset to coco dataset
-    coco_output_dir: str = "./coco-dataset" # directory path
+    coco_output_dir: str = "./coco-dataset"  # directory path
     clear_dota_labels: bool = False
-    clear_coco_dir:bool = False
+    clear_coco_dir: bool = False
 
     # cli
     build_yolo_dataset: bool = False
@@ -205,4 +205,3 @@ class Dataprepconfigs:
     create_yolo_seg_dir: bool = False
     sam_model_path: str = None
     copy_images: bool = False
-
