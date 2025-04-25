@@ -4,6 +4,7 @@ from sahi.utils.compatibility import fix_full_shape_list, fix_shift_amount_list
 from sahi.utils.import_utils import check_requirements
 from sahi.models.base import DetectionModel
 from sahi.predict import get_sliced_prediction, get_prediction
+from PIL.ExifTags import GPSTAGS, TAGS
 
 # from label_studio_ml.utils import (get_env, get_local_path)
 from tqdm import tqdm
@@ -17,9 +18,91 @@ from typing import Any, List, Optional
 import numpy as np
 import pandas as pd
 import traceback
+import geopy
+
 
 logger = logging.getLogger(__name__)
 
+class GPSUtils:
+
+    @staticmethod
+    def get_exif(file_name) -> dict|None:
+    
+        with (Image.open(file_name) as img):
+            exif_data = img._getexif()
+
+        if exif_data is None:
+            return None
+
+        extracted_exif = dict()
+        for k, v in exif_data.items():
+            extracted_exif[TAGS.get(k)] = v
+        
+        return extracted_exif
+
+    @staticmethod
+    def get_gps_info(labeled_exif:dict) -> dict|None:
+
+        # https://exiftool.org/TagNames/GPS.html
+        
+        gps_info = labeled_exif.get("GPSInfo", None)
+
+        if gps_info is None:
+            return None
+
+        info =  {
+            GPSTAGS.get(key, key): value
+            for key, value in gps_info.items()
+        }
+            
+        info['GPSAltitude'] = info['GPSAltitude'].__repr__()
+
+        # convert bytes types
+        for k,v in info.items():
+            if isinstance(v,bytes):
+                info[k] =  list(v)
+        
+        return info
+
+    @staticmethod
+    def get_gps_coord(file_name:str,altitude:str=None)->tuple|None:
+
+        extracted_exif = GPSUtils.get_exif(file_name=file_name)
+
+        if extracted_exif is None:
+            return None
+        
+        gps_info = GPSUtils.get_gps_info(extracted_exif)
+
+        if gps_info is None:
+            return None
+            
+        altitude_map = {0 : 'Above Sea Level',
+                        1 : 'Below Sea Level',
+                        2 : 'Positive Sea Level (sea-level ref)',
+                        3 : 'Negative Sea Level (sea-level ref)'
+        }
+
+        # map GPSAltitudeRef
+        gps_info['GPSAltitudeRef'] = altitude_map[gps_info['GPSAltitudeRef'][0]]
+
+        # rewite latitude
+        gps_coords = dict()
+        for coord in ['GPSLatitude','GPSLongitude']:
+            degrees, minutes, seconds = gps_info[coord]
+            ref = gps_info[coord+'Ref']
+            gps_coords[coord] = f"{degrees} {minutes}m {seconds}s {ref}"
+
+        coords = gps_coords['GPSLatitude'] + ' ' + gps_coords['GPSLongitude']
+        
+        if altitude is None:
+            alt = f"{gps_info['GPSAltitude']}m"
+        else:
+            alt = altitude
+        
+        coords = gps_coords['GPSLatitude'] + ' ' + gps_coords['GPSLongitude'] + ' ' + alt
+
+        return coords, gps_info
 
 # https://github.com/obss/sahi/blob/main/sahi/models/yolov8.py
 class YoloObbDetectionModel(DetectionModel):
@@ -196,6 +279,7 @@ class YoloObbDetectionModel(DetectionModel):
         self._object_prediction_list_per_image = object_prediction_list_per_image
 
 
+
 class Detector(object):
     def __init__(
         self,
@@ -228,26 +312,21 @@ class Detector(object):
         self.use_sliding_window = use_sliding_window
         self.is_yolo_obb = is_yolo_obb
         logger.info(f"Computing device: {device}")
-        if is_yolo_obb:
-            self.detection_model = YoloObbDetectionModel(
-                model=YOLO(path_to_weights, task="obb"),
-                confidence_threshold=confidence_threshold,
-                image_size=self.imgsz,
-                device=device,
-            )
-        else:
-            self.detection_model = UltralyticsDetectionModel(
-                model=YOLO(path_to_weights, task="detect"),
-                confidence_threshold=confidence_threshold,
-                image_size=self.imgsz,
-                device=device,
-            )
+        
+        self.detection_model = UltralyticsDetectionModel(
+            model=YOLO(path_to_weights, task="detect"),
+            confidence_threshold=confidence_threshold,
+            image_size=self.imgsz,
+            device=device,
+        )
 
     # TODO: batch predictions
     def predict(
         self,
-        image: Image,
-        return_coco: bool = True,
+        image: Image = None,
+        image_path: str = None,
+        return_gps: bool = False,
+        return_coco: bool = False,
         sahi_prostprocess: float = "NMS",
         override_tilesize: int = None,
         postprocess_match_threshold: float = 0.5,
@@ -261,14 +340,11 @@ class Detector(object):
         Returns:
             dict: predictions in coco format
         """
-        # if data is on AWS
-        # r = urlparse(url, allow_fragments=False)
-        # bucket_name = r.netloc
-        # filename = r.path.lstrip('/')
-        # with open('./tmp/s3_img.jpg','wb+') as f:
-        #     S3.download_fileobj(bucket_name, filename, f)
-        #     image = Image.open(f)
 
+        if image is None:
+            assert image_path is not None, "Provide the image path."
+            image = Image.open(image_path)
+        
         if self.use_sliding_window:
             tilesize = override_tilesize or self.tilesize
             result = get_sliced_prediction(
@@ -292,12 +368,18 @@ class Detector(object):
                 postprocess=None,
                 verbose=1,
             )
-            # return self.yolo_results_to_coco(results=result[0],is_yolo_obb=self.is_yolo_obb)
-
+        
+        
         if return_coco:
-            return result.to_coco_annotations()
+            result =  result.to_coco_annotations()
+            
+        out = result
+        # get gps coordinates
+        if return_gps:
+            gps_coords = GPSUtils.get_gps_coord(image_path)
+            out = result, gps_coords     
 
-        return result
+        return out
 
     def yolo_results_to_coco(
         self, results: ultralytics.engine.results.Results, is_yolo_obb: bool = True
@@ -327,6 +409,8 @@ class Detector(object):
         self,
         path_to_dir: str = None,
         images_paths: list[str] = None,
+        return_gps: bool = False,
+        return_coco: bool = True,
         as_dataframe: bool = False,
         save_path: str = None,
     ):
@@ -348,51 +432,96 @@ class Detector(object):
         results = {}
         paths = images_paths or Path(path_to_dir).iterdir()
         for image_path in tqdm(paths):
-            pred = self.predict(Image.open(image_path), return_coco=True)
+            pred = self.predict(image=None,
+                                return_coco=return_coco or as_dataframe or return_gps, 
+                                image_path=image_path, 
+                                return_gps=return_gps
+                            )
+            gps_coords = None
+            if return_gps:
+                pred,gps_info = pred
+                if isinstance(gps_info, tuple):
+                    gps_coords = gps_info[0]
+                
+            pred.append(dict(gps_coords=gps_coords)
+                        )
             results.update({str(image_path): pred})
+            
 
         # returns as df or save
         if as_dataframe or (save_path is not None):
-            results = self.get_pred_results_as_dataframe(results)
+            results = self.get_pred_results_as_dataframe(results,return_gps=return_gps)
 
             if save_path is not None:
                 try:
                     results.to_json(save_path, orient="records", indent=2)
                 except Exception:
-                    print("!!!Failed to save results as json!!!\n")
+                    logger.info("!!!Failed to save results as json!!!\n")
                     traceback.print_exc()
-
-            return results
 
         return results
 
-    def get_pred_results_as_dataframe(self, results: dict[str:list]):
-        df_results = pd.DataFrame.from_dict(results, orient="index")
-        dfs = list()
+    def format_gps(self,gps_coord:str):
 
+        if gps_coord is None:
+            return None,None,None
+
+        point = geopy.Point.from_string(gps_coord)
+
+        lat = point.latitude
+        long = point.longitude
+        alt = point.altitude * 1000 # converting to meters
+
+        return lat,long,alt
+
+    def get_pred_results_as_dataframe(self, results: dict[str:list],return_gps:bool=False):
+        
+        unravel_dict = []
+        gps_coords = []
+        for key,value in results.items():
+            for v in value:
+                if 'gps_coords' not in v.keys():
+                    unravel_dict.append({'file_name':key,'value':v}) #= v #,results['gps_coords']
+                elif return_gps:
+                    gps_coords.append({'gps':v['gps_coords'],'file_name':key}
+                                      )
+        
+        df_results = pd.DataFrame.from_dict(unravel_dict) 
+
+               
+        
+        dfs = list()
         for i in tqdm(range(len(df_results)), desc="pred results as df"):
-            df_i = pd.DataFrame.from_records(df_results.iloc[i, :].dropna().to_list())
-            df_i["image_path"] = df_results.index[i]
+            df_i = pd.DataFrame.from_records(df_results.iloc[i, 1:].to_list())
+            df_i.loc[0,"file_name"] = df_results.iat[i,0]
 
             dfs.append(df_i)
 
-        dfs = pd.concat(dfs, axis=0)
+        dfs = pd.concat(dfs, axis=0).dropna(thresh=5)      
+        
         dfs["x_min"] = dfs["bbox"].apply(lambda x: x[0])
         dfs["y_min"] = dfs["bbox"].apply(lambda x: x[1])
         dfs["bbox_w"] = dfs["bbox"].apply(lambda x: x[2])
         dfs["bbox_h"] = dfs["bbox"].apply(lambda x: x[3])
         dfs["x_max"] = dfs["x_min"] + dfs["bbox_w"]
         dfs["y_max"] = dfs["y_min"] + dfs["bbox_h"]
+        
+        # add gps info
+        if return_gps:
+            df_gps = pd.DataFrame.from_dict(gps_coords) 
+            dfs = dfs.merge(df_gps,on='file_name',how='left')   
+
+            # converting gps coords to decimal
+            dfs[['Latitude', 'Longitude', 'Elevation']] = dfs.gps.apply(lambda x: self.format_gps(x)).apply(pd.Series)           
 
         try:
-            dfs.drop(
-                columns=["bbox", "image_id", "segmentation", "iscrowd"], inplace=True
-            )
+            dfs.drop(columns=["image_id","iscrowd","segmentation","bbox","category_name"],inplace=True)
         except Exception:
-            print(
-                "Tried to drop columns: ['bbox','image_id','segmentation','iscrowd']."
+            logger.info(
+                "Tried to drop columns: ['image_id','iscrowd','segmentation','bbox']."
             )
             traceback.print_exc()
+            
 
         return dfs
 
