@@ -1,7 +1,3 @@
-Thank you for these details! Below is a **revamped ReadMe structure** that incorporates your responses while improving clarity, usability, and completeness.  
-
----
-
 # **DataLabeling for Aerial Wildlife Census**  
 **An active learning pipeline for labeling and training YOLO-based detectors on aerial imagery of large herbivores.**  
 
