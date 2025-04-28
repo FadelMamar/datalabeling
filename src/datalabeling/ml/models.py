@@ -61,10 +61,10 @@ class Detector(object):
             device=device,
         )
 
-    # TODO: batch predictions
+    # TODO: batch predictions with slicing
     def predict(
         self,
-        image: Image = None,
+        image: Image.Image = None,
         image_path: str = None,
         return_gps: bool = False,
         return_coco: bool = False,
@@ -85,6 +85,8 @@ class Detector(object):
         if image is None:
             assert image_path is not None, "Provide the image path."
             image = Image.open(image_path)
+        else:
+            assert isinstance(image, Image.Image)
 
         if self.use_sliding_window:
             tilesize = override_tilesize or self.tilesize
@@ -97,7 +99,7 @@ class Detector(object):
                 overlap_width_ratio=self.overlapratio,
                 postprocess_type=sahi_prostprocess,
                 postprocess_match_metric="IOU",
-                verbose=1,
+                verbose=0,
                 postprocess_match_threshold=postprocess_match_threshold or nms_iou,
             )
         else:
@@ -107,7 +109,7 @@ class Detector(object):
                 shift_amount=[0, 0],
                 full_shape=None,
                 postprocess=None,
-                verbose=1,
+                verbose=0,
             )
 
         if return_coco:
@@ -116,11 +118,12 @@ class Detector(object):
         out = result
         # get gps coordinates
         if return_gps:
-            gps_coords = GPSUtils.get_gps_coord(image_path)
+            gps_coords = GPSUtils.get_gps_coord(file_name=image_path, image=image)
             out = result, gps_coords
 
         return out
 
+    # TODO: to debug and optimize
     def sliced_prediction(
         self,
         image_path: str,
@@ -181,10 +184,10 @@ class Detector(object):
         path_to_dir: str = None,
         images_paths: list[str] = None,
         return_gps: bool = False,
-        return_coco: bool = True,
-        as_dataframe: bool = False,
+        return_coco: bool = False,
+        as_dataframe: bool = True,
         save_path: str = None,
-    ):
+    ) -> dict | pd.DataFrame:
         """Computes predictions on a directory
 
         Args:
@@ -254,6 +257,10 @@ class Detector(object):
             img_path = x["file_name"]
 
             exif = GPSUtils.get_exif(img_path)
+            if exif is None:
+                return pd.Series(
+                    data=[None, None],
+                )
             H = exif["ExifImageHeight"]
             W = exif["ExifImageWidth"]
 
@@ -285,7 +292,7 @@ class Detector(object):
                 data=[px_lat, px_long],
             )
 
-        except ValueError:
+        except Exception as e:
             traceback.print_exc()
             return pd.Series(
                 data=[None, None],

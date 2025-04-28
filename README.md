@@ -131,5 +131,3 @@ Yes! Ensure it follows YOLO format and matches the resolution (~2.8 cm/pixel).
 
 ### **Feedback?**  
 Open an issue or contact [fadel.seydou@gmail.com].  
-
-

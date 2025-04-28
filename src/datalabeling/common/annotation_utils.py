@@ -934,17 +934,22 @@ class ImageProcessor:
         return df
 
     @staticmethod
-    def get_gsd(image_path: str, sensor_height: float = None, flight_height: int = 180):
+    def get_gsd(
+        image_path: str,
+        image: Image.Image | None = None,
+        sensor_height: float = None,
+        flight_height: int = 180,
+    ):
         ##-- Sensor heights
         sensor_heights = dict(ZenmuseP1=24)
 
         ##-- Extract exif
-        exif = GPSUtils.get_exif(image_path)
+        exif = GPSUtils.get_exif(file_name=image_path, image=image)
 
         if sensor_height is None:
             sensor_height = sensor_heights[exif["Model"]]
 
-        ##-- Compute gsdp
+        ##-- Compute gsd
         focal_length = exif["FocalLength"] * 0.1  # in cm
         image_height = exif["ExifImageHeight"]  # in px
         sensor_height = sensor_height * 0.1  # in cm
@@ -977,9 +982,12 @@ class ImageProcessor:
 
 class GPSUtils:
     @staticmethod
-    def get_exif(file_name) -> dict | None:
-        with Image.open(file_name) as img:
-            exif_data = img._getexif()
+    def get_exif(file_name: str, image: Image = None) -> dict | None:
+        if image is None:
+            with Image.open(file_name) as img:
+                exif_data = img._getexif()
+        else:
+            exif_data = image._getexif()
 
         if exif_data is None:
             return None
@@ -1012,9 +1020,12 @@ class GPSUtils:
 
     @staticmethod
     def get_gps_coord(
-        file_name: str, altitude: str = None, return_as_decimal: bool = False
+        file_name: str,
+        image: Image = None,
+        altitude: str = None,
+        return_as_decimal: bool = False,
     ) -> tuple | None:
-        extracted_exif = GPSUtils.get_exif(file_name=file_name)
+        extracted_exif = GPSUtils.get_exif(file_name=file_name, image=image)
 
         if extracted_exif is None:
             return None

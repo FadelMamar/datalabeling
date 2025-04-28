@@ -1,5 +1,8 @@
 from datalabeling.common.config import DataConfig, LabelConfig
-from datalabeling.common.dataset_loader import LabelHandler
+from datalabeling.common.dataset_loader import (
+    LabelHandler,
+    ClassificationDatasetBuilder,
+)
 from datalabeling.common.pipeline import (
     LabelstudioToYolo,
     ObbToDotaStep,

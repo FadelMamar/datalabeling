@@ -4,6 +4,6 @@ call deactivate
 
 call .venv-mlflow\Scripts\activate
 
-call mlflow server --backend-store-uri runs\mlflow 
+call mlflow server --backend-store-uri runs\mlflow
 
 call deactivate

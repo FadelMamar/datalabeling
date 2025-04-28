@@ -6,7 +6,7 @@ TrainDataset:
   image_dir: train
   anno_path: annotations\annotations_train.json
   dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
-  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd', 'gt_poly']
+  data_fields: ["image", "gt_bbox", "gt_class", "is_crowd", "gt_poly"]
   allow_empty: true
   empty_ratio: 0.05
 
@@ -15,7 +15,7 @@ EvalDataset:
   image_dir: val
   anno_path: annotations\annotations_val.json
   dataset_dir: D:\PhD\Data per camp\DetectionDataset\Identification-split\coco-dataset
-  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd', 'gt_poly']
+  data_fields: ["image", "gt_bbox", "gt_class", "is_crowd", "gt_poly"]
   allow_empty: true
   empty_ratio: 1.
 

@@ -51,7 +51,7 @@ call helper-scripts\activate_label-backend_env.bat
 @REM     --dest-path-images "D:\PhD\Data per camp\IdentificationDataset\test\images" --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\identification-splits\test\coco-format" ^
 @REM     --keep-labels "buffalo" "impala" "nyala" "nyala(m)" "roan" "sable" ^
 @REM     --height 800 --width 800 --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
-    
+
 
 @REM DETECTION
 @REM :: TRAIN
@@ -67,7 +67,7 @@ call helper-scripts\activate_label-backend_env.bat
 @REM     --dest-path-images "D:\PhD\Data per camp\DetectionDataset\Identification-split\val\images" --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\identification-splits\val\coco-format" ^
 @REM     --height 800 --width 800 --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml" ^
 @REM     --discard-labels "other" "rocks" "vegetation" "detection" "termite mound" "label" "wildlife"
-    
+
 
 @REM :: TEST
 @REM call python  tools\build_dataset.py --build-yolo-dataset --load-coco-annotations --empty-ratio 20. --parse-ls-config --label-map "exported_annotations\label_mapping.json" --is-detector --min-visibility 0.7 ^
@@ -75,7 +75,7 @@ call helper-scripts\activate_label-backend_env.bat
 @REM     --dest-path-images "D:\PhD\Data per camp\DetectionDataset\Identification-split\test\images" --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\identification-splits\test\coco-format" ^
 @REM     --discard-labels "other" "rocks" "vegetation" "detection" "termite mound" "label" "wildlife" ^
 @REM     --height 800 --width 800 --data-config-yaml "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\data\dataset_identification.yaml"
-    
+
 
 
 

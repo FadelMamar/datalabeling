@@ -116,7 +116,7 @@ class DataHandler:
             )
 
             # add features
-            df["image_path"] = str(image_path)
+            df["file_name"] = str(image_path)
             width, height = Image.open(image_path).size
             df["width"] = width
             df["height"] = height

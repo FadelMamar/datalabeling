@@ -1,10 +1,10 @@
 path: D:\ # dataset root dir
 
-train: 
- - savmap_dataset_v2\annotated_py_paul\yolo_format\images
+train:
+  - savmap_dataset_v2\annotated_py_paul\yolo_format\images
 #  - general_dataset\tiled-data\val\images
 
-val :  
+val:
   # - general_dataset\tiled-data\test\images
   - savmap_dataset_v2\annotated_py_paul\yolo_format\images
 
@@ -21,4 +21,3 @@ names:
   # 3: sp4
   # 4: sp5
   # 5: sp6
-  

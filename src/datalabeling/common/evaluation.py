@@ -47,15 +47,15 @@ class PerformanceEvaluator:
         max_scores = list()
         all_scores = list()
 
-        image_paths = df_pred["image_path"].unique()
+        image_paths = df_pred["file_name"].unique()
         for image_path in tqdm(image_paths, desc="Computing metrics"):
             # get gt
-            mask_gt = df_gt["image_path"] == image_path
+            mask_gt = df_gt["file_name"] == image_path
             gt = df_gt.loc[mask_gt, :].iloc[:, 1:].to_numpy()
             labels = df_gt.loc[mask_gt, "category_id"].to_numpy().astype(int)
 
             # get preds
-            mask_pred = df_pred["image_path"] == image_path
+            mask_pred = df_pred["file_name"] == image_path
             pred = df_pred.loc[
                 mask_pred, ["x_min", "y_min", "x_max", "y_max"]
             ].to_numpy()
@@ -89,7 +89,7 @@ class PerformanceEvaluator:
             "map75": maps_75s,
             "max_scores": max_scores,
             "all_scores": all_scores,
-            "image_paths": image_paths,
+            "file_name": image_paths,
         }
 
         return pd.DataFrame.from_dict(results_per_img, orient="columns")
@@ -106,10 +106,17 @@ class PerformanceEvaluator:
             x_max = np.max(gt[:, xs], axis=1).reshape((-1, 1))
             y_min = np.min(gt[:, ys], axis=1).reshape((-1, 1))
             y_max = np.max(gt[:, ys], axis=1).reshape((-1, 1))
-        else:
-            raise NotImplementedError("Support only yolo-obb outputs.")
 
-        return np.hstack([x_min, y_min, x_max, y_max])
+        elif self.label_format == "yolo":
+            x_min = (gt[:, 0] - gt[:, 2] / 2.0).reshape(-1, 1)
+            x_max = (gt[:, 0] + gt[:, 2] / 2.0).reshape(-1, 1)
+            y_min = (gt[:, 1] - gt[:, 3] / 2.0).reshape(-1, 1)
+            y_max = (gt[:, 1] + gt[:, 3] / 2.0).reshape(-1, 1)
+
+        else:
+            raise NotImplementedError("label format should be yolo-obb or yolo.")
+
+        return np.hstack([x_min, y_min, x_max, y_max]).astype(float)
 
     def get_preds_targets(
         self,
@@ -119,7 +126,7 @@ class PerformanceEvaluator:
         images_paths: list[str] = None,
         load_results: bool = False,
         save_tag: str = "",
-    ) -> tuple[pd.DataFrame, pd.DataFrame, str]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         # when providing a list of images
         if images_paths is not None:
             assert images_dirs is None, "images_dirs should be None!"
@@ -182,7 +189,9 @@ class PerformanceEvaluator:
         # Labels format
         self.label_format = labels_format.pop()
 
-        return pd.concat(df_results, axis=0), pd.concat(df_labels, axis=0)
+        return pd.concat(df_results, axis=0).reset_index(drop=True), pd.concat(
+            df_labels, axis=0
+        ).reset_index(drop=True)
 
 
 # =====================

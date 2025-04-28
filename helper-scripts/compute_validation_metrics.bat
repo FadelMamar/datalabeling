@@ -13,7 +13,7 @@ call uv run tools\validate_herdnet.py --name "herdnet-identif" --batch-size 1 --
             --save-dir ".\runs_herdnet" --print-freq 500 --engine "lightning"
 
 
-@REM Ultralytics 
+@REM Ultralytics
 
 @REM yolov5s
 @REM call python  tools\build_dataset.py --obb-to-yolo --data-config-yaml "configs\yolo_configs\dataset_identification-detection.yaml" --skip
@@ -105,7 +105,7 @@ call deactivate
 call .venv-mmrotate\Scripts\activate.bat
 
 @REM call uv run tools\validate_mmrotate.py "runs-mmrotate\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\oriented_rcnn_r50_fpn_1x_dota_le90.py" "runs-mmrotate\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\best_mAP_epoch_12.pth" ^
-@REM         --eval "mAP" --work-dir "runs-mmrotate\test\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn 
+@REM         --eval "mAP" --work-dir "runs-mmrotate\test\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn
 
 @REM call uv run tools\mmrotate_confusion_matrix.py "runs-mmrotate\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\oriented_rcnn_r50_fpn_1x_dota_le90.py" ^
 @REM                                                 "runs-mmrotate\test\oriented_rcnn_r50_fpn\oriented_rcnn_r50_fpn_identif#empty_0.1#freeze_0.75\results.pkl" ^
@@ -113,7 +113,7 @@ call .venv-mmrotate\Scripts\activate.bat
 @REM                                                 --score-thr 0.3 --tp-iou-thr 0.6 --nms-iou-thr 0.5
 
 @REM call uv run tools\validate_mmrotate.py "runs-mmrotate\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\roi_trans_r50_fpn_1x_dota_ms_rr_le90.py" "runs-mmrotate\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\best_mAP_epoch_12.pth" ^
-@REM         --eval "mAP" --work-dir "runs-mmrotate\test\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn 
+@REM         --eval "mAP" --work-dir "runs-mmrotate\test\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75" --fuse-conv-bn
 
 @REM call uv run tools\mmrotate_confusion_matrix.py "runs-mmrotate\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\roi_trans_r50_fpn_1x_dota_ms_rr_le90.py" ^
 @REM                                                 "runs-mmrotate\test\roi_trans_r50_fpn\roi_trans_r50_fpn_identif#empty_0.1#freeze_0.75\results.pkl" ^
@@ -143,12 +143,8 @@ call .venv-paddle\Scripts\activate
 
 @REM call uv run tools\validate_ppd.py -c "configs\ppd_configs\ppyoloe_plus_sod_crn_s_80e_visdrone.yml" ^
 @REM         -o use_gpu=true weights="runs_ppd\ppyoloe_plus_sod_crn_s_80e_visdrone_identif-tr_empty_ratio_0.1_freeze_0.75\best_model\model.pdparams" PPYOLOEHead.nms.score_threshold=0.4 EvalReader.batch_size=16 ^
-@REM         --classwise --amp --output_eval "runs_ppd\test\ppyoloe_plus_sod_crn_s_80e_visdrone_identif-tr_empty_ratio_0.1_freeze_0.75" 
+@REM         --classwise --amp --output_eval "runs_ppd\test\ppyoloe_plus_sod_crn_s_80e_visdrone_identif-tr_empty_ratio_0.1_freeze_0.75"
 
 @REM call uv run tools\validate_ppd.py -c "configs\ppd_configs\ppyoloe_plus_sod_crn_l_largesize_80e_visdrone.yml" ^
 @REM         -o use_gpu=true weights="runs_ppd\ppyoloe_plus_sod_crn_l_largesize_80e_visdrone_identif-tr_empty_ratio_0.1_freeze_0.75\best_model\model.pdparams" PPYOLOEHead.nms.score_threshold=0.4 EvalReader.batch_size=16 ^
-@REM         --classwise --amp --output_eval "runs_ppd\test\ppyoloe_plus_sod_crn_l_largesize_80e_visdrone_identif-tr_empty_ratio_0.1_freeze_0.75" 
-
-
-
-
+@REM         --classwise --amp --output_eval "runs_ppd\test\ppyoloe_plus_sod_crn_l_largesize_80e_visdrone_identif-tr_empty_ratio_0.1_freeze_0.75"

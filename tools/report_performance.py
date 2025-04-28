@@ -1,5 +1,4 @@
 import typer
-
 from src.common.evaluation import compute_detector_performance
 from src.common.io import get_preds_targets
 

@@ -75,7 +75,7 @@ call helper-scripts\activate_label-backend_env.bat
 
 
 @REM :: Rep 3dry  data
-  
+
 
 @REM call uv run  tools\build_dataset.py --build-yolo-dataset --clear-yolo-dir --empty-ratio 10. --parse-ls-config --is-detector --min-visibility 0.8 ^
 @REM     --dest-path-labels "D:\PhD\Data per camp\DetectionDataset\Rep 3\train\labels" --coco-json-dir "D:\PhD\Data per camp\Exported annotations and labels\Dry season - Rep 3\train\coco-format" ^

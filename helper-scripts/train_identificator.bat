@@ -100,7 +100,7 @@ call uv run tools\train-herdnet.py --data-config-yaml "configs\yolo_configs\data
 @REM     --cl-data-config-yaml "data\dataset_identification.yaml" ^
 @REM     --cl-ratios 2.5  ^
 @REM     --cl-freeze 15   ^
-@REM     --cl-lr0s 0.00005 
+@REM     --cl-lr0s 0.00005
 
 @REM @REM @REM convert datasets to yolo-obb
 @REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "configs\yolo_configs\dataset_identification-detection.yaml" --skip

@@ -1,14 +1,13 @@
 import litserve as ls
+import base64
+
+from PIL import Image
 
 
 class MyModelAPI(ls.LitAPI):
     def setup(
         self,
         device,
-        # path_to_weights,
-        # confidence_threshold,
-        # overlapratio,
-        # tilesize
     ):
         """
         One-time initialization: load your model here.
@@ -16,55 +15,73 @@ class MyModelAPI(ls.LitAPI):
         """
 
         from datalabeling.ml.models import Detector
+        from datalabeling.common.annotation_utils import GPSUtils, ImageProcessor
+        import torch
 
-        self.model = detector = Detector(
+        self.model = Detector(
             path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
             confidence_threshold=0.25,
             overlap_ratio=0.2,
             tilesize=800,
             imgsz=800,
             use_sliding_window=True,
-            device="cpu",
+            device="cuda:0" if torch.cuda.is_available() else "cpu",
         )
 
-    def decode_request(self, request: dict):
+        self.get_image_gps_coord = GPSUtils.get_gps_coord
+        self.get_px_gps_coord = ImageProcessor.generate_pixel_coordinates
+
+    def decode_request(self, request: dict) -> Image.Image:
         """
         Convert the JSON payload into model inputs.
         For example, extract and preprocess an image or numeric data.
         """
-        # e.g. for image bytes:
         from io import BytesIO
 
-        from PIL import Image
+        try:
+            img_data = request["image"]
 
-        # import torchvision.transforms as T
+            if not isinstance(img_data, str):
+                raise ValueError("Invalid base64 format")
 
-        img_data = request["image_bytes"]
-        img = Image.open(BytesIO(img_data)).convert("RGB")
-        # transform = T.Compose([
-        #     T.Resize((224, 224)),
-        #     T.ToTensor(),
-        #     T.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),
-        # ])
-        # return transform(img).unsqueeze(0)  # add batch dim
+            image_bytes = base64.b64decode(img_data)
+            img = Image.open(BytesIO(image_bytes))  # .convert("RGB")
 
-        return img
+        except Exception as e:
+            raise ValueError(f"Image decoding failed: {str(e)}")
 
-    def predict(self, x):
+        request["image"] = img
+        request["image_gps"] = None
+        request["return_coco"] = True
+
+        # get gps coordinates
+        return_as_decimal = request.get("return_as_decimal", False)
+        gps, _ = self.get_image_gps_coord(
+            file_name=None, image=img, return_as_decimal=return_as_decimal
+        )
+        request["image_gps"] = gps
+
+        if "return_as_decimal" in request.keys():
+            request.pop("return_as_decimal")
+
+        request["return_gps"] = False
+
+        return request
+
+    def predict(self, x: dict):
         """
         Run the model forward pass.
         Input `x` is the output of decode_request.
         """
         import torch
 
+        out = dict(image_gps=x.pop("image_gps"))
+
         with torch.no_grad():
-            outputs = self.model.predict(
-                x, return_gps=False, return_coco=True, override_tilesize=False
-            )
-        # post-process to Python types
-        # top_prob, top_label = torch.max(outputs, dim=1)
-        # return {"label": top_label.item(), "confidence": top_prob.item()}
-        return outputs
+            results = self.model.predict(**x)
+            out["detections"] = results
+
+        return out
 
     def encode_response(self, output: dict):
         """

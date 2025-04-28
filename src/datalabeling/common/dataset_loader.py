@@ -5,7 +5,8 @@ import shutil
 import traceback
 from pathlib import Path
 from typing import Dict
-
+from PIL import Image
+import cv2
 import numpy as np
 import pandas as pd
 import yaml
@@ -16,8 +17,10 @@ from .annotation_utils import (
     LabelstudioConverter,
     load_coco_annotations,
 )
-from .config import DataConfig, LabelConfig
+from .config import DataConfig, LabelConfig, EvaluationConfig
 from .io import load_yaml
+from ..ml.models import Detector
+from ..common.evaluation import PerformanceEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +193,50 @@ class YOLODatasetBuilder:
             df[cols].drop_duplicates().to_csv(
                 os.path.join(output_dir, txt_file), sep=" ", index=False, header=False
             )
+
+
+class ClassificationDatasetBuilder:
+    def __init__(
+        self,
+        detection_model: Detector,
+        eval_config: EvaluationConfig,
+        source_dir: str,
+        output_dir: str,
+    ):
+        self.detector = detection_model
+        self.source_dir = source_dir
+        self.output_dir = output_dir
+        self.perf_eval = PerformanceEvaluator(config=eval_config)
+        Path(output_dir).mkdir(exist_ok=True, parents=True)
+
+    def save(self, df_results: pd.DataFrame, df_labels: pd.DataFrame):
+        pass
+
+    def process_images(self):
+        """Run batch detection and save cropped ROIs"""
+        df_results, df_labels = self.perf_eval.get_preds_targets(
+            images_dirs=[self.source_dir],
+            pred_results_dir=None,
+            detector=self.detector,
+            load_results=False,
+        )
+
+        # detections = self.detector.predict_directory(path_to_dir=self.source_dir,as_dataframe=True,save_path=None)
+        # for image_path, df_det in detections.groupby(by=['file_name']):
+        #     image = Image.open(image_path).convert('RGB')
+        #     image = np.asarray(image)
+        #     for i,row in enumerate(df_det.iterrows()):
+        #         x1 = row["x_min"]
+        #         y1 = row["y_min"]
+        #         x2 = row["x_max"]
+        #         y2 = row["y_max"]
+        #         label_id = row['category_id']
+        #         label_name = row['category_name']
+        #         cv2.imwrite(f"{self.output_dir}/{label_name}_{os.path.basename(image_path)}_{i}.jpg",
+        #                     image[y1:y2, x1:x2]
+        #                 )
+
+        self.save(df_results=df_results, df_labels=df_labels)
 
 
 class DataPreparation:

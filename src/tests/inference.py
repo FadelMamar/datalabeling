@@ -1,6 +1,7 @@
 from datalabeling.ml_backend.api.endpoints import run_inference_server
 
 if __name__ == "__main__":
+    pass
     # detector = Detector(path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
     #                     confidence_threshold=0.25,
     #                     overlap_ratio=0.2,
@@ -18,4 +19,4 @@ if __name__ == "__main__":
     #                                      as_dataframe=True,
     #                                      )
 
-    run_inference_server(port=4141)
+    # run_inference_server(port=4141)
