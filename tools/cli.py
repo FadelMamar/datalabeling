@@ -1,7 +1,8 @@
-from datalabeling.arguments import Arguments
-from datargs import parse
 import logging
 
+from datargs import parse
+
+from datalabeling.arguments import Arguments
 
 if __name__ == "__main__":
     args = parse(Arguments)
@@ -23,11 +24,11 @@ if __name__ == "__main__":
         )
 
     if args.start_training:
-        from datalabeling.train import start_training
-        import mlflow
-
         # import wandb
+        import mlflow
         import yaml
+
+        from datalabeling.train import start_training
 
         if args.mlflow_model_alias is None:
             logging.info(f"Loading model @ : {args.path_weights}")

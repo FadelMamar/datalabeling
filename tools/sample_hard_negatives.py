@@ -1,9 +1,10 @@
-from dotenv import load_dotenv
-import yaml
 import os
 from dataclasses import dataclass
-from datargs import parse
 from pathlib import Path
+
+import yaml
+from datargs import parse
+from dotenv import load_dotenv
 
 load_dotenv("../.env")
 DATA_DIR = "D:\PhD\Data per camp\DetectionDataset\hard_samples"
@@ -38,9 +39,9 @@ class Args:
 if __name__ == "__main__":
     from datalabeling.annotator import Detector
     from datalabeling.dataset.sampling import (
+        compute_detector_performance,
         get_preds_targets,
         select_hard_samples,
-        compute_detector_performance,
     )
 
     args = parse(Args)

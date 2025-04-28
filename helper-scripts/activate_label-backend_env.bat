@@ -2,3 +2,5 @@
 @REM call "C:\Users\FADELCO\miniconda3\Scripts\activate.bat"
 @REM call conda activate label-backend
 call "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\label-backend\Scripts\activate"
+
+call "D:\datalabeling\.venv\Scripts\activate"

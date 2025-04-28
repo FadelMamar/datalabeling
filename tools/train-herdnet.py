@@ -1,26 +1,26 @@
-from animaloc.models import HerdNet
+from pathlib import Path
+
+import lightning as L
 import torch
-from animaloc.models import LossWrapper
+from animaloc.eval import HerdNetEvaluator, PointsMetrics
+from animaloc.models import HerdNet, LossWrapper
+from animaloc.train import Trainer
 from animaloc.train.losses import FocalLoss
+from lightning.pytorch.callbacks import (
+    EarlyStopping,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
+from lightning.pytorch.loggers import MLFlowLogger
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
-from animaloc.train import Trainer
-from animaloc.eval import PointsMetrics, HerdNetEvaluator
-from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
+
 from datalabeling.arguments import Arguments
-import lightning as L
-from lightning.pytorch.loggers import MLFlowLogger
-from lightning.pytorch.callbacks import (
-    ModelCheckpoint,
-    LearningRateMonitor,
-    EarlyStopping,
-)
-from pathlib import Path
+from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
 
 
 def run_ligthning(args: Arguments):
     import logging
-    import segmentation_models_pytorch as smp
 
     logger = logging.getLogger("mlflow")
     logger.setLevel(logging.DEBUG)
@@ -124,7 +124,7 @@ def run_ligthning(args: Arguments):
 
     # continuous learning
     for empty_ratio, lr, freeze_ratio, epochs in zip(
-        args.cl_ratios, args.cl_lr0s, args.cl_freeze, args.cl_epochs
+        args.cl_ratios, args.cl_lr0s, args.cl_freeze, args.cl_epochs, strict=False
     ):
         args.run_name = (
             args.run_name + f"-emptyRatio_{empty_ratio}-freezeRatio_{freeze_ratio}"
@@ -325,8 +325,8 @@ def run(args: Arguments):
 
 
 if __name__ == "__main__":
-    from datargs import parse
     import mlflow
+    from datargs import parse
 
     args = parse(Arguments)
 

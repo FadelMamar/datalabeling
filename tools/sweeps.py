@@ -1,7 +1,7 @@
-from arguments import Arguments
-
 # import mlflow
 import wandb
+from arguments import Arguments
+
 from datalabeling.train import start_training
 
 

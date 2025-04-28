@@ -1,20 +1,21 @@
-from datargs import parse
-from pathlib import Path
+import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
-import json
-from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
+
 import lightning as L
-import pandas as pd
 import numpy as np
-import yaml
+import pandas as pd
 import torch
-from lightning.pytorch.loggers import MLFlowLogger
-import animaloc
-from animaloc.eval import PointsMetrics, HerdNetEvaluator
+import yaml
+from animaloc.eval import HerdNetEvaluator
+from animaloc.utils.useful_funcs import mkdir
 from animaloc.vizual import PlotPrecisionRecall
-from animaloc.utils.useful_funcs import current_date, mkdir
+from datargs import parse
+from lightning.pytorch.loggers import MLFlowLogger
+
+from datalabeling.train.herdnet import HerdnetData, HerdnetTrainer
 
 
 @dataclass
@@ -56,9 +57,10 @@ def plot_conf_matrix(array: np.ndarray, labels: list, save_dir: str):
         labels (list): labels without background class
         save_dir (str): directory to save plots
     """
-    import seaborn
-    import matplotlib.pyplot as plt
     import json
+
+    import matplotlib.pyplot as plt
+    import seaborn
 
     array = array.T  # get matrix like (Predicted,True)
 

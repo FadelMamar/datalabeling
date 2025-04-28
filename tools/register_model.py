@@ -1,12 +1,14 @@
 """Creates/gets an MLflow experiment and registers a detection model to the Model Registry."""
 
 # import argparse
+from dataclasses import dataclass
+from sys import version_info
+
 import cloudpickle
 import mlflow
-from sys import version_info
-from datalabeling.mlflow import get_experiment_id, model_wrapper, DetectorWrapper
-from dataclasses import dataclass
 from datargs import parse
+
+from datalabeling.mlflow import DetectorWrapper, get_experiment_id, model_wrapper
 
 
 @dataclass

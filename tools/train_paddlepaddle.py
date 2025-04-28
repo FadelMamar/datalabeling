@@ -10,23 +10,23 @@ Returns:
     _type_: _description_
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import os
-from dataclasses import dataclass
-from pathlib import Path
 
 # ignore warning log
 import warnings
+from dataclasses import dataclass
+from pathlib import Path
 
 warnings.filterwarnings("ignore")
-import glob
 import ast
+import glob
 import json
-import yaml
 from typing import Sequence
+
 import paddle
+import yaml
 from ppdet.core.workspace import load_config
 from ppdet.engine import Trainer, Trainer_ARSL
 from ppdet.utils.logger import setup_logger

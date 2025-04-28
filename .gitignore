@@ -6,6 +6,7 @@ my_ml_backend/data
 my_ml_backend/mlartifacts
 my_ml_backend/mlruns
 my_ml_backend/__pycache__
+mlruns
 *.pt
 my_ml_backend/cache.db
 cache.db

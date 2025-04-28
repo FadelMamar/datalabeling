@@ -2,23 +2,23 @@
 import argparse
 import os
 import os.path as osp
-from pathlib import Path
-import pandas as pd
-import numpy as np
-import json
 import time
 import warnings
+from pathlib import Path
+
 import mmcv
+import numpy as np
+import pandas as pd
 import torch
 from mmcv import Config, DictAction
 from mmcv.cnn import fuse_conv_bn
 from mmcv.runner import get_dist_info, init_dist, load_checkpoint, wrap_fp16_model
 from mmdet.apis import multi_gpu_test, single_gpu_test
 from mmdet.datasets import build_dataloader, replace_ImageToTensor
-from mmrotate.datasets.builder import ROTATED_DATASETS
-from mmrotate.datasets.dota import DOTADataset
 from mmrotate.core import poly2obb_np
 from mmrotate.datasets import build_dataset
+from mmrotate.datasets.builder import ROTATED_DATASETS
+from mmrotate.datasets.dota import DOTADataset
 from mmrotate.models import build_detector
 from mmrotate.utils import (
     build_ddp,
@@ -85,7 +85,9 @@ class WildAIDataset(DOTADataset):
                 data_info["ann"]["labels"] = []
                 data_infos.append(data_info)
         else:
-            for image_path, ann_file in zip(selected_images_paths, ann_files):
+            for image_path, ann_file in zip(
+                selected_images_paths, ann_files, strict=False
+            ):
                 data_info = {}
                 data_info["filename"] = image_path.name
                 data_info["ann"] = {}

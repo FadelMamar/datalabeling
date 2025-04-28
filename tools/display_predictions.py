@@ -1,9 +1,8 @@
 import logging
 import time
-from pathlib import Path
 import traceback
-from tqdm import tqdm
-from datalabeling.annotator import Detector
+from pathlib import Path
+
 import fiftyone as fo
 import numpy as np
 import pandas as pd
@@ -14,9 +13,11 @@ from sahi.postprocess.combine import (
     NMMPostprocess,
     NMSPostprocess,
 )
-from datalabeling.dataset.sampling import load_prediction_results
-
 from sahi.utils.import_utils import check_requirements
+from tqdm import tqdm
+
+from datalabeling.annotator import Detector
+from datalabeling.dataset.sampling import load_prediction_results
 
 POSTPROCESS_NAME_TO_CLASS = {
     "GREEDYNMM": GreedyNMMPostprocess,
@@ -307,8 +308,8 @@ def predict_fiftyone(
 
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
     import pandas as pd
+    from dotenv import load_dotenv
 
     load_dotenv(r"../.env")
 

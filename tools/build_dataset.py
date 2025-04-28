@@ -1,20 +1,22 @@
+import json
+import logging
+import os
+import traceback
+from pathlib import Path
+
+import yaml
+from datargs import parse
+from dotenv import load_dotenv
+
 from datalabeling.arguments import Dataprepconfigs
 from datalabeling.dataset import (
     build_yolo_dataset,
+    convert_obb_to_dota,
     convert_obb_to_yolo,
+    convert_yolo_to_coco,
     convert_yolo_to_obb,
     create_yolo_seg_directory,
-    convert_yolo_to_coco,
-    convert_obb_to_dota,
 )
-from datargs import parse
-from pathlib import Path
-import json
-import yaml
-import os
-import logging
-import traceback
-from dotenv import load_dotenv
 
 
 def load_yaml(data_config_yaml: str) -> dict:
@@ -71,7 +73,9 @@ if __name__ == "__main__":
                 "min_visibility",
                 "empty_ratio",
             ]
-            configs = dict(zip(configs, [args.__dict__[k] for k in configs]))
+            configs = dict(
+                zip(configs, [args.__dict__[k] for k in configs], strict=False)
+            )
             json.dump(configs, file, indent=2)
 
     assert (args.yolo_to_obb + args.obb_to_yolo) < 2, "Both arguments can't be True"
@@ -132,7 +136,8 @@ if __name__ == "__main__":
         )
 
     if args.yolo_to_coco:
-        from ultralytics.data.dataset import YOLODataset, YOLOConcatDataset
+        from ultralytics.data.dataset import YOLOConcatDataset, YOLODataset
+
         from datalabeling.train.utils import remove_label_cache
 
         with open(args.data_config_yaml, "r") as file:

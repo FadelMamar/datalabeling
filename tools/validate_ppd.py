@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -28,23 +26,23 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-import paddle
 import json
+
+import paddle
 from ppdet.core.workspace import create, load_config, merge_config
-from ppdet.utils.check import (
-    check_gpu,
-    check_npu,
-    check_xpu,
-    check_mlu,
-    check_gcu,
-    check_version,
-    check_config,
-)
-from ppdet.utils.cli import ArgsParser, merge_args
 from ppdet.engine import Trainer, Trainer_ARSL, init_parallel_env
 from ppdet.metrics.coco_utils import json_eval_results
 from ppdet.slim import build_slim_model
-
+from ppdet.utils.check import (
+    check_config,
+    check_gcu,
+    check_gpu,
+    check_mlu,
+    check_npu,
+    check_version,
+    check_xpu,
+)
+from ppdet.utils.cli import ArgsParser, merge_args
 from ppdet.utils.logger import setup_logger
 
 logger = setup_logger("eval")

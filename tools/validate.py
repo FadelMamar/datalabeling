@@ -1,13 +1,12 @@
-from datargs import parse
-from dataclasses import dataclass
-from typing import Sequence
 import json
-from ultralytics.utils.metrics import ConfusionMatrix, DetMetrics, box_iou
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Sequence
+
+from datargs import parse
 from ultralytics.data import converter
 from ultralytics.models.yolo.detect import DetectionValidator
-from pathlib import Path
-import seaborn
-import matplotlib.pyplot as plt
+from ultralytics.utils.metrics import ConfusionMatrix
 
 
 @dataclass

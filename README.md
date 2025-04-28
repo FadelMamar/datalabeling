@@ -1,98 +1,144 @@
-# Datalabeling
-This repository is used to facilitate data labeling in the context of **automated aerial census of large herbivores**. The project aims to facilitate the labeling of aerial images by integrating a YOLO-based object detector that learns from the annotations. The active learning pipeline is currently semi-automated. It uses *Label studio* as the labeling platform and *Ultralytics* as the machine learning training library.
+Thank you for these details! Below is a **revamped ReadMe structure** that incorporates your responses while improving clarity, usability, and completeness.  
 
-# Set up a workspace 
-- Open a terminal
-- Create a folder ``` mkidr workspace```
-- Move to folder ```cd workspace```
-- Clone repository into the workspace ```git clone https://github.com/FadelMamar/datalabeling.git```
+---
 
-# Creating virtual environments
-### Create virtual environment for Label studio UI
-- Open Anaconda prompt. Type 'anaconda prompt' in the search bar of your computer and launch it.
-- Change directory ```cd ./sourcecode```
-- Create a conda virtual environment with ```conda env create -f environment_labelstudio.yml```
-- Activate virtual environment:```conda activate label-studio``` 
-- Run the command ```pip install -e .```
-- Launch label studio: type in ```label-studio``` then press 'Enter'`
-- Close application: log out of the application then type ```conda deactivate``` then press 'Enter'
-### Create virtual environment for ML backend
-- Change directory ```cd ../my_ml_backend```
-- Create a conda virtual environment with ```conda env create -f environment_mlbackend.yml```
-- Activate virtual environment:```conda activate label-backend``` 
-- Change directory ```cd ../sourcecode```
-- Run the command ```pip install -e .```
+# **DataLabeling for Aerial Wildlife Census**  
+**An active learning pipeline for labeling and training YOLO-based detectors on aerial imagery of large herbivores.**  
 
+![Example Aerial Annotation](https://www.path-to-image.com) *(optional: add a real screenshot later)*  
 
-# [Optional] Installing Label-studio for windows
-- **Install Anaconda** Follow instructions at https://www.anaconda.com/download
-(Instructions are also available here https://labelstud.io/guide/install.html#Install-with-Anaconda)
+## **📌 Project Overview**  
+This tool facilitates **semi-automated data labeling** for wildlife researchers and ML practitioners working with:  
+- **17 target species**: Waterbuck, Buffalo, Bushbuck, Duiker, Giraffe, Impala, Kudu, Nyala, Reedbuck, Roan, Sable, Warthog, Wildebeest, Zebra, Lechwe, Tsessebe.  
+- **Annotation types**: Horizontal bounding boxes & keypoints.  
+- **Active learning**: YOLO models improve as users label more data (retraining frequency customizable).  
 
-# [Optional] Installing Label-studio for Mac
-(Instructions are available here: https://labelstud.io/guide/install.html#Install-using-Homebrew)
-- **Install homebrew** -> Follow instructions here https://brew.sh/
-- Open terminal 
-- Type in ```brew tap humansignal/tap``` and press "Enter"
-- Type in ```brew install humansignal/tap/label-studio``` and press "Enter"
-- Launch Label studio by typing ```label-studio``` and pressing "Enter".
+**Key Features**:  
+✔️ Integrated with **Label Studio** (user-friendly UI for non-technical researchers)  
+✔️ Supports **YOLO-based detection** (Ultralytics) for model-assisted labeling  
+✔️ Works with **aerial imagery from savanna biome** (~2.8 cm/pixel resolution)  
+✔️ Coming soon: **Pre-trained models** + **Docker deployment**  
 
-# [Optional] Installing Label-studio using Docker (Mac and windows)
-(instructions are available here https://labelstud.io/guide/install.html#Install-with-Docker)
-- Install Docker ->  https://www.docker.com/ 
-- open terminal in your workspace and run ```docker run -it -p 8080:8080 -v ./labeleddata:/label-studio/data heartexlabs/label-studio:latest```
+---
 
-# Launch Label-studio when it is already installed - Windows
-- To launch label studio, run the file at ```datalabeling\helper-scripts\run-labelstudio-windows.bat```
-- To launch the ML backend, run the file at ```datalabeling\helper-scripts\run-ml-backend-windows.bat```
-- Label studio is accessible from the browser at ```http://localhost:8080```
-- To close application: close the window
+## **⚙️ Setup Guide**  
 
-# Launch Label-studio when it is already installed - Linux
-- To launch label studio, run the file at ```datalabeling\helper-scripts\run-labelstudio-linux.sh```
-- To launch the ML backend, run the file at ```datalabeling\helper-scripts\run-ml-backend-linux.sh```
-- To close application: close the window
+### **1. Prerequisites**  
+- **OS**: Windows, Mac, or Linux  
+- **Anaconda** (recommended) or **Python 3.8+**  
+- (Optional) **Docker** (for future simplified deployment)  
 
+### **2. Installation**  
 
+#### **Option A: Conda (Recommended)**  
+```bash  
+# Clone repo  
+mkdir workspace && cd workspace  
+git clone https://github.com/FadelMamar/datalabeling.git  
+cd datalabeling  
 
-# Create a project in Label studio
-https://labelstud.io/guide/setup_project.html#Create-a-project
-https://labelstud.io/guide/setup_project.html#Set-up-annotation-settings-for-your-project
+# Create Label Studio environment  
+conda env create -f environment_labelstudio.yml  
+conda activate label-studio  
+pip install -e ./sourcecode  
 
-# Import data to Label studio
-https://labelstud.io/guide/tasks.html
+# Create ML backend environment  
+conda env create -f environment_mlbackend.yml  
+conda activate label-backend  
+pip install -e ./my_ml_backend  
+```  
 
-## Annotation template for bounding boxes
-<View>
-  <Image name="image" value="$image"/>
-  <RectangleLabels name="label" toName="image">
-    <Label value="specie1" background="green"/>
-    <Label value="specie2" background="blue"/>
-  </RectangleLabels>
-</View>
+#### **Option B: Docker (Coming Soon)**  
+```bash  
+docker run -it -p 8080:8080 -v ./labeleddata:/label-studio/data heartexlabs/label-studio:latest  
+```  
 
-## Annotation template for key points
-<View>
-  <KeyPointLabels name="kp-1" toName="img-1">
-    <Label value="specie1" background="red" />
-    <Label value="specie2" background="green" />
-  </KeyPointLabels>
-  <Image name="img-1" value="$img" />
-</View>
+---
 
-## Annotation template for segmentation
-<View>
-<PolygonLabels name="segmentation" toName="image"
-                 strokeWidth="3" pointSize="small"
-                 opacity="0.9">
-    <Label value="camp" background="red"/>
-    <Label value="notcamp" background="blue"/>
- </PolygonLabels>
- </View>
- 
- ## Annotation template for classification
- <View>
- <Choices name="choice" toName="image">
-   <Choice value="namp"/>
-   <Choice value="notCamp" />
- </Choices>
-  </View>
+## **🚀 Launching the Tool**  
+
+### **Windows**  
+- Launch Label Studio:  
+  ```bash  
+  .\helper-scripts\run-labelstudio-windows.bat  
+  ```  
+- Launch ML Backend:  
+  ```bash  
+  .\helper-scripts\run-ml-backend-windows.bat  
+  ```  
+
+### **Linux/Mac**  
+```bash  
+./helper-scripts/run-labelstudio-linux.sh  
+./helper-scripts/run-ml-backend-linux.sh  
+```  
+
+Access Label Studio at: **[http://localhost:8080](http://localhost:8080)**  
+
+---
+
+## **🖼️ Annotation Templates**  
+Paste these in Label Studio’s **Settings > Labeling Interface**:  
+
+### **Bounding Boxes**  
+```xml  
+<View>  
+  <Image name="image" value="$image"/>  
+  <RectangleLabels name="label" toName="image">  
+    <Label value="Waterbuck" background="green"/>  
+    <Label value="Zebra" background="blue"/>  
+    <!-- Add all 17 species here -->  
+  </RectangleLabels>  
+</View>  
+```  
+
+### **Keypoints (Points)**  
+```xml  
+<View>  
+  <KeyPointLabels name="kp-1" toName="img-1">  
+    <Label value="Giraffe" background="red"/>  
+    <Label value="Buffalo" background="green"/>  
+  </KeyPointLabels>  
+  <Image name="img-1" value="$img"/>  
+</View>  
+```  
+
+---
+
+## **🔧 Usage Tips**  
+- **Data Format**: Images in YOLO format (`.txt` files per image with `class_id x_center y_center width height`).  
+- **Active Learning**: Retrain YOLO after labeling `X` images (set `X` in the config).  
+- **Resolution**: Optimal performance at **~2.8 cm/pixel**.  
+
+---
+
+## **🚧 Roadmap**  
+- [ ] **Pre-trained YOLO models** for wildlife detection (coming soon).  
+- [ ] **Docker support** for one-click deployment.  
+- [ ] **Fully automated retraining**.  
+
+---
+
+## **❓ FAQ**  
+**Q: How do I add new species?**  
+Edit the annotation template in Label Studio and retrain the model.  
+
+**Q: Can I use my own dataset?**  
+Yes! Ensure it follows YOLO format and matches the resolution (~2.8 cm/pixel).  
+
+---
+
+## **📜 License**  
+*MIT License (link to LICENSE file if available).*  
+
+---
+
+### **Feedback?**  
+Open an issue or contact [fadel.seydou@gmail.com].  
+
+---  
+
+### **Next Steps**  
+1. Would you like to **add screenshots** of the labeling UI?  
+2. Should we include a **mini-tutorial** for first-time users?  
+3. Any specific **troubleshooting tips** to highlight?  

@@ -1,18 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
-import os
 import json
 from pathlib import Path
-from validate_mmrotate import WildAIDataset
+
 import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
+import seaborn
 import torch
-from matplotlib.ticker import MultipleLocator
 from mmcv import Config, DictAction
 from mmcv.ops import nms_rotated
 from mmdet.datasets import build_dataset
-import seaborn
 from mmrotate.core.bbox import rbbox_overlaps
 
 
@@ -157,7 +155,7 @@ def analyze_per_img_dets(
                         confusion_matrix[gt_label, det_label] += 1
                 if det_match == 0:  # BG FP
                     confusion_matrix[-1, det_label] += 1
-    for num_tp, gt_label in zip(true_positives, gt_labels):
+    for num_tp, gt_label in zip(true_positives, gt_labels, strict=False):
         if num_tp == 0:  # FN
             confusion_matrix[gt_label, -1] += 1
 

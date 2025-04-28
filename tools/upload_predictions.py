@@ -1,7 +1,9 @@
-from dotenv import load_dotenv
-from datalabeling.annotator import Annotator
 from typing import Sequence
+
 import fire
+from dotenv import load_dotenv
+
+from datalabeling.annotator import Annotator
 
 
 def main(project_id: int, aliases: Sequence[str], confidence_threshold: float = 0.15):

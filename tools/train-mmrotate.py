@@ -5,28 +5,28 @@ Created on Tue Mar 18 17:30:13 2025
 @author: FADELCO
 """
 
-import mmcv
-import yaml
+import copy
 import os
 import os.path as osp
-import copy
-import numpy as np
-from pathlib import Path
-import pandas as pd
-from mmrotate.datasets.builder import ROTATED_DATASETS
-from mmrotate.datasets.dota import DOTADataset
-import torch
-from mmdet.apis import set_random_seed
-from mmrotate.core import poly2obb_np
-from typing import Sequence
-from mmdet.datasets import build_dataset
-from mmdet.models import build_detector
-from mmdet.apis import train_detector
-from datargs import parse
 from dataclasses import dataclass
-from mmrotate.utils import collect_env, get_root_logger, setup_multi_processes
+from pathlib import Path
+from typing import Sequence
+
+import mmcv
+import numpy as np
+import pandas as pd
+import torch
+import yaml
+from datargs import parse
 from mmcv.parallel import is_module_wrapper
 from mmcv.runner.hooks import HOOKS, Hook
+from mmdet.apis import set_random_seed, train_detector
+from mmdet.datasets import build_dataset
+from mmdet.models import build_detector
+from mmrotate.core import poly2obb_np
+from mmrotate.datasets.builder import ROTATED_DATASETS
+from mmrotate.datasets.dota import DOTADataset
+from mmrotate.utils import collect_env, get_root_logger, setup_multi_processes
 
 
 def load_yaml(data_config_yaml: str) -> dict:
@@ -154,7 +154,9 @@ class WildAIDataset(DOTADataset):
                 data_info["ann"]["labels"] = []
                 data_infos.append(data_info)
         else:
-            for image_path, ann_file in zip(selected_images_paths, ann_files):
+            for image_path, ann_file in zip(
+                selected_images_paths, ann_files, strict=False
+            ):
                 data_info = {}
                 data_info["filename"] = image_path.name
                 data_info["ann"] = {}
@@ -254,9 +256,10 @@ class freezeModelHook(Hook):
 
 
 if __name__ == "__main__":
-    from datargs import parse
-    import mlflow
     import time
+
+    import mlflow
+    from datargs import parse
 
     args = parse(Flags)
 
