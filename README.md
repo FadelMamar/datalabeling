@@ -136,9 +136,4 @@ Yes! Ensure it follows YOLO format and matches the resolution (~2.8 cm/pixel).
 ### **Feedback?**  
 Open an issue or contact [fadel.seydou@gmail.com].  
 
----  
 
-### **Next Steps**  
-1. Would you like to **add screenshots** of the labeling UI?  
-2. Should we include a **mini-tutorial** for first-time users?  
-3. Any specific **troubleshooting tips** to highlight?  
