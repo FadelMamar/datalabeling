@@ -178,8 +178,11 @@ class EvaluationConfig:
     map_threshold: float = 0.3
     uncertainty_method: str = "entropy"
     uncertainty_threshold: float = 4
+    tp_iou_threshold: float = 0.5
+    fp_tp_ratio_threshold: float = 0.2
+    fn_tp_ratio_threshold: float = 0.2
     is_yolo_obb: bool = False
-    score_col: str = "all_scores"
+    score_col: str = "max_scores"
 
 
 @dataclass
