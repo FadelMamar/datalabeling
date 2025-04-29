@@ -125,7 +125,7 @@ Yes! Ensure it follows YOLO format and matches the resolution (~2.8 cm/pixel).
 ---
 
 ## **📜 License**  
-*MIT License (link to LICENSE file if available).*  
+*MIT License*  
 
 ---
 
