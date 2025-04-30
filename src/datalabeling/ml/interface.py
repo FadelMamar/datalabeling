@@ -5,11 +5,11 @@ import traceback
 from pathlib import Path
 from time import time
 from urllib.parse import quote, unquote
-
+import pandas as pd
 import mlflow
 from dotenv import load_dotenv
 from label_studio_ml.utils import get_local_path
-from label_studio_sdk import Client
+from label_studio_sdk.client import LabelStudio
 from PIL import Image
 from tqdm import tqdm
 
@@ -48,7 +48,9 @@ class Annotator(object):
             # Connect to the Label Studio API and check the connection
             LABEL_STUDIO_URL = os.getenv("LABEL_STUDIO_URL")
             API_KEY = os.getenv("LABEL_STUDIO_API_KEY")
-            self.labelstudio_client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
+            self.labelstudio_client = LabelStudio(
+                base_url=LABEL_STUDIO_URL, api_key=API_KEY
+            )
         else:
             logging.warning(
                 msg="Pass argument `dotenv_path` to access label studio API"
@@ -70,9 +72,7 @@ class Annotator(object):
             self.modelversion = f"{name}:{version}" + tag_to_append
             self.modelURI = f"models:/{name}/{version}"
             self.model = mlflow.pyfunc.load_model(self.modelURI)
-            # logger.info('Device:',self.model.detection_model.device)
         else:
-            # device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model = Detector(
                 path_to_weights=path_to_weights,
                 confidence_threshold=confidence_threshold,
@@ -83,22 +83,21 @@ class Annotator(object):
                 is_yolo_obb=is_yolo_obb,
             )
             self.modelversion = Path(path_to_weights).stem + tag_to_append
-            # logger.info('Device:', device)
         # LS label config
         self.from_name = "label"
         self.to_name = "image"
         self.label_type = "rectanglelabels"
 
-    def predict(self, image: bytearray) -> dict:
+    def predict(self, image: Image.Image, return_coco=True) -> dict:
         """prediction using Sahi or not depending on self.use_sliding_window
 
         Args:
-            image (bytearray): object of PIL.Image.open
+            image (Image.Image): image from PIL
 
         Returns:
             dict: prediction in coco annotation format
         """
-        return self.model.predict(image)
+        return self.model.predict(image, return_coco=return_coco)
 
     def predict_directory(
         self,
@@ -179,15 +178,19 @@ class Annotator(object):
             top_n (int): top n tasks to be uploaded in descending order of task_id. Default 0 which disables the feature.
         """
         # Select project
-        project = self.labelstudio_client.get_project(id=project_id)
+        project = self.labelstudio_client.projects.get(id=project_id)
 
         # Upload predictions for each task
-        tasks = project.get_tasks()
-        if top_n > 0:
-            tasks = sorted(tasks, key=lambda x: x["id"])[:top_n]
-        for task in tqdm(tasks, desc="Uploading predictions"):
-            task_id = task["id"]
-            img_url = task["data"]["image"]
+        tasks = self.labelstudio_client.tasks.list(
+            project=project.id,
+        )
+        for i, task in enumerate(tasks):
+            if top_n > 0:
+                if i > top_n:
+                    break
+
+            task_id = task.id
+            img_url = task.data["image"]
 
             try:
                 # using unquote to deal with special characters
@@ -195,6 +198,8 @@ class Annotator(object):
             except Exception:
                 traceback.print_exc()
                 img_path = get_local_path(img_url, download_resources=False)
+
+            logger.info(f"Uploading predictions for: {img_path}")
 
             img = Image.open(img_path)
             prediction = self.predict(img)
@@ -207,12 +212,20 @@ class Annotator(object):
             max_score = 0.0
             if len(conf_scores) > 0:
                 max_score = max(conf_scores)
-            project.create_prediction(
-                task_id=task_id,
+
+            self.labelstudio_client.predictions.create(
+                task=task_id,
                 score=max_score,
                 result=formatted_pred,
                 model_version=self.modelversion,
             )
+            # project.create_prediction(
+            #     task_id=task_id,
+            #     score=max_score,
+            #     result=formatted_pred,
+            #     model_version=self.modelversion,
+            # )
+
             img.close()
 
     def build_upload_json(
@@ -297,3 +310,53 @@ class Annotator(object):
                 json.dump(directory_preds, file, indent=2)
 
         return directory_preds
+
+    @staticmethod
+    def get_project_stats(
+        labelstudio_client: LabelStudio, project_id: int, annotator_id=0
+    ):
+        project = labelstudio_client.projects.get(id=project_id)
+
+        images_count = dict()
+
+        # Iterating
+        tasks = labelstudio_client.tasks.list(
+            project=project.id,
+        )
+        labels = []
+        for task in tasks:
+            try:
+                result = task.annotations[annotator_id]["result"]
+            except Exception:
+                # traceback.print_exc()
+                continue
+
+            img_labels = []
+            for annot in result:
+                img_labels = annot["value"]["rectanglelabels"] + img_labels
+            labels = labels + img_labels
+
+            # update stats holder
+            for label in set(img_labels):
+                if label in images_count.keys():
+                    images_count[label] += 1
+                else:
+                    images_count[label] = 1
+
+        instances = {
+            f"{k}": [
+                labels.count(k),
+            ]
+            for k in set(labels)
+        }
+        images_count = {
+            k: [
+                v,
+            ]
+            for k, v in images_count.items()
+        }
+
+        instances_count = pd.DataFrame.from_dict(instances)
+        images_count = pd.DataFrame.from_dict(images_count)
+
+        return instances_count, images_count

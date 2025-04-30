@@ -78,7 +78,10 @@ class MyModelAPI(ls.LitAPI):
         out = dict(image_gps=x.pop("image_gps"))
 
         with torch.no_grad():
-            results = self.model.predict(**x)
+            results = self.model.predict(
+                inference_service_url=None,
+                **x,
+            )
             out["detections"] = results
 
         return out

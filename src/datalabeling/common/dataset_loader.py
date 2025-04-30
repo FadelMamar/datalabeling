@@ -198,45 +198,87 @@ class YOLODatasetBuilder:
 class ClassificationDatasetBuilder:
     def __init__(
         self,
-        detection_model: Detector,
+        detector: Detector,
         eval_config: EvaluationConfig,
         source_dir: str,
         output_dir: str,
     ):
-        self.detector = detection_model
+        self.detector = detector
         self.source_dir = source_dir
         self.output_dir = output_dir
         self.perf_eval = PerformanceEvaluator(config=eval_config)
         Path(output_dir).mkdir(exist_ok=True, parents=True)
 
-    def save(self, df_results: pd.DataFrame, df_labels: pd.DataFrame):
-        pass
+    def save(
+        self,
+        image: np.ndarray,
+        label_name: str | int,
+        file_name: str,
+        detection_index: int,
+    ):
+        img_dir = Path(self.output_dir) / str(label_name)
+        img_dir.mkdir(exist_ok=True, parents=False)
+        save_path = img_dir / f"{os.path.basename(file_name)}_det-{detection_index}.jpg"
+        cv2.imwrite(save_path, image)
 
-    def process_images(self):
+    def resize_bbox(self, factor: float, x1, x2, y1, y2, img_width, img_height):
+        x1 = max(x1 - (factor - 1.0) * (x2 - x1) / 2, 0)
+        y1 = max(y1 - (factor - 1.0) * (y2 - y1) / 2, 0)
+        x2 = min(x2 + (factor - 1.0) * (x2 - x1) / 2, img_width)
+        y2 = min(y2 + (factor - 1.0) * (y2 - y1) / 2, img_height)
+
+        out = list(map(int, [x1, x2, y1, y2]))
+
+        return out
+
+    def process_images(self, bbox_resize_factor: float = 1.0):
         """Run batch detection and save cropped ROIs"""
-        df_results, df_labels = self.perf_eval.get_preds_targets(
+
+        assert bbox_resize_factor >= 1.0
+
+        df_metrics = self.perf_eval.evaluate(
             images_dirs=[self.source_dir],
-            pred_results_dir=None,
+            pred_results_dir=self.output_dir,
+            save_tag="cls",
             detector=self.detector,
             load_results=False,
         )
+        mask_fn = df_metrics["gt_FN"] == True
+        mask_fp = df_metrics["pred_FP"] == True
+        mask = mask_fn + mask_fp
+        for file_name, df_det in tqdm(
+            df_metrics.loc[mask, :].groupby("file_name"), desc="Saving FPs and FNs"
+        ):
+            image = Image.open(file_name).convert("RGB")
+            img_width, img_height = image.size
+            image = np.asarray(image)
 
-        # detections = self.detector.predict_directory(path_to_dir=self.source_dir,as_dataframe=True,save_path=None)
-        # for image_path, df_det in detections.groupby(by=['file_name']):
-        #     image = Image.open(image_path).convert('RGB')
-        #     image = np.asarray(image)
-        #     for i,row in enumerate(df_det.iterrows()):
-        #         x1 = row["x_min"]
-        #         y1 = row["y_min"]
-        #         x2 = row["x_max"]
-        #         y2 = row["y_max"]
-        #         label_id = row['category_id']
-        #         label_name = row['category_name']
-        #         cv2.imwrite(f"{self.output_dir}/{label_name}_{os.path.basename(image_path)}_{i}.jpg",
-        #                     image[y1:y2, x1:x2]
-        #                 )
+            for i, row in df_det.iterrows():
+                try:
+                    x1 = int(row["pred_x_min"])
+                    y1 = int(row["pred_y_min"])
+                    x2 = int(row["pred_x_max"])
+                    y2 = int(row["pred_y_max"])
+                    # label_id = row['pred_category_id']
+                    label_name = "false_positives"
+                except:
+                    x1 = int(row["gt_x_min"])
+                    y1 = int(row["gt_y_min"])
+                    x2 = int(row["gt_x_max"])
+                    y2 = int(row["gt_y_max"])
+                    # label_id = row['gt_category_id']
+                    label_name = "false_negatives"
 
-        self.save(df_results=df_results, df_labels=df_labels)
+                x1, x2, y1, y2 = self.resize_bbox(
+                    bbox_resize_factor, x1, x2, y1, y2, img_width, img_height
+                )
+
+                self.save(
+                    image=image[y1:y2, x1:x2],
+                    label_name=label_name,
+                    file_name=file_name,
+                    detection_index=i,
+                )
 
 
 class DataPreparation:

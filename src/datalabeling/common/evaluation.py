@@ -25,9 +25,25 @@ class PerformanceEvaluator:
         self.label_format = None
 
     def evaluate(
-        self, predictions: pd.DataFrame, ground_truth: pd.DataFrame
+        self,
+        images_dirs: list[str],
+        pred_results_dir: str,
+        detector: Detector,
+        images_paths: list[str] = None,
+        load_results: bool = False,
+        save_tag: str = "",
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Calculate performance metrics"""
+
+        predictions, ground_truth = self.get_preds_targets(
+            images_dirs=images_dirs,
+            pred_results_dir=pred_results_dir,
+            detector=detector,
+            images_paths=images_paths,
+            load_results=load_results,
+            save_tag=save_tag,
+        )
+
         results_per_img, df_eval = self._calculate_base_metrics(
             predictions, ground_truth
         )
@@ -94,21 +110,26 @@ class PerformanceEvaluator:
             map_50s.append(metric["map_50"].item())
             maps_75s.append(metric["map_75"].item())
 
-            df_pred_i = df_pred_i.copy()
+            df_pred_i = df_pred.loc[mask_pred, :].copy().reset_index(drop=True)
+            df_gt_i = df_gt.loc[mask_gt, :].copy().reset_index(drop=True)
             if df_gt_i.empty:
                 df_pred_i["TP"] = 0
                 df_pred_i["FP"] = len(df_pred_i)
-                df_pred_i["FN"] = 0
                 pred_flags.append(df_pred_i)
                 continue
 
+            df_gt_i[["x_min", "y_min", "x_max", "y_max"]] = self._get_bbox(
+                gt=df_gt_i.iloc[:, 1:].to_numpy()
+            )
+
+            # TODO: make it work for multiclass?
             # compute ious
             box_ious = ciou(preds=pred, target=gt, aggregate=False)
             # For each prediction: find best-matching GT
             best_iou, best_gt_idx = box_ious.max(dim=1)
-            df_pred_i = df_pred_i.reset_index(drop=True)
             df_pred_i["matching_gt"] = "None"
             df_pred_i["matching_gt"] = df_pred_i["matching_gt"].astype("object")
+            df_pred_i["pred_label"] = "None"
             df_pred_i["file_name"] = image_path
             for i in range(len(df_pred_i)):
                 df_pred_i.loc[i, "TP"] = (
@@ -123,11 +144,15 @@ class PerformanceEvaluator:
                     if df_pred_i.loc[i, "TP"]
                     else "None"
                 )
+                # df_pred_i["pred_label"] = (
+                #     json.dumps(df_gt_i.loc[best_gt_idx[i],'category_id'].numpy().tolist())
+                #     if df_pred_i.loc[i, "TP"]
+                #     else "None"
+                # )
             pred_flags.append(df_pred_i)
 
             # For each ground-truth: mark FN if never matched
             worst_pred_iou, _ = box_ious.max(dim=0)
-            df_gt_i = df_gt_i.copy().reset_index(drop=True)
             df_gt_i["file_name"] = image_path
             for i in range(len(df_gt_i)):
                 df_gt_i.loc[i, "FN"] = (

@@ -6,14 +6,15 @@ import pandas as pd
 from ultralytics import SAM
 
 from ..ml.train import TrainingManager
+from ..ml.models import Detector
 from .annotation_utils import check_label_format
 from .annotation_utils import convert_obb_to_dota as o2d
 from .annotation_utils import convert_obb_to_yolo as o2y
 from .annotation_utils import convert_yolo_to_coco as y2coco
 from .annotation_utils import convert_yolo_to_obb as y2o
 from .annotation_utils import create_yolo_seg_directory as yolo2seg
-from .config import DataConfig, LabelConfig, TrainingConfig
-from .dataset_loader import DataPreparation
+from .config import DataConfig, LabelConfig, TrainingConfig, EvaluationConfig
+from .dataset_loader import DataPreparation, ClassificationDatasetBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,24 @@ class LabelstudioToYolo(PipelineStep):
             image_dir=self.image_dir,
             ls_client=self.ls_client,
         )
+
+
+class ClassificationDataExport(PipelineStep):
+    def __init__(
+        self,
+        detector: Detector,
+        eval_config: EvaluationConfig,
+        source_dir: str,
+        output_dir: str,
+        bbox_resize_factor: float = 2.0,
+    ):
+        self.handler = ClassificationDatasetBuilder(
+            detector, eval_config, source_dir=source_dir, output_dir=output_dir
+        )
+        self.bbox_resize_factor = bbox_resize_factor
+
+    def run(self, context: Dict[str, Any] = None) -> None:
+        self.handler.process_images(bbox_resize_factor=self.bbox_resize_factor)
 
 
 class ModelTraining(PipelineStep):

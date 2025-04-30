@@ -2,10 +2,36 @@ import streamlit as st
 import pandas as pd
 from typing import List
 import requests
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+import traceback
+from datalabeling.ml.interface import Annotator
+from datalabeling.common.io import load_yaml
+import logging
+from label_studio_sdk.client import LabelStudio
+from itertools import chain
 
-# Configuration
-LABEL_STUDIO_URL = "http://localhost:8080"
-TRAINING_API_URL = "http://training-service:8000"
+DOT_ENV = Path(__file__) / "../.env"
+load_dotenv(DOT_ENV)
+LABEL_STUDIO_URL = os.environ["LABEL_STUDIO_URL"]
+LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
+LABEL_STUDIO_CLIENT = LabelStudio(
+    base_url=LABEL_STUDIO_URL, api_key=LABEL_STUDIO_API_KEY
+)
+TRAINING_API_URL = ...
+TRAINING_API_KEY = ...
+# LOCAL_FILES_DOCUMENT_ROOT = os.environ['LOCAL_FILES_DOCUMENT_ROOT']
+
+
+class StreamlitLogHandler(logging.Handler):
+    def __init__(self, widget_func):
+        super().__init__()
+        self.widget = widget_func  # e.g. st.empty().code
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget(msg)
 
 
 def main():
@@ -14,10 +40,10 @@ def main():
     st.title("Labeling Workflow Management")
 
     # Sidebar for common controls
-    with st.sidebar:
-        st.header("API Configuration")
-        label_studio_token = st.text_input("Label Studio Token", type="password")
-        training_api_token = st.text_input("Training API Token", type="password")
+    # with st.sidebar:
+    #     st.header("API Configuration")
+    # label_studio_token = st.text_input("Label Studio Token", type="password")
+    # training_api_token = st.text_input("Training API Token", type="password")
 
     # Main tabs
     tab1, tab2, tab3 = st.tabs(
@@ -27,45 +53,115 @@ def main():
     with tab1:
         st.header("Upload to Label Studio")
         with st.form("upload_annotations"):
-            project_id = st.number_input("Project ID", min_value=1, step=1)
-            model_alias = st.text_input("Model Alias")
-            annotation_file = st.file_uploader("Annotation File (JSON)", type=["json"])
+            project_id = st.number_input("Project ID", min_value=0, step=1)
+            model_alias = st.text_input("Model Alias").strip()
+            detector_name = st.text_input("Detector name", value="obb-detector").strip()
+            confidence_threshold = st.text_input(
+                "Confidence threshold", value=0.2
+            ).strip()
+            path_to_weights = st.text_input(
+                "Path to model weights",
+                value=r"D:\datalabeling\base_models_weights\best.pt",
+            ).strip()
+            tile_size = st.number_input("Tile size", min_value=640, step=1)
+            top_n = st.number_input("Top n", min_value=0, step=1)
+            use_sliding_window = True
+            # annotation_file = st.file_uploader("Annotation File (JSON)", type=["json"])
+
+            annotator_kwargs = {
+                "path_to_weights": path_to_weights,
+                "mlflow_model_alias": model_alias,
+                "mlflow_model_name": detector_name,
+                "tilesize": tile_size,
+                "overlapratio": 0.1,
+                "use_sliding_window": True,
+                "is_yolo_obb": detector_name == "obb-detector",
+                "confidence_threshold": 0.1,
+                "tag_to_append": "",
+            }
+
+            log_widget = st.empty().code
+            handler = StreamlitLogHandler(log_widget)
+            logger = logging.getLogger()
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
 
             if st.form_submit_button("Upload Annotations"):
                 try:
-                    response = upload_to_label_studio(
-                        project_id, model_alias, annotation_file, label_studio_token
-                    )
-                    st.success(f"Upload successful! Response: {response.status_code}")
+                    with st.spinner("Uploading annotations...", show_time=True):
+                        upload_to_label_studio(
+                            project_id=project_id, top_n=top_n, **annotator_kwargs
+                        )
+                        st.success("Done!")
+
                 except Exception as e:
-                    st.error(f"Upload failed: {str(e)}")
+                    traceback.print_exc()
+                    # st.error(f"Upload failed: {str(e)}")
 
     with tab2:
         st.header("Project Analytics")
         with st.form("project_stats"):
             stats_project_id = st.number_input(
-                "Analytics Project ID", min_value=1, step=1
+                "Analytics Project ID", min_value=0, step=1
             )
+
+            log_widget = st.empty().code
+            handler = StreamlitLogHandler(log_widget)
+            logger = logging.getLogger()
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
 
             if st.form_submit_button("Show Statistics"):
                 try:
-                    stats_df = get_project_statistics(
-                        stats_project_id, label_studio_token
-                    )
-                    st.dataframe(stats_df, use_container_width=True)
+                    with st.spinner("Computing statistics...", show_time=True):
+                        instances_count, images_count = get_project_statistics(
+                            stats_project_id
+                        )
+                    st.dataframe(instances_count, use_container_width=False)
+                    st.dataframe(images_count, use_container_width=False)
 
                     # Display metrics
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric(
-                        "Total Annotations", stats_df["total_annotations"].iloc[0]
-                    )
-                    col2.metric("Completed Tasks", stats_df["completed_tasks"].iloc[0])
-                    col3.metric(
-                        "Avg Quality", f"{stats_df['avg_quality'].iloc[0]:.2f}%"
-                    )
+                    # col1, col2, col3 = st.columns(len(images_count.columns))
+                    # col1.metric(
+                    #     "Total Annotations", stats_df["total_annotations"].iloc[0]
+                    # )
+                    # col2.metric("Completed Tasks", stats_df["completed_tasks"].iloc[0])
+                    # col3.metric(
+                    #     "Avg Quality", f"{stats_df['avg_quality'].iloc[0]:.2f}%"
+                    # )
 
                 except Exception as e:
                     st.error(f"Failed to fetch statistics: {str(e)}")
+
+        with st.form("train_val_test_stats"):
+            path_to_yaml = st.text_input(
+                "Path to data.yaml file",
+                value=r"D:\datalabeling\configs\yolo_configs\data_config.yaml",
+            ).strip()
+            split = st.text_input(
+                "Split to select", value="train", help="train val or test"
+            ).strip()
+
+            if st.form_submit_button("Show Statistics"):
+                with st.spinner("Computing statistics...", show_time=True):
+                    stats = visualize_splits_distribution(
+                        data_yaml_path=path_to_yaml, split=split
+                    )
+
+                st.bar_chart(
+                    stats["instances_count"],
+                    x="class",
+                    y="count",
+                    x_label="Species",
+                    y_label="Instance count",
+                )
+                st.bar_chart(
+                    stats["images_count"],
+                    x="class",
+                    y="image",
+                    x_label="Species",
+                    y_label="Images count",
+                )
 
     with tab3:
         st.header("Train Object Detector")
@@ -80,7 +176,7 @@ def main():
                         int(pid.strip()) for pid in training_projects.split(",")
                     ]
                     response = start_training(
-                        project_ids, epochs, batch_size, training_api_token
+                        project_ids, epochs, batch_size, TRAINING_API_KEY
                     )
                     st.success(
                         f"Training initiated! Job ID: {response.json()['job_id']}"
@@ -91,27 +187,75 @@ def main():
 
 
 # Mock API client functions (implement according to your API specs)
-def upload_to_label_studio(
-    project_id: int, model_alias: str, annotation_file, token: str
+def upload_to_label_studio(project_id: int, top_n: int = 0, **annotator_kwargs):
+    handler = Annotator(dotenv_path=str(DOT_ENV), **annotator_kwargs)
+    handler.upload_predictions(project_id=project_id, top_n=top_n)
+
+
+def get_project_statistics(
+    project_id: int, annotator_id=0
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    instances_count, images_count = Annotator.get_project_stats(
+        LABEL_STUDIO_CLIENT, project_id=project_id, annotator_id=annotator_id
+    )
+
+    instances_count.rename(
+        columns={col: col + "_num_instances" for col in instances_count.columns},
+        inplace=True,
+    )
+    images_count.rename(
+        columns={col: col + "_num_images" for col in images_count.columns}, inplace=True
+    )
+
+    return instances_count, images_count
+
+
+def visualize_splits_distribution(
+    data_yaml_path: str,
+    split="train",
 ):
-    """Mock function for Label Studio upload"""
-    headers = {"Authorization": f"Token {token}"}
-    files = {"file": annotation_file.getvalue()}
-    return requests.post(
-        f"{LABEL_STUDIO_URL}/api/projects/{project_id}/import",
-        headers=headers,
-        files=files,
-        params={"model_alias": model_alias},
+    from tqdm import tqdm
+
+    logger = logging.getLogger(__file__)
+
+    # load yaml
+    yolo_config = load_yaml(data_yaml_path)
+
+    label_map = yolo_config["names"]
+
+    path_dataset = [os.path.join(yolo_config["path"], p) for p in yolo_config[split]]
+
+    # iter_labels = path_dataset.glob("*.txt")
+
+    iter_labels = chain.from_iterable(
+        [Path(p.replace("images", "labels")).glob("*.txt") for p in path_dataset]
     )
 
+    # total_number_images = len(list(iter_labels))
+    # path_dataset = path_dataset.replace('images','labels')
+    # total_number_of_positive_images = len(list(Path(path_dataset).glob('*')))
 
-def get_project_statistics(project_id: int, token: str) -> pd.DataFrame:
-    """Mock function for statistics retrieval"""
-    headers = {"Authorization": f"Token {token}"}
-    response = requests.get(
-        f"{LABEL_STUDIO_URL}/api/projects/{project_id}/stats", headers=headers
-    )
-    return pd.DataFrame([response.json()])
+    labels = list()
+    for txtfile in tqdm(iter_labels, desc="Reading labels from data.yaml"):
+        df = pd.read_csv(txtfile, sep=" ", header=None)
+        df["class"] = df.iloc[:, 0].astype(int)
+        df["image"] = txtfile.stem
+        labels.append(df)
+
+    df = pd.concat(labels, axis=0).reset_index(drop=True)
+    df["class"] = df["class"].map(label_map)
+
+    images_count = df.groupby("class")["image"].count().reset_index()
+    instances_count = df["class"].value_counts().reset_index()
+
+    #
+    # stats = dict(num_negative=total_number_images-total_number_of_positive_images,
+    #              num_positive=total_number_of_positive_images
+    #              )
+    stats = dict()
+    stats.update({"instances_count": instances_count, "images_count": images_count})
+
+    return stats
 
 
 def start_training(project_ids: List[int], epochs: int, batch_size: int, token: str):

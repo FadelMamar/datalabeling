@@ -11,6 +11,7 @@ from PIL import Image
 from sahi.models.ultralytics import UltralyticsDetectionModel
 from sahi.predict import get_prediction, get_sliced_prediction
 from torch.utils.data import DataLoader, TensorDataset
+import requests, base64
 
 # from label_studio_ml.utils import (get_env, get_local_path)
 from tqdm import tqdm
@@ -52,26 +53,65 @@ class Detector(object):
         self.overlapratio = overlap_ratio
         self.use_sliding_window = use_sliding_window
         self.is_yolo_obb = is_yolo_obb
-        logger.info(f"Computing device: {device}")
 
-        self.detection_model = UltralyticsDetectionModel(
-            model=YOLO(path_to_weights, task="detect"),
-            confidence_threshold=confidence_threshold,
-            image_size=self.imgsz,
-            device=device,
-        )
+        self.detection_model = None
+        if path_to_weights is not None:
+            logger.info(f"Computing device: {device}")
+
+            self.detection_model = UltralyticsDetectionModel(
+                model=YOLO(path_to_weights, task="detect"),
+                confidence_threshold=confidence_threshold,
+                image_size=self.imgsz,
+                device=device,
+            )
+
+    def _predict_url(
+        self,
+        image_path: str,
+        inference_service_url: str = "http://127.0.0.1:4141/predict",
+        timeout=3 * 60,
+        return_gps: bool = True,
+    ):
+        with open(image_path, "rb") as f:
+            img_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        payload = {
+            "image": img_b64,
+            "sahi_prostprocess": "NMS",
+            "override_tilesize": None,  # tilesize to use for
+            "postprocess_match_threshold": 0.5,
+            "nms_iou": None,
+            "return_as_decimal": False,
+        }
+
+        resp = requests.post(
+            inference_service_url,
+            json=payload,
+            timeout=timeout,
+        ).json()
+
+        detections = resp["detections"]
+        image_gps = resp["image_gps"]
+
+        if return_gps:
+            return detections, image_gps
+
+        return detections
 
     # TODO: batch predictions with slicing
     def predict(
         self,
         image: Image.Image = None,
+        inference_service_url: str = None,
         image_path: str = None,
         return_gps: bool = False,
         return_coco: bool = False,
         sahi_prostprocess: float = "NMS",
         override_tilesize: int = None,
         postprocess_match_threshold: float = 0.5,
+        timeout: int = 3 * 60,
         nms_iou: float = None,
+        verbose: int = 0,
     ):
         """Run sliced predictions
 
@@ -82,6 +122,16 @@ class Detector(object):
             dict: predictions in coco format
         """
 
+        # predict using inference service
+        if isinstance(inference_service_url, str):
+            self._predict_url(
+                image_path=image_path,
+                inference_service_url=inference_service_url,
+                timeout=timeout,
+                return_gps=return_gps,
+            )
+
+        # predict using local model
         if image is None:
             assert image_path is not None, "Provide the image path."
             image = Image.open(image_path)
@@ -99,7 +149,7 @@ class Detector(object):
                 overlap_width_ratio=self.overlapratio,
                 postprocess_type=sahi_prostprocess,
                 postprocess_match_metric="IOU",
-                verbose=0,
+                verbose=verbose,
                 postprocess_match_threshold=postprocess_match_threshold or nms_iou,
             )
         else:
@@ -109,7 +159,7 @@ class Detector(object):
                 shift_amount=[0, 0],
                 full_shape=None,
                 postprocess=None,
-                verbose=0,
+                verbose=verbose,
             )
 
         if return_coco:
@@ -350,7 +400,6 @@ class Detector(object):
                     "iscrowd",
                     "segmentation",
                     "bbox",
-                    "category_name",
                 ],
                 inplace=True,
             )
