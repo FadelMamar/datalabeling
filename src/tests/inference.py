@@ -1,5 +1,3 @@
-from datalabeling.ml_backend.api.endpoints import run_inference_server
-
 if __name__ == "__main__":
     pass
     # detector = Detector(path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",

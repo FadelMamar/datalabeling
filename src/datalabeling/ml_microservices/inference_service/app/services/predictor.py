@@ -2,6 +2,7 @@ import litserve as ls
 import base64
 
 from PIL import Image
+from pathlib import Path
 
 
 class MyModelAPI(ls.LitAPI):
@@ -19,7 +20,7 @@ class MyModelAPI(ls.LitAPI):
         import torch
 
         self.model = Detector(
-            path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
+            path_to_weights=Path(__file__) / "../../model_weights/best.pt",
             confidence_threshold=0.25,
             overlap_ratio=0.2,
             tilesize=800,
@@ -91,6 +92,15 @@ class MyModelAPI(ls.LitAPI):
         Wrap the model output in a JSON-serializable dict.
         """
         return output
+
+
+def run_inference_server(port=4141):
+    api = MyModelAPI()
+    server = ls.LitServer(
+        api,
+        max_batch_size=1,
+    )
+    server.run(port=port)
 
 
 # class MLflowModelFetcher:
