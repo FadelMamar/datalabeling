@@ -18,7 +18,7 @@ class DataConfig:
     slice_width: int = 640
     slice_height: int = 640
     overlap_ratio: float = 0.2
-    min_area_ratio: float = 0.1
+    min_area_ratio: float = 0.8
     empty_ratio: float = 1.0
     clear_output: bool = False
     save_all: bool = False

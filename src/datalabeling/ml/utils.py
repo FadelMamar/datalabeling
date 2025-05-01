@@ -7,9 +7,8 @@ import pandas as pd
 import yaml
 
 from ..common.config import EvaluationConfig, TrainingConfig
-from ..common.evaluation import PerformanceEvaluator
+from ..common.evaluation import PerformanceEvaluator, HardSampleSelector
 from ..common.io import load_yaml, save_yolo_yaml_cfg
-from ..common.selection import HardSampleSelector
 from .models import Detector
 
 logger = logging.getLogger(__name__)

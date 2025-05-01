@@ -28,6 +28,11 @@ def ls_to_yolo():
     dataset_config.parse_ls_config = False
     dataset_config.load_coco_annotations = True
 
+    dataset_config.slice_height = 640
+    dataset_config.slice_width = 640
+    dataset_config.min_area_ratio = 0.8
+    dataset_config.empty_ratio = 1.0
+
     dataset_config.is_single_cls = True
     dataset_config.yolo_data_config_yaml = r"D:\datalabeling\configs\yolo_configs\data_config.yaml"  # needed for multiclass
 
@@ -35,7 +40,6 @@ def ls_to_yolo():
 
     dataset_config.save_all = False
     dataset_config.save_only_empty = False
-    dataset_config.empty_ratio = 1.0
 
     label_config = LabelConfig()
     label_config.label_map = r"D:\datalabeling\exported_annotations\label_mapping.json"
