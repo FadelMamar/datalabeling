@@ -1,11 +1,13 @@
-````markdown
 # ML Microservices Monorepo Implementation Roadmap
 
 This document outlines a 6-week plan (16 hours/week) to consolidate existing services and build new components in a single GitHub repository.
 > https://chatgpt.com/c/68120a64-a1d4-8001-a6a3-a7dcc81de7bb
+> https://chat.deepseek.com/a/chat/s/869b5735-78fb-4d25-9d0b-372d469ead66
+> https://chatgpt.com/c/68114057-e398-8001-89f3-86cf4e61d097
 
 ## 📁 Monorepo Structure
-```plain
+```
+plain
 ml_microservices/
 ├── .github/                   
 │   └── workflows/               # CI / workflows
@@ -38,6 +40,23 @@ ml_microservices/
 │   └── Dockerfile
 │   └── Logs → Prometheus
 │   └── Sends inputs/stats → EvidentlyAI
+|
+|
+yolo_baal_backend/
+├── main.py               # FastAPI app
+├── config.py             # Config management
+├── model/
+│   ├── __init__.py
+│   ├── yolo_baal.py      # Model wrapper with YOLOv8 + Baal
+│   └── trainer.py        # Training loop
+├── data/
+│   ├── loader.py         # Dataset I/O (e.g., from Label Studio export)
+│   └── transform.py      # Image transforms
+├── utils/
+│   ├── logger.py         # Structured logging
+│   └── ls_interface.py   # Label Studio formatting helpers
+├── requirements.txt
+└── README.md
 |
 |
 ├── labeling_service/          
@@ -106,7 +125,7 @@ calibration_service/
 │
 └── docker-compose.yml         # Orchestrates all services
 └── README.md
-````
+```
 
 **Internal Communication Plan**
 | From                   | To                     | Method                         | Purpose                            |
@@ -211,10 +230,12 @@ calibration_service/
   - `make train` / `make calibrate`
 
 > **Milestone:** A self-contained monorepo enabling full ML pipeline with observability.
-
----
-
-© 2025 Your Name / Team Name
-
-```
-```
+````
+graph TD
+    A[Initial Dataset] --> B[Train YOLO]
+    B --> C[Predict with Uncertainty]
+    C --> D[Select Uncertain Samples]
+    D --> E[Label in Label Studio]
+    E --> F[Retrain Model]
+    F --> C
+````
