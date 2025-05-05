@@ -106,6 +106,18 @@ class DataHandler:
                 ]
             elif _format == "yolo":
                 df.columns = ["category_id", "x", "y", "w", "h"]
+
+                df["x1"] = df["x"] - df["w"] / 2.0
+                df["y1"] = df["y"] - df["h"] / 2.0
+
+                df["x2"] = df["x1"] + df["w"]
+                df["y2"] = df["y1"]
+
+                df["x3"] = df["x2"]
+                df["y3"] = df["y2"] + df["h"]
+
+                df["x4"] = df["x1"]
+                df["y4"] = df["y3"]
             else:
                 raise ValueError("Check features in label file.")
 
@@ -125,6 +137,11 @@ class DataHandler:
             for i in range(1, 5):
                 df[f"x{i}"] = df[f"x{i}"] * width
                 df[f"y{i}"] = df[f"y{i}"] * height
+
+            df["x_min"] = df["x1"]
+            df["y_min"] = df["y1"]
+            df["x_max"] = df["x2"]
+            df["y_max"] = df["y3"]
 
             df_list.append(df)
 

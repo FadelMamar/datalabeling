@@ -76,7 +76,7 @@ class PerformanceEvaluator:
             # get gt
             mask_gt = df_gt["file_name"] == image_path
             df_gt_i = df_gt.loc[mask_gt, :].iloc[:, 1:]
-            gt = torch.from_numpy(self._get_bbox(gt=df_gt_i.to_numpy()))
+            gt = torch.from_numpy(self._get_bbox(gt=df_gt_i))
             labels = df_gt.loc[mask_gt, "category_id"].to_numpy().astype(int)
 
             # get preds
@@ -119,7 +119,7 @@ class PerformanceEvaluator:
                 continue
 
             df_gt_i[["x_min", "y_min", "x_max", "y_max"]] = self._get_bbox(
-                gt=df_gt_i.iloc[:, 1:].to_numpy()
+                gt=df_gt_i.iloc[:, 1:]
             )
 
             # TODO: make it work for multiclass?
@@ -193,29 +193,31 @@ class PerformanceEvaluator:
 
         return results_per_img, df_eval
 
-    def _get_bbox(self, gt: np.ndarray):
+    def _get_bbox(self, gt: pd.DataFrame):
+        return gt[["x_min", "y_min", "x_max", "y_max"]].to_numpy()
+
         # empty image case
-        if len(gt) < 1:
-            return np.array([])
+        # if len(gt) < 1:
+        #     return np.array([])
 
-        if self.label_format == "yolo-obb":
-            xs = [0, 2, 4, 6]
-            ys = [1, 3, 5, 7]
-            x_min = np.min(gt[:, xs], axis=1).reshape((-1, 1))
-            x_max = np.max(gt[:, xs], axis=1).reshape((-1, 1))
-            y_min = np.min(gt[:, ys], axis=1).reshape((-1, 1))
-            y_max = np.max(gt[:, ys], axis=1).reshape((-1, 1))
+        # if self.label_format == "yolo-obb":
+        #     xs = [0, 2, 4, 6]
+        #     ys = [1, 3, 5, 7]
+        #     x_min = np.min(gt[:, xs], axis=1).reshape((-1, 1))
+        #     x_max = np.max(gt[:, xs], axis=1).reshape((-1, 1))
+        #     y_min = np.min(gt[:, ys], axis=1).reshape((-1, 1))
+        #     y_max = np.max(gt[:, ys], axis=1).reshape((-1, 1))
 
-        elif self.label_format == "yolo":
-            x_min = (gt[:, 0] - gt[:, 2] / 2.0).reshape(-1, 1)
-            x_max = (gt[:, 0] + gt[:, 2] / 2.0).reshape(-1, 1)
-            y_min = (gt[:, 1] - gt[:, 3] / 2.0).reshape(-1, 1)
-            y_max = (gt[:, 1] + gt[:, 3] / 2.0).reshape(-1, 1)
+        # elif self.label_format == "yolo":
+        #     x_min = (gt[:, 0] - gt[:, 2] / 2.0).reshape(-1, 1)
+        #     x_max = (gt[:, 0] + gt[:, 2] / 2.0).reshape(-1, 1)
+        #     y_min = (gt[:, 1] - gt[:, 3] / 2.0).reshape(-1, 1)
+        #     y_max = (gt[:, 1] + gt[:, 3] / 2.0).reshape(-1, 1)
 
-        else:
-            raise NotImplementedError("label format should be yolo-obb or yolo.")
+        # else:
+        #     raise NotImplementedError("label format should be yolo-obb or yolo.")
 
-        return np.hstack([x_min, y_min, x_max, y_max]).astype(float)
+        # return np.hstack([x_min, y_min, x_max, y_max]).astype(float)
 
     def get_preds_targets(
         self,

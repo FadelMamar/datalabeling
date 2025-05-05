@@ -288,7 +288,7 @@ class TrainingManager:
         else:
             model = YOLO(path, task=self.args.task, verbose=False)
 
-        if self.args.path_weights:
+        if self.args.path_weights and self.args.yolo_arch_yaml:
             model = model.load(self.args.path_weights)
 
         return model

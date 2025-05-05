@@ -255,7 +255,7 @@ class Detector(object):
         )
         results = {}
         paths = images_paths or Path(path_to_dir).iterdir()
-        for image_path in tqdm(paths):
+        for image_path in tqdm(paths, desc="Computing predictions..."):
             pred = self.predict(
                 image=None,
                 return_coco=return_coco or as_dataframe or return_gps,

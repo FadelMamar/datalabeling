@@ -8,6 +8,7 @@ Created on Thu Apr 24 19:29:12 2025
 from tqdm import tqdm
 
 from datalabeling.common.io import HerdnetData
+from datalabeling.common.pipeline import ClassificationDataExport
 
 
 def load_herd_net():
@@ -51,13 +52,14 @@ def load_classification_data():
     eval_config.uncertainty_method = "entropy"
     eval_config.uncertainty_threshold = 4
     eval_config.score_col = "max_scores"
+    eval_config.tp_iou_threshold = 0.4
 
     detector = Detector(
         path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
-        confidence_threshold=0.25,
+        confidence_threshold=eval_config.score_threshold,
         overlap_ratio=0.2,
-        tilesize=800,
-        imgsz=800,
+        tilesize=640,
+        imgsz=640,
         use_sliding_window=True,
         device="cpu",
     )

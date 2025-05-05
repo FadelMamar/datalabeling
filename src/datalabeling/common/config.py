@@ -139,7 +139,7 @@ class TrainingConfig:
     hn_load_results: bool = False
 
     # regularization
-    dropout: float = 0.0
+    dropout: float = 0.0  # used only for classification tasks
     weight_decay: float = 5e-4
 
     # transfer learning
@@ -182,7 +182,7 @@ class EvaluationConfig:
     map_threshold: float = 0.3
     uncertainty_method: str = "entropy"
     uncertainty_threshold: float = 4
-    tp_iou_threshold: float = 0.5
+    tp_iou_threshold: float = 0.4
     fp_tp_ratio_threshold: float = 0.2
     fn_tp_ratio_threshold: float = 0.2
     is_yolo_obb: bool = False
