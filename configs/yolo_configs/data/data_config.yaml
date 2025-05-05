@@ -6,7 +6,7 @@ train:
 
 val:
   - general_dataset\tiled-data\test\images
-  - savmap_dataset_v2\annotated_py_paul\yolo_format\images
+  # - savmap_dataset_v2\annotated_py_paul\yolo_format\images
 
 # test:  # test images (optional)
 #   - test\images
