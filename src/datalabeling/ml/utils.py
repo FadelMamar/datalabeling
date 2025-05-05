@@ -4,7 +4,14 @@ import traceback
 from pathlib import Path
 
 import pandas as pd
-import yaml
+import yaml, json
+
+from ultralytics.utils.loss import v8DetectionLoss, E2EDetectLoss
+from ultralytics.models.yolo.detect import DetectionTrainer
+from ultralytics.nn.tasks import DetectionModel
+
+import torch
+
 
 from ..common.config import EvaluationConfig, TrainingConfig
 from ..common.evaluation import PerformanceEvaluator, HardSampleSelector
@@ -232,3 +239,51 @@ def get_data_cfg_paths_for_HN(
     )
 
     return str(save_path)
+
+
+RANK = int(os.getenv("RANK", -1))
+
+
+class CustomLoss(v8DetectionLoss):
+    """Custom YOLO loss that inherits from Ultralytics default loss"""
+
+    def __init__(self, pos_weight: float = 1.0, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        pos_weight = (
+            torch.Tensor(
+                [
+                    pos_weight,
+                ]
+            )
+            .reshape(1, 1)
+            .to(self.device)
+        )
+        self.bce = torch.nn.BCEWithLogitsLoss(reduction="none", pos_weight=pos_weight)
+
+
+class CustomDetModel(DetectionModel):
+    def __init__(self, pos_weight: float = 1.0, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pos_weight = pos_weight
+
+    def init_criterion(self):
+        return (
+            E2EDetectLoss(self)
+            if getattr(self, "end2end", False)
+            else CustomLoss(self.pos_weight, self)
+        )
+
+
+class CustomTrainer(DetectionTrainer):
+    def get_model(self, cfg, weights, verbose=True):
+        """Returns a customized detection model instance configured with specified config and weights."""
+
+        pos_weight = json.loads(os.environ.get("pos_weight", "1.0"))
+
+        model = CustomDetModel(
+            pos_weight, cfg, nc=self.data["nc"], ch=3, verbose=verbose and RANK == -1
+        )
+        if weights:
+            model.load(weights)
+
+        return model

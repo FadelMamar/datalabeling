@@ -61,6 +61,9 @@ class TrainingConfig:
 
     # training data
     yolo_yaml: str = None  # os.path.join(CUR_DIR,'../../../data/data_config.yaml')
+    yolo_arch_yaml: str = None
+
+    ultralytics_pos_weight: float = 1.0
 
     # training flags
     imgsz: int = 800
@@ -76,6 +79,7 @@ class TrainingConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     patience: int = 10
     val: str = "True"
+    yolo_iou_val: float = 0.6
 
     # herdnet
     herdnet_pl_ckpt: str = None

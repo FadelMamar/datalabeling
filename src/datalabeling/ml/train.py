@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-
+import json
 import lightning as L
 import torch
 import yaml
@@ -27,6 +27,7 @@ from .utils import (
     get_data_cfg_paths_for_cl,
     get_data_cfg_paths_for_HN,
     remove_label_cache,
+    CustomTrainer,
 )
 
 logger = logging.getLogger(__name__)
@@ -255,6 +256,10 @@ class TrainingManager:
         self.model_type = model_type
         self.herdnet_training_backend = herdnet_training_backend
 
+        assert model_type in ["ultralytics", "herdnet"], (
+            f"this model_type ``{model_type}`` is not supported."
+        )
+
         assert herdnet_training_backend in ["original", "pl"], (
             "the provided backend is not supported."
         )
@@ -263,16 +268,30 @@ class TrainingManager:
 
     def _load_model(self):
         if self.model_type == "ultralytics":
-            return self._load_ultralytics_model
+            return self._load_ultralytics_model()
 
-        if self.model_type == "herdnet":
+        elif self.model_type == "herdnet":
             return self._load_herdnet()
 
-    def _load_ultralytics_model(self):
-        if self.args.is_rtdetr:
-            return RTDETR(self.args.path_weights)
+        else:
+            raise NotImplementedError
 
-        return YOLO(self.args.path_weights, task=self.args.task, verbose=False)
+    def _load_ultralytics_model(self):
+        model = None
+
+        path = self.args.path_weights
+        if self.args.yolo_arch_yaml:
+            path = self.args.yolo_arch_yaml
+
+        if self.args.is_rtdetr:
+            model = RTDETR(path)
+        else:
+            model = YOLO(path, task=self.args.task, verbose=False)
+
+        if self.args.path_weights:
+            model = model.load(self.args.path_weights)
+
+        return model
 
     def _load_herdnet(
         self,
@@ -624,14 +643,19 @@ class TrainingManager:
 
         assert args.val in ["True", "False"]
 
+        cfg = dict()
+        if not self.args.is_rtdetr:
+            os.environ["pos_weight"] = json.dumps(self.args.ultralytics_pos_weight)
+            cfg = dict(trainer=CustomTrainer)
+
         self.model.train(
-            data=data_cfg or args.data_config_yaml,
+            data=data_cfg or args.yolo_yaml,
             epochs=args.epochs,
-            imgsz=imgsz or min(args.height, args.width),
+            imgsz=imgsz or args.imgsz,
             device=args.device,
             freeze=args.freeze,
             name=args.run_name,
-            single_cls=args.is_detector,
+            single_cls=args.is_single_cls,
             lr0=args.lr0,
             lrf=args.lrf,
             momentum=args.optimizer_momentum,
@@ -651,7 +675,7 @@ class TrainingManager:
             degrees=args.rotation_degree,
             mixup=args.mixup,
             scale=args.scale,
-            iou=args.iou_threshold,
+            iou=args.yolo_iou_val,
             mosaic=args.mosaic,
             augment=False,
             erasing=args.erasing,
@@ -668,6 +692,7 @@ class TrainingManager:
             exist_ok=True,
             seed=args.seed,
             resume=resume,
+            **cfg,
         )
 
     def _pretraining(self):
