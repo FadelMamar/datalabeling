@@ -1,6 +1,7 @@
 from datalabeling.common.config import TrainingConfig
 from datalabeling.common.pipeline import ModelTraining, Pipeline
 
+
 if __name__ == "__main__":
     ## Training configs
     training_cfg = TrainingConfig()
@@ -13,13 +14,21 @@ if __name__ == "__main__":
     training_cfg.herdnet_lr_milestones = [15, 25]
     training_cfg.herdnet_val_batchsize = 4
 
-    training_cfg.yolo_yaml = r"D:\datalabeling\configs\yolo_configs\data_config.yaml"
+    training_cfg.yolo_yaml = (
+        r"D:\datalabeling\configs\yolo_configs\data\data_config.yaml"
+    )
+    training_cfg.yolo_arch_yaml = (
+        r"D:\datalabeling\configs\yolo_configs\models\yolov8-ghost-p2.yaml"
+    )
+    training_cfg.path_weights = None
+
+    training_cfg.ultralytics_pos_weight = 10.0
 
     training_step = ModelTraining(
         training_cfg=training_cfg,
         herdnet_loss=None,
         herdnet_training_backend="pl",  # original or pl
-        model_type="herdnet",
+        model_type="ultralytics",
     )
 
     pipe = Pipeline(
