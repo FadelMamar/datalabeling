@@ -214,11 +214,11 @@ class ClassificationDatasetBuilder:
         image: np.ndarray,
         label_name: str | int,
         file_name: str,
-        detection_index: int,
+        index: int,
     ):
         img_dir = Path(self.output_dir) / str(label_name)
         img_dir.mkdir(exist_ok=True, parents=False)
-        save_path = img_dir / f"{os.path.basename(file_name)}_det-{detection_index}.jpg"
+        save_path = img_dir / f"{os.path.basename(file_name)}-{index}.jpg"
         cv2.imwrite(save_path, image)
 
     def resize_bbox(self, factor: float, x1, x2, y1, y2, img_width, img_height):
@@ -230,6 +230,37 @@ class ClassificationDatasetBuilder:
         out = list(map(int, [x1, x2, y1, y2]))
 
         return out
+
+    def save_groundtruth(
+        self,
+        bbox_resize_factor: float = 1.0,
+    ):
+        for file_name, df_gt in tqdm(
+            self.perf_eval.ground_truth.groupby("file_name"), desc="Saving groundtruth"
+        ):
+            image = Image.open(file_name).convert("RGB")
+            image = np.asarray(image)
+
+            for i, row in df_gt.iterrows():
+                x1 = int(row["x_min"])
+                y1 = int(row["y_min"])
+                x2 = int(row["x_max"])
+                y2 = int(row["y_max"])
+                img_width = row["width"]
+                img_height = row["height"]
+
+                label_name = "groundtruth"
+
+                x1, x2, y1, y2 = self.resize_bbox(
+                    bbox_resize_factor, x1, x2, y1, y2, img_width, img_height
+                )
+
+                self.save(
+                    image=image[y1:y2, x1:x2],
+                    label_name=label_name,
+                    file_name=file_name,
+                    index=i,
+                )
 
     def process_images(self, bbox_resize_factor: float = 1.0):
         """Run batch detection and save cropped ROIs"""
@@ -262,12 +293,13 @@ class ClassificationDatasetBuilder:
                     # label_id = row['pred_category_id']
                     label_name = "false_positives"
                 except:
-                    x1 = int(row["gt_x_min"])
-                    y1 = int(row["gt_y_min"])
-                    x2 = int(row["gt_x_max"])
-                    y2 = int(row["gt_y_max"])
-                    # label_id = row['gt_category_id']
-                    label_name = "false_negatives"
+                    # x1 = int(row["gt_x_min"])
+                    # y1 = int(row["gt_y_min"])
+                    # x2 = int(row["gt_x_max"])
+                    # y2 = int(row["gt_y_max"])
+                    # # label_id = row['gt_category_id']
+                    # label_name = "false_negatives"
+                    continue
 
                 x1, x2, y1, y2 = self.resize_bbox(
                     bbox_resize_factor, x1, x2, y1, y2, img_width, img_height
@@ -277,8 +309,10 @@ class ClassificationDatasetBuilder:
                     image=image[y1:y2, x1:x2],
                     label_name=label_name,
                     file_name=file_name,
-                    detection_index=i,
+                    index=i,
                 )
+
+        self.save_groundtruth(bbox_resize_factor=bbox_resize_factor)
 
 
 class DataPreparation:

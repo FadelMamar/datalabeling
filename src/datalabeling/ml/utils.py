@@ -205,8 +205,8 @@ def get_data_cfg_paths_for_HN(
         "paths"
     ].to_list()
 
-    # get predictions & targets
-    predictions, groundtruth = perf_eval.get_preds_targets(
+    # compute performance & uncertainty of model
+    df_results_per_img = perf_eval.evaluate(
         images_dirs=None,
         images_paths=images_paths,
         pred_results_dir=pred_results_dir,
@@ -214,14 +214,11 @@ def get_data_cfg_paths_for_HN(
         load_results=args.hn_load_results,
         save_tag="hn-sampling",
     )
-
-    # compute performance & uncertainty of model
-    df_results_per_img = perf_eval.evaluate(predictions, groundtruth)
     df_hard_negatives = hard_sampler.select_hard_samples(df_results_per_img)
 
     # save image paths in data_config yaml
     hard_sampler.save_selection_references(
-        df_hard_negatives=df_hard_negatives, save_path_samples=save_path_samples
+        df_hard_negatives=df_hard_negatives, save_path=save_path_samples
     )
 
     # save data.yaml file in yolo format

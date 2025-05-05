@@ -254,7 +254,7 @@ class Detector(object):
             "Both should not be given."
         )
         results = {}
-        paths = images_paths or Path(path_to_dir).iterdir()
+        paths = images_paths or list(Path(path_to_dir).iterdir())
         for image_path in tqdm(paths, desc="Computing predictions..."):
             pred = self.predict(
                 image=None,

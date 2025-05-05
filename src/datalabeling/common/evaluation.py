@@ -23,6 +23,7 @@ class PerformanceEvaluator:
     def __init__(self, config: EvaluationConfig):
         self.config = config
         self.label_format = None
+        self.predictions, self.ground_truth = None, None
 
     def evaluate(
         self,
@@ -32,10 +33,10 @@ class PerformanceEvaluator:
         images_paths: list[str] = None,
         load_results: bool = False,
         save_tag: str = "",
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> pd.DataFrame:
         """Calculate performance metrics"""
 
-        predictions, ground_truth = self.get_preds_targets(
+        self.predictions, self.ground_truth = self.get_preds_targets(
             images_dirs=images_dirs,
             pred_results_dir=pred_results_dir,
             detector=detector,
@@ -45,7 +46,7 @@ class PerformanceEvaluator:
         )
 
         results_per_img, df_eval = self._calculate_base_metrics(
-            predictions, ground_truth
+            self.predictions.copy(), self.ground_truth.copy()
         )
         metrics = results_per_img.merge(df_eval, on="file_name", how="left")
         return metrics
