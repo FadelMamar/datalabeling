@@ -3,7 +3,7 @@
 
 <div align="center">
 <img src="assets/8a95d084bb9f48b0be6eebfbcb80bf68_0_636_512_1360_1152_2000.jpg" alt="Example of Data" width="400"/>
-<p><em>Example of image for animal detection in UAV imagery. source: savmap https://zenodo.org/records/1204408.</em></p>
+<p><em>Example of image for animal detection in UAV imagery. source: https://zenodo.org/records/1204408.</em></p>
 </div>
 
 
