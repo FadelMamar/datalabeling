@@ -1,7 +1,7 @@
 # **DataLabeling for Aerial Wildlife Census**  
 **An active learning pipeline for labeling and training YOLO-based detectors on aerial imagery of large herbivores.**  
 
-![Example Aerial Annotation](assets\0db007efb98d458f89276fda5792f241.JPG)
+![Example Aerial imagery](assets/0db007efb98d458f89276fda5792f241.JPG)
 
 ## **📌 Project Overview**  
 This tool facilitates **semi-automated data labeling** for wildlife researchers and ML practitioners working with:  
