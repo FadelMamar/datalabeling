@@ -61,7 +61,7 @@ def main():
         st.header("Upload to Label Studio")
         with st.form("upload_annotations"):
             project_id = st.number_input("Project ID", min_value=0, step=1)
-            model_alias = st.text_input("Model Alias").strip()
+            model_alias = st.text_input("Model Alias",value="yolov11x-obb").strip()
             detector_name = st.text_input("Detector name", value="obb-detector").strip()
             confidence_threshold = st.text_input(
                 "Confidence threshold", value=0.2
@@ -127,23 +127,13 @@ def main():
                     st.dataframe(instances_count, use_container_width=False)
                     st.dataframe(images_count, use_container_width=False)
 
-                    # Display metrics
-                    # col1, col2, col3 = st.columns(len(images_count.columns))
-                    # col1.metric(
-                    #     "Total Annotations", stats_df["total_annotations"].iloc[0]
-                    # )
-                    # col2.metric("Completed Tasks", stats_df["completed_tasks"].iloc[0])
-                    # col3.metric(
-                    #     "Avg Quality", f"{stats_df['avg_quality'].iloc[0]:.2f}%"
-                    # )
-
                 except Exception as e:
                     st.error(f"Failed to fetch statistics: {str(e)}")
 
         with st.form("train_val_test_stats"):
             path_to_yaml = st.text_input(
                 "Path to data.yaml file",
-                value=r"D:\datalabeling\configs\yolo_configs\data_config.yaml",
+                value=r"..\configs\yolo_configs\data\data_config.yaml",
             ).strip()
             split = st.text_input(
                 "Split to select", value="train", help="train val or test"
@@ -188,14 +178,16 @@ def main():
             ).strip()
 
             if st.form_submit_button("Get coordinates"):
-                gps_coords = get_gps_coords(image_paths=None, image_dir=image_dir)
+                with st.spinner("Running...", show_time=True):
+                    gps_coords = get_gps_coords(image_paths=None, image_dir=image_dir)
                 st.dataframe(gps_coords, use_container_width=False)
 
     with tab5:
         st.header("Inference")
 
-        with st.form("inference"):
-            model_alias = st.text_input("Model Alias", value="version18").strip()
+        with st.form("inference"):           
+
+            model_alias = st.text_input("Model Alias", value="yolov11x-obb").strip()
             model_name = st.text_input("Model name", value="obb-detector").strip()
             confidence_threshold = st.text_input(
                 "Confidence threshold", value=0.15
@@ -203,32 +195,38 @@ def main():
             image_dir = st.text_input(
                 "Path to images directory (without quotes)"
             ).strip()
-            # save_path = st.text_input("Save path (without quotes)").strip()
-            save_path=None
+            save_path = st.text_input("Save path (without quotes)",value='detections.csv').strip()
+
+            log_widget = st.empty().code
+            handler = StreamlitLogHandler(log_widget)
+            logger = logging.getLogger()
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
 
             if st.form_submit_button("Get predictions"):
-                df_results = run_inference(
-                    image_dir=image_dir,
-                    alias=model_alias,
-                    save_path=save_path,
-                    image_paths=None,
-                    confidence_threshold=confidence_threshold,
-                    dotenv_path=DOT_ENV,
-                    name=model_name,
-                    exts=[
-                        "*.jpg",
-                        "*.jpeg",
-                        "*.png",
-                    ],
-                )
+                with st.spinner("Running...", show_time=True):
+                    df_results = run_inference(
+                        image_dir=image_dir,
+                        alias=model_alias,
+                        save_path=save_path,
+                        image_paths=None,
+                        confidence_threshold=confidence_threshold,
+                        dotenv_path=DOT_ENV,
+                        name=model_name,
+                        exts=[
+                            "*.jpg",
+                            "*.jpeg",
+                            "*.png",
+                        ],
+                    )
                 st.dataframe(df_results[["Latitude", "Longitude", "Elevation"]], use_container_width=False)
                 
 
-
+@st.cache_data
 def run_inference(
     image_dir: str,
     alias: str,
-    save_path: str,
+    save_path: str=None,
     image_paths: list[None] = None,
     confidence_threshold: float = 0.15,
     dotenv_path: str = "../.env",
@@ -261,9 +259,12 @@ def run_inference(
         save_path=None,
     )
 
-    return results#[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
+    if save_path:
+        results[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
 
+    return results
 
+@st.cache_data
 def get_gps_coords(
     image_dir: str,
     image_paths: list[str] = None,
