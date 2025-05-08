@@ -1,0 +1,13 @@
+[project]
+name = "inference_service"
+version = "0.0.1"
+description = "inference service"
+readme = "README.md"
+authors = [
+    { name = "Fadel Seydou", email = "fadel.seydou@gmail.com" }
+]
+requires-python = "~=3.10"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

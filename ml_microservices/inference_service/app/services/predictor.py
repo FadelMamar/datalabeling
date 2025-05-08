@@ -20,7 +20,7 @@ class MyModelAPI(ls.LitAPI):
         import torch
 
         self.model = Detector(
-            path_to_weights=Path(__file__) / "../../model_weights/best.pt",
+            path_to_weights="/model_weights/best.pt",
             confidence_threshold=0.25,
             overlap_ratio=0.2,
             tilesize=800,
@@ -92,25 +92,6 @@ class MyModelAPI(ls.LitAPI):
         Wrap the model output in a JSON-serializable dict.
         """
         return output
-
-
-def run_inference_server(port=4141):
-    api = MyModelAPI()
-    server = ls.LitServer(
-        api,
-        max_batch_size=1,
-    )
-    server.run(port=port)
-
-
-# class MLflowModelFetcher:
-#     """Downloads model artifacts from MLflow by run ID"""
-#     def __init__(self, tracking_uri: str):
-#         self.client = MlflowClient(tracking_uri)
-
-#     def fetch(self, run_id: str, artifact_path: str, dst: str) -> str:
-#         """Download the model artifact directory to dst, returns local path"""
-#         return mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=artifact_path, dst_path=dst)
 
 
 # def prepare_triton_model(repo_path: str, model_name: str, model_version: str, model_dir: str):

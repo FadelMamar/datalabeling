@@ -1,0 +1,65 @@
+# env_file: .env
+
+services:
+
+  minio:
+    image: "minio/minio:RELEASE.2025-04-22T22-12-26Z"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  labelstudio:
+    image: "heartexlabs/label-studio:20250507.142758-develop-2e2c7ed2f"
+    ports:
+      - "8080:8080"
+    volumes:
+      - labelstudio_data:/label-studio/data
+    depends_on:
+      - minio
+
+  mlflow_service:
+    build:
+      context: ./mlflow_service        # directory containing your Dockerfile
+      dockerfile: Dockerfile           # omit if it’s literally named “Dockerfile”
+    image: my-mlflow-server:latest
+    environment:
+      # must match what you put in your Dockerfile or override as needed
+      BACKEND_STORE_URI: sqlite:///mlflow.db
+      DEFAULT_ARTIFACT_ROOT: s3://mlflow/
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    ports:
+      - "5000:5000"                     # expose MLflow UI/API on port 5000
+    volumes:
+      - mlflow_service_data:/mlflow/mlruns   # persist mlruns metadata
+    networks:
+      - backend                       # attach to your internal network
+    depends_on:
+      - minio
+
+  inference_service:
+    build:
+      context: ./inference_service
+      dockerfile: Dockerfile
+    image: my-inference-service:latest
+    ports:
+      - "4141:4141"
+    volumes:
+      - D:\datalabeling\base_models_weights:/model_weights
+
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  minio_data:
+  labelstudio_data:
+  mlflow_service_data:

@@ -1,12 +1,11 @@
-import pandas as pd
-from datalabeling.ml import Detector
-
 if __name__ == "__main__":
     # import geopy
     # from geopy import distance
     # from datalabeling.common.annotation_utils import GPSUtils, ImageProcessor
 
     # img_path = r"D:\paul_data\DJI_20231002100957_0001.JPG"
+    # import pandas as pd
+    # from datalabeling.ml import Detector
 
     # detector = Detector(path_to_weights=None)
 
@@ -64,40 +63,40 @@ if __name__ == "__main__":
 
     # detections = resp.json()
 
-    from dotenv import load_dotenv
+    # from dotenv import load_dotenv
 
-    load_dotenv(r"D:\datalabeling\.env")
+    # load_dotenv(r"D:\datalabeling\.env")
 
-    from datalabeling.ml import Annotator
-    import os
-    from pathlib import Path
-    import torch
-    from tqdm import tqdm
+    # from datalabeling.ml import Annotator
+    # import os
+    # from pathlib import Path
+    # import torch
+    # from tqdm import tqdm
 
-    from label_studio_sdk.client import LabelStudio
+    # from label_studio_sdk.client import LabelStudio
 
-    use_sliding_window = True
+    # use_sliding_window = True
 
-    handler = (
-        Annotator(  # path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
-            #                     is_yolo_obb=True,
-            #                     tilesize=640,
-            #                     overlapratio=0.1,
-            #                     use_sliding_window=use_sliding_window,
-            #                     confidence_threshold=0.5,
-            #                     # device="NPU", # "cpu", "cuda"
-            #                     tag_to_append=f"-sahi:{use_sliding_window}",
-            dotenv_path="../.env"
-        )
-    )
+    # handler = (
+    #     Annotator(  # path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
+    #         #                     is_yolo_obb=True,
+    #         #                     tilesize=640,
+    #         #                     overlapratio=0.1,
+    #         #                     use_sliding_window=use_sliding_window,
+    #         #                     confidence_threshold=0.5,
+    #         #                     # device="NPU", # "cpu", "cuda"
+    #         #                     tag_to_append=f"-sahi:{use_sliding_window}",
+    #         dotenv_path="../.env"
+    #     )
+    # )
 
-    project_id = 3  # insert correct project_id by loooking at the url
+    # project_id = 3  # insert correct project_id by loooking at the url
     # top_n=10
     # handler.upload_predictions(project_id=project_id,top_n=top_n)
 
-    instances_count, images_count = handler.get_project_stats(
-        project_id=project_id, annotator_id=0
-    )
+    # instances_count, images_count = handler.get_project_stats(
+    #     project_id=project_id, annotator_id=0
+    # )
 
     # LABEL_STUDIO_URL = os.getenv("LABEL_STUDIO_URL")
     # API_KEY = os.getenv("LABEL_STUDIO_API_KEY")
@@ -107,3 +106,49 @@ if __name__ == "__main__":
     # project = ls.projects.get(3)
 
     # tasks = ls.tasks.list(project=project.id,)
+
+    # =============================================================================
+    #     Yolo architecture
+    # =============================================================================
+    from ultralytics import YOLO
+    import torch
+    import numpy as np
+
+    def predict_with_uncertainty(model, img_path, n_iter=10):
+        """Monte Carlo Dropout for uncertainty estimation"""
+
+        from baal.bayesian.dropout import patch_module
+        from baal.active.heuristics import BALD
+
+        all_preds = []
+        heuristic = BALD(reduction="mean")
+        _model = patch_module(model, inplace=False)
+
+        num_classes = model.nc
+
+        with torch.no_grad():
+            for _ in range(n_iter):
+                pred = _model(img_path)[0]  # YOLO prediction
+                try:
+                    pred = pred.boxes.data.cpu().numpy()
+                except:
+                    pred = pred.obb.data.cpu().numpy()
+
+                idx = pred[:, -1].astype(int)
+                dummy = np.zeros((pred.shape[0], num_classes, 5))
+                dummy[idx] = pred[:, :-2]
+                all_preds.append(dummy)
+
+        # Calculate uncertainty using BALD
+        stacked = np.stack(all_preds, axis=-1)
+        uncertainty = heuristic(stacked)
+
+        return {"boxes": stacked, "uncertainty": uncertainty}
+
+    model = YOLO(r"D:\datalabeling\base_models_weights\best.pt", task="detect")
+
+    x = r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\images\00a033fefe644429a1e0fcffe88f8b39_0_4_512_512_1152_1152.jpg"
+
+    (out1,) = model(x)
+
+    # out = predict_with_uncertainty(model,x,n_iter=3)
