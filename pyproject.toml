@@ -43,6 +43,7 @@ dependencies = [
     "ultralytics>=8.3.128",
     "albumentations>=2.0.6",
     "animaloc",
+    "pycocotools>=2.0.8",
 ]
 
 [build-system]

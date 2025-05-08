@@ -803,6 +803,7 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pillow" },
     { name = "pre-commit" },
+    { name = "pycocotools" },
     { name = "ray", extra = ["data", "serve", "train", "tune"] },
     { name = "ruff" },
     { name = "sahi" },
@@ -848,6 +849,7 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "pre-commit", specifier = ">=4.2.0" },
+    { name = "pycocotools", specifier = ">=2.0.8" },
     { name = "ray", extras = ["data", "serve", "train", "tune"], specifier = ">=2.44.1" },
     { name = "ruff", specifier = ">=0.9.10" },
     { name = "sahi", specifier = ">=0.11.22" },
@@ -2743,16 +2745,16 @@ wheels = [
 
 [[package]]
 name = "litserve"
-version = "0.2.8"
+version = "0.2.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
     { name = "pyzmq" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/44/f9/d84c4ce940fead558f9bdabb417879edad3f358e70ba25f90922c89720a2/litserve-0.2.8.tar.gz", hash = "sha256:c3cf29ad5a106d6933bde17373bede872c618c40b5cbf6301e0dce3bf227c1fa", size = 53446 }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/6c/88a6ec1727ab049bba62f1094468f1c499ceb19d5fe24c5048089b61116a/litserve-0.2.9.tar.gz", hash = "sha256:5f36f9feb9b1c0573c971d1f3acc26b922dc6039af875f9b5bcbd2435c632d88", size = 56185 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/90/f7f205c22adb8df1c7c9bf562f8987e4499213fa739bd29b3b2aa4629b94/litserve-0.2.8-py3-none-any.whl", hash = "sha256:5fc3531344c7e95a212b2d78176dc648b31e8b8a484791610a7f5d9ce3314a82", size = 66601 },
+    { url = "https://files.pythonhosted.org/packages/b7/53/ff2b55cf3742eb7d8ebf80d46c081ffc1bb27f5a6330baac8c60f3a7dcd8/litserve-0.2.9-py3-none-any.whl", hash = "sha256:7685d66666d8d17222f477e44183b40a2c6314c89fb23ad960401ffd6b6cbb05", size = 69302 },
 ]
 
 [[package]]
@@ -4097,6 +4099,32 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/46/e7/ade6ddc8ef255e2a3c112c6ab3210f70d26df79dbc2af53922e182bbc42f/pyboxen-1.3.0.tar.gz", hash = "sha256:f12e6c656769f9d6aa1dd5d11688a62ed12da9dcebfa22a242103c610130b948", size = 5943 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/17/c0/ff96b0e84ba004123eddd0fb2299cc6499cff62eb6c126d468fc05181ab5/pyboxen-1.3.0-py3-none-any.whl", hash = "sha256:ac799533bbdb0a4f4a7c3b8723607dbe3aed3d293d3863e178064027f8177c9c", size = 6789 },
+]
+
+[[package]]
+name = "pycocotools"
+version = "2.0.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6b/1a/cdfce175d663568215b3a6b6170ad2a526932cc1021dffabda56a5c3f189/pycocotools-2.0.8.tar.gz", hash = "sha256:8f2bcedb786ba26c367a3680f9c4eb5b2ad9dccb2b34eaeb205e0a021e1dfb8d", size = 24993 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/56/9eedccfd1cfdaf6553d527bed0b2b5572550567a5786a8beb098027a3e5e/pycocotools-2.0.8-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:92bf788e6936fc52b57ccaaa78ecdaeac81872eebbfc45b6fe16ae18b85709bd", size = 162868 },
+    { url = "https://files.pythonhosted.org/packages/d5/9c/09cd808743338db170915deb35fa020b792d583238afe55f27c011f91c3c/pycocotools-2.0.8-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6a07f57f991e379959c0f4a1b9ea35d875876433b7f45c6d8fe6b718e58834bc", size = 443318 },
+    { url = "https://files.pythonhosted.org/packages/8b/d4/7279d072c0255d07c541326f6058effb1b08190f49695bf2c22aae666878/pycocotools-2.0.8-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5968a1e5421719af9eb7ccee4c540bfb18b1fc95d30d9a48571d0aaeb159a1ae", size = 458661 },
+    { url = "https://files.pythonhosted.org/packages/33/b7/886f5ceb83cfefe52d14b4df7da034deecddf714b4ff2c75d98ee35469cd/pycocotools-2.0.8-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:59eb7b1839f269262456347b6fe2bb88a8be56b32d87fab946483746e1f18a07", size = 438662 },
+    { url = "https://files.pythonhosted.org/packages/cf/0f/890e1e5d6c9f773fb5f5903ca8f75425b1c0cec8f71c1322f481f26a0138/pycocotools-2.0.8-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:05480f731fcd7c5d05389081f84198f3b8117f4560227185bc462cccb5c79181", size = 456444 },
+    { url = "https://files.pythonhosted.org/packages/2e/f5/dfa78dc72e47dfe1ada7b37fedcb338454750470358a6dfcfdfda35fa337/pycocotools-2.0.8-cp311-cp311-win_amd64.whl", hash = "sha256:e680e27e58b840c105fa09a3bb1d91706038c5c8d7b7bf09c2e5ecbd1b05ad7f", size = 85304 },
+    { url = "https://files.pythonhosted.org/packages/43/2a/7a461713fd3ff474bd12420b8e402c248b7821f295031f2ac632c0949740/pycocotools-2.0.8-cp311-cp311-win_arm64.whl", hash = "sha256:16c5a1d2c8726149b5a0e6fe95095ffc172d4012ece5dee9b5beeef708fc0284", size = 71417 },
+    { url = "https://files.pythonhosted.org/packages/20/b6/d3287bdb2f1954d5739337035a424b6ec012bc6fed0af476c92309cec001/pycocotools-2.0.8-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:dd4616621d062882db677de5c64b1b0f6efbcaed9fd284b61e7ba4b16ab24d7a", size = 162686 },
+    { url = "https://files.pythonhosted.org/packages/ce/1d/3f32a8fd8b0d0c6f952f030ac90fceb318204c19de33b1cbc4cccee51a03/pycocotools-2.0.8-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5683ba2612c39094a2e8453d40349768a3da6673376786651481d6f553ff7b50", size = 429594 },
+    { url = "https://files.pythonhosted.org/packages/3c/ce/e51566bce4067327c299fe8b6de18f9275e0c0ceaf8e4820ea9af689101c/pycocotools-2.0.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b89f399eb851d18f68dfa7f126380394ec0820915c7b3831dd37563bc58daa95", size = 443497 },
+    { url = "https://files.pythonhosted.org/packages/87/f2/038244a12c3297a2a7821bd6e72deaa350831c142b0380a14c9749009d83/pycocotools-2.0.8-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:e6d528c4f35580347ee3cd57f92cf0926e9b6a688d0904b2ea8a814ae2e57a47", size = 428855 },
+    { url = "https://files.pythonhosted.org/packages/74/fd/88025b72eaff58fe4066823ebecb3232c3b59f2a080cb3d4c974e1082732/pycocotools-2.0.8-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:56bbe8be608def61da0b4430562b8d5ff14525f509631a667cfd8405325193da", size = 444322 },
+    { url = "https://files.pythonhosted.org/packages/4a/9b/8f89d36e4a23166ccabe5c9fed00baffaa6a67609add316fc1334bbf4016/pycocotools-2.0.8-cp312-cp312-win_amd64.whl", hash = "sha256:d004033e760a172b2ccbdf4a62d20d2bcf0c9b40dc3c0d1d724045b0a6944862", size = 83255 },
+    { url = "https://files.pythonhosted.org/packages/4d/82/73ba66a13b2288ecc60ed910dd8c16e6c584f3ca5407e706e5903d256712/pycocotools-2.0.8-cp312-cp312-win_arm64.whl", hash = "sha256:87853ca11e9b130e461d6b5284ea475efe35429060a915844e1998d206ba028e", size = 68922 },
 ]
 
 [[package]]
