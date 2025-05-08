@@ -8,6 +8,7 @@ import os
 import traceback
 from datalabeling.ml.interface import Annotator
 from datalabeling.common.io import load_yaml
+from datalabeling.common.annotation_utils import GPSUtils, ImageProcessor
 import logging
 from label_studio_sdk.client import LabelStudio
 from itertools import chain
@@ -46,8 +47,14 @@ def main():
     # training_api_token = st.text_input("Training API Token", type="password")
 
     # Main tabs
-    tab1, tab2, tab3 = st.tabs(
-        ["Upload Annotations", "Project Analytics", "Model Training"]
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        [
+            "Upload Annotations",
+            "Project Analytics",
+            "Model Training",
+            "GPS",
+            "Inference",
+        ]
     )
 
     with tab1:
@@ -171,19 +178,113 @@ def main():
             batch_size = st.selectbox("Batch Size", [8, 16, 32, 64])
 
             if st.form_submit_button("Start Training"):
-                try:
-                    project_ids = [
-                        int(pid.strip()) for pid in training_projects.split(",")
-                    ]
-                    response = start_training(
-                        project_ids, epochs, batch_size, TRAINING_API_KEY
-                    )
-                    st.success(
-                        f"Training initiated! Job ID: {response.json()['job_id']}"
-                    )
-                    st.json(response.json())
-                except Exception as e:
-                    st.error(f"Training failed: {str(e)}")
+                raise NotImplementedError
+
+    with tab4:
+        st.header("GPS")
+        with st.form("gps_coords"):
+            image_dir = st.text_input(
+                "Path to images directory (without quotes)"
+            ).strip()
+
+            if st.form_submit_button("Get coordinates"):
+                gps_coords = get_gps_coords(image_paths=None, image_dir=image_dir)
+                st.dataframe(gps_coords, use_container_width=False)
+
+    with tab5:
+        st.header("Inference")
+
+        with st.form("inference"):
+            model_alias = st.text_input("Model Alias", value="version18").strip()
+            model_name = st.text_input("Model name", value="obb-detector").strip()
+            confidence_threshold = st.text_input(
+                "Confidence threshold", value=0.15
+            ).strip()
+            image_dir = st.text_input(
+                "Path to images directory (without quotes)"
+            ).strip()
+            save_path = st.text_input("Save path (without quotes)").strip()
+
+            if st.form_submit_button("Get predictions"):
+                run_inference(
+                    image_dir=image_dir,
+                    alias=model_alias,
+                    save_path=save_path,
+                    image_paths=None,
+                    confidence_threshold=confidence_threshold,
+                    dotenv_path=DOT_ENV,
+                    name=model_name,
+                    exts=[
+                        "*.jpg",
+                        "*.jpeg",
+                        "*.png",
+                    ],
+                )
+
+
+def run_inference(
+    image_dir: str,
+    alias: str,
+    save_path: str,
+    image_paths: list[None] = None,
+    confidence_threshold: float = 0.15,
+    dotenv_path: str = "../.env",
+    name: str = "obb-detector",
+    exts: list[str] = [
+        "*.jpg",
+        "*.jpeg",
+        "*.png",
+    ],
+) -> None:
+    handler = Annotator(
+        mlflow_model_alias=alias,
+        mlflow_model_name=name,
+        confidence_threshold=confidence_threshold,
+        is_yolo_obb=name.strip() == "obb-detector",
+        dotenv_path=dotenv_path,
+    )
+
+    exts = [e.lower() for e in exts] + [e.capitalize() for e in exts]
+
+    if image_paths is None:
+        image_paths = chain.from_iterable([Path(image_dir).glob(ext) for ext in exts])
+
+    results = handler.predict_directory(
+        path_to_dir=None,
+        images_paths=image_paths,
+        return_gps=True,
+        return_coco=False,
+        as_dataframe=True,
+        save_path=None,
+    )
+
+    results[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
+
+
+def get_gps_coords(
+    image_dir: str,
+    image_paths: list[str] = None,
+    exts: list[str] = [
+        "*.jpg",
+        "*.jpeg",
+        "*.png",
+    ],
+):
+    exts = [e.lower() for e in exts] + [e.capitalize() for e in exts]
+
+    if image_paths is None:
+        image_paths = chain.from_iterable([Path(image_dir).glob(ext) for ext in exts])
+
+    gps_coords = [
+        GPSUtils.get_gps_coord(file_name=path, return_as_decimal=True)[0]
+        for path in image_paths
+    ]
+
+    gps_coords = pd.DataFrame(
+        data=gps_coords, columns=["Latitude", "Longitude", "Elevation"]
+    )
+
+    return gps_coords
 
 
 # Mock API client functions (implement according to your API specs)

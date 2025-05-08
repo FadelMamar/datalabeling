@@ -6,21 +6,15 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir -e . \
- && pip install --no-cache-dir -r requirements.txt
-
 # Create & switch to app directory
-WORKDIR /workspace
-
-# 4. Install your package and dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 2. Create & switch to app directory
 WORKDIR /app
 
-# 3. Copy dependency files first (for better caching)
-COPY .env app.py requirements.txt ./
+# Copy dependency files first (for better caching)
+COPY .env requirements.txt ./
 
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app.py ./
 
 # Expose the default port
 EXPOSE 8501

@@ -54,6 +54,13 @@ services:
     volumes:
       - D:\datalabeling\base_models_weights:/model_weights
 
+  dashboard_service:
+    build:
+      context: ./dashboard_service
+      dockerfile: Dockerfile
+    image: my-dashboard-service:latest
+    ports:
+      - "8501:8501"
 
 networks:
   backend:
