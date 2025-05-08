@@ -659,9 +659,10 @@ class TrainingManager:
         assert args.val in ["True", "False"]
 
         cfg = dict()
-        if not self.args.is_rtdetr:
-            os.environ["pos_weight"] = json.dumps(self.args.ultralytics_pos_weight)
-            cfg = dict(trainer=CustomTrainer)
+        # TODO: debug
+        # if not self.args.is_rtdetr:
+        #     os.environ["pos_weight"] = json.dumps(self.args.ultralytics_pos_weight)
+        #     cfg = dict(trainer=CustomTrainer)
 
         self.model.train(
             data=data_cfg or args.yolo_yaml,
@@ -676,6 +677,9 @@ class TrainingManager:
             momentum=args.optimizer_momentum,
             weight_decay=args.weight_decay,
             warmup_epochs=args.warmup_epochs,
+            dfl=args.dfl,
+            cls=args.cls,
+            box=args.box,
             dropout=args.dropout,
             batch=batchsize or args.batchsize,
             val=args.val == "True",

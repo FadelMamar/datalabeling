@@ -200,13 +200,15 @@ class ClassificationDatasetBuilder:
         self,
         detector: Detector,
         eval_config: EvaluationConfig,
-        source_dir: str,
+        source_dirs: list[str],
         output_dir: str,
     ):
+        self.config = eval_config
         self.detector = detector
-        self.source_dir = source_dir
+        self.source_dirs = source_dirs
         self.output_dir = output_dir
-        self.perf_eval = PerformanceEvaluator(config=eval_config)
+        self.perf_eval = PerformanceEvaluator(config=self.config)
+        
         Path(output_dir).mkdir(exist_ok=True, parents=True)
 
     def save(
@@ -268,11 +270,12 @@ class ClassificationDatasetBuilder:
         assert bbox_resize_factor >= 1.0
 
         df_metrics = self.perf_eval.evaluate(
-            images_dirs=[self.source_dir],
+            images_dirs=self.source_dirs,
             pred_results_dir=self.output_dir,
+            images_paths=None,
             save_tag="cls",
             detector=self.detector,
-            load_results=False,
+            load_results=self.config.load_results,
         )
         mask_fn = df_metrics["gt_FN"] == True
         mask_fp = df_metrics["pred_FP"] == True
