@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from typing import List
 import requests
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from pathlib import Path
 import os
 import traceback
@@ -14,15 +14,15 @@ from label_studio_sdk.client import LabelStudio
 from itertools import chain
 
 DOT_ENV = Path(__file__) / "../.env"
-load_dotenv(DOT_ENV)
+# load_dotenv(DOT_ENV)
+
 LABEL_STUDIO_URL = os.environ["LABEL_STUDIO_URL"]
 LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
+
 LABEL_STUDIO_CLIENT = LabelStudio(
     base_url=LABEL_STUDIO_URL, api_key=LABEL_STUDIO_API_KEY
 )
-TRAINING_API_URL = ...
-TRAINING_API_KEY = ...
-# LOCAL_FILES_DOCUMENT_ROOT = os.environ['LOCAL_FILES_DOCUMENT_ROOT']
+
 
 
 class StreamlitLogHandler(logging.Handler):
