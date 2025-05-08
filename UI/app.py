@@ -203,10 +203,11 @@ def main():
             image_dir = st.text_input(
                 "Path to images directory (without quotes)"
             ).strip()
-            save_path = st.text_input("Save path (without quotes)").strip()
+            # save_path = st.text_input("Save path (without quotes)").strip()
+            save_path=None
 
             if st.form_submit_button("Get predictions"):
-                run_inference(
+                df_results = run_inference(
                     image_dir=image_dir,
                     alias=model_alias,
                     save_path=save_path,
@@ -220,6 +221,8 @@ def main():
                         "*.png",
                     ],
                 )
+                st.dataframe(df_results[["Latitude", "Longitude", "Elevation"]], use_container_width=False)
+                
 
 
 def run_inference(
@@ -258,7 +261,7 @@ def run_inference(
         save_path=None,
     )
 
-    results[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
+    return results#[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
 
 
 def get_gps_coords(
