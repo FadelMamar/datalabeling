@@ -256,12 +256,18 @@ class Detector(object):
         results = {}
         paths = images_paths or list(Path(path_to_dir).iterdir())
         for image_path in tqdm(paths, desc="Computing predictions..."):
-            pred = self.predict(
-                image=None,
-                return_coco=return_coco or as_dataframe or return_gps,
-                image_path=image_path,
-                return_gps=return_gps,
-            )
+
+            try:
+                pred = self.predict(
+                    image=None,
+                    return_coco=return_coco or as_dataframe or return_gps,
+                    image_path=image_path,
+                    return_gps=return_gps,
+                )
+            except Exception as e:
+                logger.error(e)
+                logger.error(f"Failed for {image_path}")
+                continue
             gps_coords = None
             if return_gps:
                 pred, gps_info = pred

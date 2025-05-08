@@ -9,6 +9,7 @@ my_ml_backend/__pycache__
 mlruns
 *.pt
 my_ml_backend/cache.db
+classifier
 cache.db
 *.pyc
 *.csv

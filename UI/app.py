@@ -187,8 +187,8 @@ def main():
 
         with st.form("inference"):           
 
-            model_alias = st.text_input("Model Alias", value="yolov11x-obb").strip()
-            model_name = st.text_input("Model name", value="obb-detector").strip()
+            model_alias = st.text_input("Model Alias", value="yolov12s").strip()
+            model_name = st.text_input("Model name", value="detector").strip()
             confidence_threshold = st.text_input(
                 "Confidence threshold", value=0.15
             ).strip()

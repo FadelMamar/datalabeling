@@ -109,6 +109,16 @@ class Annotator(object):
         save_path: str = None,
     ):
         try:
+             results = self.model.predict_directory(
+                path_to_dir=path_to_dir,
+                images_paths=images_paths,
+                return_gps=return_gps,
+                return_coco=return_coco,
+                as_dataframe=as_dataframe,
+                save_path=save_path,
+            )
+            
+        except:
             results = (
                 self.model.unwrap_python_model().detection_model.predict_directory(
                     path_to_dir=path_to_dir,
@@ -118,15 +128,6 @@ class Annotator(object):
                     as_dataframe=as_dataframe,
                     save_path=save_path,
                 )
-            )
-        except:
-            results = self.model.predict_directory(
-                path_to_dir=path_to_dir,
-                images_paths=images_paths,
-                return_gps=return_gps,
-                return_coco=return_coco,
-                as_dataframe=as_dataframe,
-                save_path=save_path,
             )
 
         return results

@@ -169,12 +169,12 @@ class ClassificationDataExport(PipelineStep):
         self,
         detector: Detector,
         eval_config: EvaluationConfig,
-        source_dir: str,
+        source_dirs: list[str],
         output_dir: str,
         bbox_resize_factor: float = 2.0,
     ):
         self.handler = ClassificationDatasetBuilder(
-            detector, eval_config, source_dir=source_dir, output_dir=output_dir
+            detector, eval_config, source_dirs=source_dirs, output_dir=output_dir
         )
         self.bbox_resize_factor = bbox_resize_factor
 
