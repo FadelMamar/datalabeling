@@ -61,7 +61,7 @@ def main():
             ).strip()
             path_to_weights = st.text_input(
                 "Path to model weights",
-                value=r"D:\datalabeling\base_models_weights\best.pt",
+                # value=r"D:\datalabeling\base_models_weights\best.pt",
             ).strip()
             tile_size = st.number_input("Tile size", min_value=640, step=1)
             top_n = st.number_input("Top n", min_value=0, step=1)

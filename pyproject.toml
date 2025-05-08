@@ -40,6 +40,9 @@ dependencies = [
     "ray[data,serve,train,tune]>=2.44.1",
     "label-studio>=1.17.0",
     "streamlit>=1.44.1",
+    "ultralytics>=8.3.128",
+    "albumentations>=2.0.6",
+    "animaloc",
 ]
 
 [build-system]
@@ -54,6 +57,7 @@ dev = [
 
 [tool.uv.sources]
 datalabeling = { workspace = true }
+animaloc = { git = "https://github.com/FadelMamar/HerdNet.git" }
 
 [tool.black]
 line-length = 88
