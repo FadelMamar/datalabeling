@@ -1035,15 +1035,19 @@ class GPSUtils:
         if gps_info is None:
             return None
 
-        altitude_map = {
-            0: "Above Sea Level",
-            1: "Below Sea Level",
-            2: "Positive Sea Level (sea-level ref)",
-            3: "Negative Sea Level (sea-level ref)",
-        }
+        if gps_info.get("GPSAltitudeRef", None):
+            altitude_map = {
+                0: "Above Sea Level",
+                1: "Below Sea Level",
+                2: "Positive Sea Level (sea-level ref)",
+                3: "Negative Sea Level (sea-level ref)",
+            }
 
-        # map GPSAltitudeRef
-        gps_info["GPSAltitudeRef"] = altitude_map[gps_info["GPSAltitudeRef"][0]]
+            # map GPSAltitudeRef
+            try:
+                gps_info["GPSAltitudeRef"] = altitude_map[gps_info["GPSAltitudeRef"]]
+            except:
+                gps_info["GPSAltitudeRef"] = altitude_map[gps_info["GPSAltitudeRef"][0]]
 
         # rewite latitude
         gps_coords = dict()

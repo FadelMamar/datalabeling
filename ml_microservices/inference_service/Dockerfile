@@ -7,14 +7,17 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir -e . \
- && pip install --no-cache-dir -r requirements.txt
-
 # Create & switch to app directory
 WORKDIR /workspace
 
 # Copy dependency files first (for better caching)
-COPY pyproject.toml requirements.txt main.py ./
+COPY pyproject.toml requirements.txt ./
+
+RUN pip install --no-cache-dir -e . \
+ && pip install --no-cache-dir -r requirements.txt
+
+
+ COPY main.py ./
 
 # Copy your application code into /app
 COPY app/ ./app/
