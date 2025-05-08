@@ -79,7 +79,7 @@ def sample_pos_neg(images_paths: list, ratio: float, seed: int = 41):
     # concatenate
     sampled_data = pd.concat([sampled_empty, data.loc[data["is_empty"] == 0]])
 
-    logger.info(f"Sampling: pos={num_non_empty} & neg={num_sampled_empty}", end="\n")
+    logger.info(f"Sampling: pos={num_non_empty} & neg={num_sampled_empty}")
 
     return sampled_data["image_paths"].to_list()
 
@@ -150,7 +150,6 @@ def get_data_cfg_paths_for_cl(
 
     logger.info(
         f"Saving samples at: {save_path_samples} and data_cfg at {save_path_cfg}",
-        end="\n\n",
     )
 
     return str(save_path_cfg)

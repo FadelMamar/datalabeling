@@ -55,6 +55,8 @@ class PerformanceEvaluator:
         self, df_pred: pd.DataFrame, df_gt: pd.DataFrame
     ) -> pd.DataFrame:
         """Compute precision, recall, mAP etc."""
+        
+        logger.info("Computing TP, FP and mAP.")
 
         m_ap = MeanAveragePrecision(
             box_format="xyxy",
@@ -73,7 +75,9 @@ class PerformanceEvaluator:
         gt_flags = []
 
         image_paths = df_pred["file_name"].unique()
+        
         for image_path in tqdm(image_paths, desc="Computing metrics"):
+            
             # get gt
             mask_gt = df_gt["file_name"] == image_path
             df_gt_i = df_gt.loc[mask_gt, :].iloc[:, 1:]
@@ -197,28 +201,6 @@ class PerformanceEvaluator:
     def _get_bbox(self, gt: pd.DataFrame):
         return gt[["x_min", "y_min", "x_max", "y_max"]].to_numpy()
 
-        # empty image case
-        # if len(gt) < 1:
-        #     return np.array([])
-
-        # if self.label_format == "yolo-obb":
-        #     xs = [0, 2, 4, 6]
-        #     ys = [1, 3, 5, 7]
-        #     x_min = np.min(gt[:, xs], axis=1).reshape((-1, 1))
-        #     x_max = np.max(gt[:, xs], axis=1).reshape((-1, 1))
-        #     y_min = np.min(gt[:, ys], axis=1).reshape((-1, 1))
-        #     y_max = np.max(gt[:, ys], axis=1).reshape((-1, 1))
-
-        # elif self.label_format == "yolo":
-        #     x_min = (gt[:, 0] - gt[:, 2] / 2.0).reshape(-1, 1)
-        #     x_max = (gt[:, 0] + gt[:, 2] / 2.0).reshape(-1, 1)
-        #     y_min = (gt[:, 1] - gt[:, 3] / 2.0).reshape(-1, 1)
-        #     y_max = (gt[:, 1] + gt[:, 3] / 2.0).reshape(-1, 1)
-
-        # else:
-        #     raise NotImplementedError("label format should be yolo-obb or yolo.")
-
-        # return np.hstack([x_min, y_min, x_max, y_max]).astype(float)
 
     def get_preds_targets(
         self,
@@ -229,6 +211,7 @@ class PerformanceEvaluator:
         load_results: bool = False,
         save_tag: str = "",
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        
         # when providing a list of images
         if images_paths is not None:
             assert images_dirs is None, "images_dirs should be None!"
@@ -236,7 +219,7 @@ class PerformanceEvaluator:
             save_path = os.path.join(pred_results_dir, f"predictions-{sfx}.json")
 
             # get prediction results
-            if load_results:
+            if load_results and os.path.exists(save_path):
                 df_results = DataHandler.load_json_predictions(save_path)
             else:
                 df_results = detector.predict_directory(
@@ -263,7 +246,7 @@ class PerformanceEvaluator:
             save_path = os.path.join(pred_results_dir, f"predictions-{sfx}.json")
 
             # get prediction results
-            if load_results:
+            if load_results and os.path.exists(save_path):
                 results = DataHandler.load_json_predictions(save_path)
             else:
                 results = detector.predict_directory(
