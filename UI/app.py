@@ -260,6 +260,11 @@ def run_inference(
     )
 
     if save_path:
+        results.drop(columns=["Latitude", "Longitude",],inplace=True)
+        renaming={'px_Latitude':'Latitude',
+                 'px_Longitude':'Longitude'
+        }
+        results.rename(columns=renaming, inplace=True)
         results[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
 
     return results
