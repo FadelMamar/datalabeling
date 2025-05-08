@@ -5,47 +5,27 @@ from datargs import parse
 from datalabeling.arguments import Arguments
 
 if __name__ == "__main__":
-    args = parse(Arguments)
 
-    if args.export_format is not None:
-        from ultralytics import YOLO
+    args = parse(TrainingConfig)
 
-        model = YOLO(args.export_model_weights)
-        assert args.width == args.height, "Input image should have a square shape."
-        model.export(
-            format=args.export_format,
-            imgsz=args.width,
-            nms=True,
-            half=args.half,
-            int8=args.int8,
-            batch=args.export_batch_size,
-            dynamic=args.dynamic,
-            simplify=True,
-        )
+    # if args.export_format is not None:
+    #     from ultralytics import YOLO
 
-    if args.start_training:
-        # import wandb
-        import mlflow
-        import yaml
+    #     model = YOLO(args.export_model_weights)
+    #     assert args.width == args.height, "Input image should have a square shape."
+    #     model.export(
+    #         format=args.export_format,
+    #         imgsz=args.width,
+    #         nms=True,
+    #         half=args.half,
+    #         int8=args.int8,
+    #         batch=args.export_batch_size,
+    #         dynamic=args.dynamic,
+    #         simplify=True,
+    #     )
 
-        from datalabeling.train import start_training
-
-        if args.mlflow_model_alias is None:
-            logging.info(f"Loading model @ : {args.path_weights}")
-
-        else:
-            mlflow.set_tracking_uri(args.mlflow_tracking_uri)
-            client = mlflow.MlflowClient()
-            name = args.run_name
-            alias = args.mlflow_model_alias
-            version = client.get_model_version_by_alias(name=name, alias=alias).version
-            modelURI = f"models:/{name}/{version}"
-            args.path_weights = (
-                mlflow.pyfunc.load_model(modelURI)
-                .unwrap_python_model()
-                .detection_model.detection_model.model.ckpt_path
-            )
-            logging.info(f"Loading model {modelURI} registered with alias: {alias}")
+    # if args.start_training:
+        # import wandb       
 
         # with wandb.init(
         #             # project=args.project_name,
