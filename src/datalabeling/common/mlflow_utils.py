@@ -1,7 +1,7 @@
 import mlflow
 import torch
 
-from ..annotator import Detector
+from ..ml import Detector
 
 
 def get_experiment_id(name: str):

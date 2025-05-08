@@ -8,7 +8,7 @@ import cloudpickle
 import mlflow
 from datargs import parse
 
-from datalabeling.mlflow import DetectorWrapper, get_experiment_id, model_wrapper
+from datalabeling.common.mlflow_utils import DetectorWrapper, get_experiment_id
 
 
 @dataclass
@@ -74,7 +74,7 @@ def main():
 
     exp_id = get_experiment_id(args.exp_name)
 
-    cloudpickle.register_pickle_by_value(model_wrapper)
+    # cloudpickle.register_pickle_by_value(model_wrapper)
 
     with mlflow.start_run(experiment_id=exp_id):
         mlflow.pyfunc.log_model(
