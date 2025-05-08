@@ -8,10 +8,13 @@ call helper-scripts\activate_label-backend_env.bat
 
 @REM HerdNet
 @REM --engine original, lightning
-call uv run tools\validate_herdnet.py --name "herdnet-identif" --batch-size 1 --data-config "configs\yolo_configs\dataset_identification.yaml" --splits "val" ^
-            --imgsz 800 --weights "mlartifacts/934358897506090439/b93b0e55010348be89f55bb27b99fd91/artifacts/epoch=11-step=1740/epoch=11-step=1740.ckpt" ^
-            --save-dir ".\runs_herdnet" --print-freq 500 --engine "lightning"
+@REM call uv run tools\validate_herdnet.py --name "herdnet-identif" --batch-size 1 --data-config "configs\yolo_configs\dataset_identification.yaml" --splits "val" ^
+@REM             --imgsz 800 --weights "mlartifacts/934358897506090439/b93b0e55010348be89f55bb27b99fd91/artifacts/epoch=11-step=1740/epoch=11-step=1740.ckpt" ^
+@REM             --save-dir ".\runs_herdnet" --print-freq 500 --engine "lightning"
 
+@REM call uv run tools\validate_herdnet.py --name "herdnet-Det-PTR" --batch-size 16 --data-config "configs\yolo_configs\dataset_pretraining.yaml" --splits "val" ^
+@REM             --imgsz 640 --weights "runs_herdnet\herdnet-Det-PTR_emptyRatio_0.0\best_model.pth" ^
+@REM             --save-dir ".\runs_herdnet" --print-freq 500 --engine "original"
 
 @REM Ultralytics 
 

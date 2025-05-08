@@ -39,17 +39,17 @@ call wandb online
 
 @REM herdnet
 
-@REM call uv run tools\train-herdnet.py --data-config-yaml "configs\yolo_configs\dataset_identification.yaml" --run-name "herdnet-Identif" --lr0 0.0001 --batchsize 16 ^
-@REM                                    --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth" ^
+@REM call uv run tools\train-herdnet.py --data-config-yaml "configs\yolo_configs\dataset_identification.yaml" --run-name "herdnet-Identif" --lr0 0.0001 --batchsize 8 ^
+@REM                                    --path-weights "runs_herdnet\herdnet-Det-PTR_emptyRatio_0.0\best_model.pth" --herdnet-num-classes 2 ^
 @REM                                    --imgsz 800 --cl-ratios 0.0 --project-name "Herdnet" --epochs 30 --device "cuda"
 
 @REM call uv run tools\train-herdnet.py --data-config-yaml "configs\yolo_configs\dataset_identification-detection.yaml" --run-name "herdnet-Det" --lr0 0.0001 --batchsize 16 ^
-@REM                                     --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  ^
+@REM                                     --path-weights "runs_herdnet\herdnet-Det-PTR_emptyRatio_0.0\best_model.pth" --herdnet-num-classes 2 ^
 @REM                                     --imgsz 800 --cl-ratios 0.0 --project-name "Herdnet" --epochs 30 --device "cuda"
 
-call uv run tools\train-herdnet.py --data-config-yaml "configs\yolo_configs\dataset_pretraining.yaml" --run-name "herdnet-Det-PTR" --lr0 0.0001 --batchsize 16 ^
-                                    --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth"  ^
-                                    --imgsz 640 --cl-ratios 0.0 --project-name "Herdnet" --epochs 30 --device "cuda"
+@REM call uv run tools\train-herdnet.py --data-config-yaml "configs\yolo_configs\dataset_pretraining.yaml" --run-name "herdnet-Det-PTR" --lr0 0.0001 --batchsize 16 ^
+@REM                                     --path-weights "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\base_models_weights\20220329_HerdNet_Ennedi_dataset_2023.pth" --herdnet-num-classes 4 ^
+@REM                                     --imgsz 640 --cl-ratios 0.0 --project-name "Herdnet" --epochs 30 --device "cuda"
 
 @REM shutdown -s
 
