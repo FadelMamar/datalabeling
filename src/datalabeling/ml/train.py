@@ -267,6 +267,21 @@ class TrainingManager:
         self.model = self._load_model()
 
     def _load_model(self):
+
+        if self.args.mlflow_model_alias is not None:
+            mlflow.set_tracking_uri(self.args.mlflow_tracking_uri)
+            client = mlflow.MlflowClient()
+            name = self.args.run_name
+            alias = self.args.mlflow_model_alias
+            version = client.get_model_version_by_alias(name=name, alias=alias).version
+            modelURI = f"models:/{name}/{version}"
+            self.args.path_weights = (
+                mlflow.pyfunc.load_model(modelURI)
+                .unwrap_python_model()
+                .detection_model.detection_model.model.ckpt_path
+            )
+            logger.info(f"Loading model {modelURI} registered with alias: {alias}")
+
         if self.model_type == "ultralytics":
             return self._load_ultralytics_model()
 
