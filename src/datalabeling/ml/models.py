@@ -256,18 +256,24 @@ class Detector(object):
         results = {}
         paths = images_paths or list(Path(path_to_dir).iterdir())
         for image_path in tqdm(paths, desc="Computing predictions..."):
-            pred = self.predict(
-                image=None,
-                return_coco=return_coco or as_dataframe or return_gps,
-                image_path=image_path,
-                return_gps=return_gps,
-            )
+
+            try:
+                pred = self.predict(
+                    image=None,
+                    return_coco=return_coco or as_dataframe or return_gps,
+                    image_path=image_path,
+                    return_gps=return_gps,
+                )
+            except Exception as e:
+                logger.error(e)
+                logger.error(f"Failed for {image_path}")
+                continue
             gps_coords = None
             if return_gps:
                 pred, gps_info = pred
                 if isinstance(gps_info, tuple):
                     gps_coords = gps_info[0]
-
+            
             pred.append(dict(gps_coords=gps_coords))
             results.update({str(image_path): pred})
 
@@ -314,7 +320,7 @@ class Detector(object):
             H = exif["ExifImageHeight"]
             W = exif["ExifImageWidth"]
 
-            lat_center, lon_center, alt = x.Latitude, x.Longitude, x.Elevation
+            lat_center, lon_center, alt = x.img_Latitude, x.img_Longitude, x.Elevation
 
             # bbox center
             x_det = x["x_min"] + x["bbox_w"] * 0.5
@@ -353,26 +359,25 @@ class Detector(object):
     ):
         unravel_dict = []
         gps_coords = []
-        for key, value in results.items():
+        for file_name, value in results.items():
             for v in value:
                 if "gps_coords" not in v.keys():
                     unravel_dict.append(
-                        {"file_name": key, "value": v}
+                        {"file_name": file_name, "value": v}
                     )  # = v #,results['gps_coords']
                 elif return_gps:
-                    gps_coords.append({"gps": v["gps_coords"], "file_name": key})
+                    gps_coords.append({"gps": v["gps_coords"], "file_name": file_name})
 
         df_results = pd.DataFrame.from_dict(unravel_dict)
 
         dfs = list()
         for i in tqdm(range(len(df_results)), desc="pred results as df"):
             df_i = pd.DataFrame.from_records(df_results.iloc[i, 1:].to_list())
-            df_i.loc[0, "file_name"] = df_results.iat[i, 0]
-
+            df_i["file_name"] = df_results.iat[i, 0]
             dfs.append(df_i)
 
-        dfs = pd.concat(dfs, axis=0).dropna(thresh=5)
-
+        dfs = pd.concat(dfs, axis=0) #.dropna(thresh=5)
+        # bbox is in coco format (x_min,y_min,w,h)
         dfs["x_min"] = dfs["bbox"].apply(lambda x: x[0])
         dfs["y_min"] = dfs["bbox"].apply(lambda x: x[1])
         dfs["bbox_w"] = dfs["bbox"].apply(lambda x: x[2])
@@ -386,10 +391,10 @@ class Detector(object):
             dfs = dfs.merge(df_gps, on="file_name", how="left")
 
             # converting gps coords to decimal
-            dfs[["Latitude", "Longitude", "Elevation"]] = dfs.gps.apply(
+            dfs[["img_Latitude", "img_Longitude", "Elevation"]] = dfs.gps.apply(
                 lambda x: self.format_gps(x)
             ).apply(pd.Series)
-            dfs[["px_Latitude", "px_Longitude"]] = dfs.apply(
+            dfs[["Latitude", "Longitude"]] = dfs.apply(
                 self.get_detections_gps, axis=1
             )
 

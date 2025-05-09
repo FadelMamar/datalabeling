@@ -187,8 +187,8 @@ def main():
 
         with st.form("inference"):           
 
-            model_alias = st.text_input("Model Alias", value="yolov11x-obb").strip()
-            model_name = st.text_input("Model name", value="obb-detector").strip()
+            model_alias = st.text_input("Model Alias", value="yolov12s").strip()
+            model_name = st.text_input("Model name", value="detector").strip()
             confidence_threshold = st.text_input(
                 "Confidence threshold", value=0.15
             ).strip()
@@ -205,7 +205,7 @@ def main():
 
             if st.form_submit_button("Get predictions"):
                 with st.spinner("Running...", show_time=True):
-                    df_results = run_inference(
+                    df_results_px = run_inference(
                         image_dir=image_dir,
                         alias=model_alias,
                         save_path=save_path,
@@ -219,7 +219,7 @@ def main():
                             "*.png",
                         ],
                     )
-                st.dataframe(df_results[["Latitude", "Longitude", "Elevation"]], use_container_width=False)
+                st.dataframe(df_results_px, use_container_width=False)
                 
 
 @st.cache_data
@@ -258,9 +258,17 @@ def run_inference(
         as_dataframe=True,
         save_path=None,
     )
+    
+    # results['img_Latitude'] = results['Latitude']
+    # results['img_Longitude'] = results['Longitude']
+    # results_px = results.drop(columns=["Latitude", "Longitude"]).copy()
+    # renaming={'px_Latitude':'Latitude',
+    #          'px_Longitude':'Longitude',
+    # }
+    # results_px = results_px.rename(columns=renaming)
 
     if save_path:
-        results[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
+        results[['Latitude','Longitude','Elevation']].to_csv(save_path, index=False)
 
     return results
 

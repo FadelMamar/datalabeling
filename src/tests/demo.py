@@ -115,36 +115,36 @@ if __name__ == "__main__":
     import numpy as np
     # from torchvision.datasets import ImageFolder
 
-    def predict_with_uncertainty(model, img_path, n_iter=10):
-        """Monte Carlo Dropout for uncertainty estimation"""
+    # def predict_with_uncertainty(model, img_path, n_iter=10):
+    #     """Monte Carlo Dropout for uncertainty estimation"""
 
-        from baal.bayesian.dropout import patch_module
-        from baal.active.heuristics import BALD
+    #     from baal.bayesian.dropout import patch_module
+    #     from baal.active.heuristics import BALD
 
-        all_preds = []
-        heuristic = BALD(reduction="mean")
-        _model = patch_module(model, inplace=False)
+    #     all_preds = []
+    #     heuristic = BALD(reduction="mean")
+    #     _model = patch_module(model, inplace=False)
 
-        num_classes = model.nc
+    #     num_classes = model.nc
 
-        with torch.no_grad():
-            for _ in range(n_iter):
-                pred = _model(img_path)[0]  # YOLO prediction
-                try:
-                    pred = pred.boxes.data.cpu().numpy()
-                except:
-                    pred = pred.obb.data.cpu().numpy()
+    #     with torch.no_grad():
+    #         for _ in range(n_iter):
+    #             pred = _model(img_path)[0]  # YOLO prediction
+    #             try:
+    #                 pred = pred.boxes.data.cpu().numpy()
+    #             except:
+    #                 pred = pred.obb.data.cpu().numpy()
 
-                idx = pred[:, -1].astype(int)
-                dummy = np.zeros((pred.shape[0], num_classes, 5))
-                dummy[idx] = pred[:, :-2]
-                all_preds.append(dummy)
+    #             idx = pred[:, -1].astype(int)
+    #             dummy = np.zeros((pred.shape[0], num_classes, 5))
+    #             dummy[idx] = pred[:, :-2]
+    #             all_preds.append(dummy)
 
-        # Calculate uncertainty using BALD
-        stacked = np.stack(all_preds, axis=-1)
-        uncertainty = heuristic(stacked)
+    #     # Calculate uncertainty using BALD
+    #     stacked = np.stack(all_preds, axis=-1)
+    #     uncertainty = heuristic(stacked)
 
-        return {"boxes": stacked, "uncertainty": uncertainty}
+    #     return {"boxes": stacked, "uncertainty": uncertainty}
 
     # detector = YOLO(r"D:\datalabeling\base_models_weights\best.pt", task="detect")
     classifier = YOLO(

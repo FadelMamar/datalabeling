@@ -1,5 +1,7 @@
 call cd "C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling"
 
+start helper-scripts\launch_mlflow_server.bat
+
 call deactivate
 
 call .venv\Scripts\activate
