@@ -2,27 +2,35 @@ import logging
 import os
 from pathlib import Path
 import json
+from typing import Sequence
 import lightning as L
 import torch
 import yaml
 from animaloc.eval import HerdNetEvaluator, PointsMetrics
 from animaloc.eval.lmds import HerdNetLMDS
 from animaloc.models import HerdNet, LossWrapper
-from animaloc.train import Trainer
+
 from animaloc.train.losses import FocalLoss
 from lightning.pytorch.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
     ModelCheckpoint,
 )
+import numpy as np
+import mlflow
 from lightning.pytorch.loggers import MLFlowLogger
+import torch.nn as nn
+from torch.nn import functional as F
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
+from torchmetrics.classification import Accuracy, Precision, Recall, F1Score, AUROC
 from torch.utils.data import DataLoader
 from ultralytics import RTDETR, YOLO
+from torchvision import models
 
 from ..common.config import TrainingConfig
-from ..common.io import HerdnetData
+from ..common.io import HerdnetData, ClassifierDataModule
+
 from .utils import (
     get_data_cfg_paths_for_cl,
     get_data_cfg_paths_for_HN,
@@ -243,6 +251,90 @@ class HerdnetTrainer(L.LightningModule):
         return [optimizer], [{"scheduler": lr_scheduler, "interval": "epoch"}]
 
 
+class ImageClassifier(L.LightningModule):
+    def __init__(
+        self,
+        model,
+        num_classes: int = 2,
+        threshold: float = 0.5,
+        label_smoothing: float = 0.0,
+        lr: float = 1e-3,
+    ):
+        super().__init__()
+
+        self.save_hyperparameters(ignore=["model", "threshold"])
+
+        # use a pretrained ResNet backbone
+        self.model = model
+        # replace final layer
+        # in_features = self.model.fc.in_features
+        # self.model.fc = nn.Linear(in_features, num_classes)
+
+        # metrics
+        cfg = dict(task="multiclass", num_classes=num_classes, average="macro")
+        self.accuracy = Accuracy(**cfg)
+        self.precision = Precision(threshold=threshold, **cfg)
+        self.recall = Recall(threshold=threshold, **cfg)
+        self.f1score = F1Score(threshold=threshold, **cfg)
+        self.ap = AUROC(**cfg)
+
+        self.metrics = dict(
+            accuracy=self.accuracy,
+            precision=self.precision,
+            recall=self.recall,
+            f1score=self.f1score,
+        )
+
+        self.label_smoothing = label_smoothing
+        self.num_classes = num_classes
+
+    def forward(self, x):
+        out = self.model(x)
+
+        if isinstance(out, Sequence):
+            logits = out[1]  # yolo cls
+        else:
+            logits = out
+
+        return logits
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+
+        classes = y.cpu().flatten().tolist()
+        weight = [
+            len(classes) / (classes.count(i) + 1e-6) for i in range(self.num_classes)
+        ]
+        weight = torch.Tensor(weight).float().clamp(1.0, 10.0).to(y.device)
+
+        logits = self(x)
+        loss = F.cross_entropy(
+            logits, y, label_smoothing=self.label_smoothing, weight=weight
+        )
+
+        self.log("train_loss", loss, on_step=False, on_epoch=True)
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+
+        logits = self(x)
+        loss = F.cross_entropy(logits, y, label_smoothing=self.label_smoothing)
+
+        for name, metric in self.metrics.items():
+            metric.update(logits, y)
+            self.log(f"val_{name}", metric)
+
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        # optional: scheduler
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+        return [optimizer], [scheduler]
+
+
 class TrainingManager:
     def __init__(
         self,
@@ -256,7 +348,7 @@ class TrainingManager:
         self.model_type = model_type
         self.herdnet_training_backend = herdnet_training_backend
 
-        assert model_type in ["ultralytics", "herdnet"], (
+        assert model_type in ["ultralytics", "herdnet", "classifier"], (
             f"this model_type ``{model_type}`` is not supported."
         )
 
@@ -267,7 +359,6 @@ class TrainingManager:
         self.model = self._load_model()
 
     def _load_model(self):
-
         if self.args.mlflow_model_alias is not None:
             mlflow.set_tracking_uri(self.args.mlflow_tracking_uri)
             client = mlflow.MlflowClient()
@@ -288,6 +379,9 @@ class TrainingManager:
         elif self.model_type == "herdnet":
             return self._load_herdnet()
 
+        elif self.model_type == "classifier":
+            return self._load_classifier_model()
+
         else:
             raise NotImplementedError
 
@@ -307,6 +401,34 @@ class TrainingManager:
             model = model.load(self.args.path_weights)
 
         return model
+
+    def _load_classifier_model(
+        self,
+    ):
+        # TODO
+        if self.args.path_weights:
+            # self._cls_routine = ImageClassifier.load_from_checkpoint(
+            #     checkpoint_path=self.args.herdnet_pl_ckpt,
+            #     lr=self.args.lr0,
+            #     map_location=self.args.device,
+            #     weight_decay=self.args.weight_decay,
+            #     data_config_yaml=self.args.yolo_yaml,
+            #     work_dir=work_dir,
+            # )
+            pass
+        else:
+            model = models.mobilenet_v3_small(weights="IMAGENET1K_V1")
+            model.classifier = torch.nn.Linear(576, self.args.cls_num_classes)
+
+            routine = ImageClassifier(
+                model=model,
+                num_classes=self.args.cls_num_classes,
+                threshold=self.args.cls_thrs,
+                label_smoothing=self.args.cls_thrs,
+                lr=self.args.lr0,
+            )
+
+        return routine
 
     def _load_herdnet(
         self,
@@ -390,8 +512,65 @@ class TrainingManager:
             else:
                 self._run_herdnet_pl()
 
+        elif self.model_type == "classifier":
+            self._run_classifier()
+
         else:
             raise NotImplementedError
+
+    def _run_classifier(
+        self,
+    ):
+        # data
+        datamodule = ClassifierDataModule(
+            train_dir=self.args.cls_train_dir,
+            val_dir=self.args.cls_val_dir,
+            batch_size=self.args.batchsize,
+            num_workers=os.cpu_count() // 4,
+            img_size=self.args.imgsz,
+        )
+        datamodule.setup("fit")
+
+        # loggers and callbacks
+        mlf_logger = MLFlowLogger(
+            experiment_name=self.args.project_name,
+            run_name=self.args.run_name,
+            tracking_uri=self.args.mlflow_tracking_uri,
+            log_model=True,
+        )
+        checkpoint_callback = ModelCheckpoint(
+            dirpath=self.args.cls_workdir,
+            monitor=self.args.cls_monitor_metric,
+            mode=self.args.cls_monitor_mode,
+            save_weights_only=True,
+            save_last=True,
+            save_top_k=1,
+        )
+        lr_callback = LearningRateMonitor(logging_interval="epoch")
+        callbacks = [
+            checkpoint_callback,
+            lr_callback,
+            EarlyStopping(
+                monitor=self.args.cls_monitor_metric,
+                patience=self.args.patience,
+                min_delta=1e-4,
+                mode=self.args.cls_monitor_mode,
+            ),
+        ]
+
+        # trainer
+        trainer = L.Trainer(
+            max_epochs=self.args.epochs,
+            # logger=mlf_logger,
+            # accumulate_grad_batches=max(int(128 / self.args.batchsize), 1),
+            precision="bf16-mixed",
+            callbacks=callbacks,
+            detect_anomaly=False,
+            accelerator="auto",
+        )
+
+        # fit
+        trainer.fit(self.model, datamodule=datamodule)
 
     def _run_ultralytics(self):
         assert self.args.task in ["detect", "obb", "segment"]
@@ -416,6 +595,8 @@ class TrainingManager:
     def _run_herdnet_original(
         self,
     ):
+        from animaloc.train import Trainer
+
         # setting up working dir
         work_dir = self.args.herdnet_work_dir
         work_dir = Path(work_dir) / (self.args.run_name)

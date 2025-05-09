@@ -18,7 +18,9 @@ from animaloc.data.transforms import (
 from animaloc.datasets import CSVDataset, FolderDataset
 from PIL import Image
 from torch.utils.data import ConcatDataset, DataLoader
+from torchvision import transforms
 from tqdm import tqdm
+from torchvision.datasets import ImageFolder
 
 from .config import DataConfig
 
@@ -274,6 +276,78 @@ class DataHandler:
     def save_results(self, df: pd.DataFrame, tag: str = "") -> None:
         """Save results with optional tagging"""
         pass
+
+
+class ClassifierDataModule(L.LightningDataModule):
+    def __init__(
+        self,
+        train_dir: str,
+        val_dir: str,
+        batch_size: int = 32,
+        num_workers: int = 4,
+        img_size: int = 96,
+        # train_tfms=None,
+        # val_tfms=None,
+    ):
+        super().__init__()
+
+        self.train_dir = train_dir
+        self.val_dir = val_dir
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.img_size = img_size
+
+        self.normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        )
+
+        self.train_tfms = transforms.Compose(
+            [
+                transforms.Resize((self.img_size, self.img_size)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(45),
+                transforms.AutoAugment(),
+                transforms.ToTensor(),
+                self.normalize,
+            ]
+        )
+        self.val_tfms = transforms.Compose(
+            [
+                transforms.Resize((self.img_size, self.img_size)),
+                transforms.ToTensor(),
+                self.normalize,
+            ]
+        )
+
+    def setup(self, stage=None):
+        if stage in (None, "fit"):
+            self.train_dataset = ImageFolder(self.train_dir, transform=self.train_tfms)
+            self.val_dataset = ImageFolder(self.val_dir, transform=self.val_tfms)
+            self.num_classes = len(self.train_dataset.classes)
+
+        if stage == "validate":
+            self.val_dataset = ImageFolder(self.val_dir, transform=self.val_tfms)
+            self.num_classes = len(self.train_dataset.classes)
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            persistent_workers=True,
+            pin_memory=torch.cuda.is_available(),
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            persistent_workers=True,
+            pin_memory=torch.cuda.is_available(),
+        )
 
 
 class HerdnetData(L.LightningDataModule):
