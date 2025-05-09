@@ -356,32 +356,3 @@ class Detector(object):
             traceback.print_exc()
 
         return dfs
-        """Formatting the prediction to work with Label studio
-
-        Args:
-            pred (dict): prediction in coco format
-            img_height (int): image height
-            img_width (int): image width
-
-        Returns:
-            dict: Label studio formated prediction
-        """
-        x, y, width, height = pred["bbox"]
-        label = pred["category_name"]
-        score = pred["score"]
-
-        template = {
-            "from_name": "label",
-            "to_name": "image",
-            "type": "rectanglelabels",
-            "value": {
-                "rectanglelabels": [label],
-                "x": x / img_width * 100,
-                "y": y / img_height * 100,
-                "width": width / img_width * 100,
-                "height": height / img_height * 100,
-            },
-            "score": score,
-        }
-
-        return template

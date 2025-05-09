@@ -2,7 +2,7 @@
 FROM python:3.10-slim
 
 # 2. Set MLflow and MinIO client versions
-ENV MLFLOW_VERSION=2.5.0
+ENV MLFLOW_VERSION=2.22.0
 ENV MINIO_CLIENT_VERSION=mc
 
 # 3. Install MLflow and AWS S3 extras for MinIO compatibility
@@ -22,5 +22,7 @@ EXPOSE 5000
 # 7. Entrypoint: start the MLflow tracking server
 CMD mlflow server \
     --backend-store-uri ${BACKEND_STORE_URI} \
-    --default-artifact-root ${DEFAULT_ARTIFACT_ROOT} \
-    --host 0.0.0.0 --port 5000
+    --default-artifact-root ${MLFLOW_S3_ENDPOINT_URL} \
+    --artifacts-destination ${MLFLOW_ARTIFACTS_DEST} \
+    --host 0.0.0.0 \
+    --port 5000
