@@ -37,33 +37,67 @@ if __name__ == "__main__":
         #             name=args.run_name,
         #             # tags=args.tag
         #             ):
+
         # log data_config file
-        if args.ptr_data_config_yaml:
-            with open(args.ptr_data_config_yaml, "r") as file:
-                data_config = yaml.load(file, Loader=yaml.FullLoader)
-                data_config["mode"] = "pretraining"
-                # wandb.log(data_config)
+        # if args.ptr_data_config_yaml:
+        #     data_config = load_yaml(args.ptr_data_config_yaml)
+        #     data_config["mode"] = "pretraining"
+        #     # wandb.log(data_config)
 
-        if args.use_continual_learning:
-            with open(args.cl_data_config_yaml, "r") as file:
-                data_config = yaml.load(file, Loader=yaml.FullLoader)
-                data_config["mode"] = "continuous_learning"
-                # wandb.log(data_config)
+        # if args.use_continual_learning:
+        #     data_config = load_yaml(args.cl_data_config_yaml)
+        #     data_config["mode"] = "continuous_learning"
+        #     # wandb.log(data_config)
 
-        if args.use_hn_learning:
-            with open(args.hn_data_config_yaml, "r") as file:
-                data_config = yaml.load(file, Loader=yaml.FullLoader)
-                data_config["mode"] = "hard negative learning"
-                # wandb.log(data_config)
+        # if args.use_hn_learning:
+        #     data_config = load_yaml(args.hn_data_config_yaml)
+        #     data_config["mode"] = "hard negative learning"
+        #     # wandb.log(data_config)
 
-        if not (
-            args.ptr_data_config_yaml
-            or args.use_continual_learning
-            or args.use_hn_learning
-        ):
-            with open(args.data_config_yaml, "r") as file:
-                data_config = yaml.load(file, Loader=yaml.FullLoader)
-                # data_config["mode"] = "standard"
-                # wandb.log(data_config)
+        # if not (
+        #     args.ptr_data_config_yaml
+        #     or args.use_continual_learning
+        #     or args.use_hn_learning
+        # ):
+        #     data_config = load_yaml(args.data_config_yaml)
+        #     data_config["mode"] = "standard"
+        #     wandb.log(data_config)
 
-        start_training(args)
+
+
+    # training_step = ModelTraining(
+    #                 training_cfg=args,
+    #                 herdnet_loss=None,
+    #                 herdnet_training_backend=args.herdnet_training_backend,
+    #                 model_type=args.model_type,
+    # )
+
+    # pipe = Pipeline(
+    #     steps=[
+    #         training_step,
+    #     ]
+    # )
+    # pipe.run()
+
+
+    # classification model
+    from ultralytics import YOLO
+
+    # Load a model
+    model = YOLO(r"configs\yolo_configs\models\yolo12-cls.yaml").load('yolo11n-cls.pt')  # load a pretrained model (recommended for training)
+
+    # model = YOLO("yolo11n-cls.pt")
+
+    # # Train the model
+    results = model.train(data=r"D:\PhD\Data per camp\Classification", 
+                        epochs=50, 
+                        imgsz=96,
+                        batch=64,
+                        project='classifier',
+                        lrf=5e-3,
+                        device='cuda:0',
+                        cos_lr=True,
+                        optimizer='auto',
+                        auto_augment='augmix',
+                        name='yolo12-cls'
+                        )

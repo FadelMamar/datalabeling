@@ -6,12 +6,16 @@ Created on Thu Apr 24 19:29:12 2025
 """
 
 from tqdm import tqdm
+# from datalabeling.common.pipeline import ClassificationDataExport
 
-from datalabeling.common.io import HerdnetData
-from datalabeling.common.pipeline import ClassificationDataExport
+
+
 
 
 def load_herd_net():
+    
+    from datalabeling.common.io import HerdnetData
+    
     data_config_yaml = r"D:\datalabeling\configs\yolo_configs\data_config.yaml"
     patch_size = 640
     batchsize = 4
@@ -52,23 +56,34 @@ def load_classification_data():
     eval_config.uncertainty_method = "entropy"
     eval_config.uncertainty_threshold = 4
     eval_config.score_col = "max_scores"
-    eval_config.tp_iou_threshold = 0.4
+    eval_config.tp_iou_threshold = 0.2
+    
+# =============================================================================
+    eval_config.load_results = True # Set to True to load existing predictions if applicable
+# =============================================================================
 
     detector = Detector(
-        path_to_weights=r"D:\datalabeling\base_models_weights\best.pt",
+        path_to_weights=r"C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/f5b7124be14c4c89b8edd26bcf7a9a76/artifacts/weights/best.pt",
         confidence_threshold=eval_config.score_threshold,
         overlap_ratio=0.2,
-        tilesize=640,
-        imgsz=640,
-        use_sliding_window=True,
-        device="cpu",
+        tilesize=800,
+        imgsz=800,
+        use_sliding_window=False,
+        device="cuda:0",
     )
+    
+    source_dirs=[
+                 r"D:\PhD\Data per camp\DetectionDataset\delplanque_tiled_data\train_tiled\images",
+                 r"D:\PhD\Data per camp\DetectionDataset\delplanque_tiled_data\val_tiled\images",
+                 r"D:\PhD\Data per camp\DetectionDataset\WAID\val\images",
+                 r"D:\PhD\Data per camp\DetectionDataset\savmap\images"
+                 ]
 
     handler = ClassificationDatasetBuilder(
         detector,
         eval_config,
-        source_dir=r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\images",
-        output_dir=r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\cls",
+        source_dirs=source_dirs,
+        output_dir=r"D:\PhD\Data per camp\Classification\train",
     )
 
     handler.process_images(bbox_resize_factor=2.0)
@@ -77,4 +92,4 @@ def load_classification_data():
 if __name__ == "__main__":
     pass
 
-    # load_classification_data()
+    load_classification_data()

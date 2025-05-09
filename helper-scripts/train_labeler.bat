@@ -41,24 +41,40 @@ call wandb offline
 call wandb offline
 
 @REM @REM convert datasets to yolo-obb
-call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_labeler.yaml" --skip
+@REM call uv run  tools\build_dataset.py --yolo-to-obb --data-config-yaml "data\dataset_labeler.yaml" --skip
 
-call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0001 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
+@REM call uv run tools\cli.py --start-training --batchsize 16  --weight-decay 0.0001 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 15 --is-detector ^
+@REM     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
+@REM     --height 800 --width 800^
+@REM     --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/771014640604815853/9ab053acdcbb486992fbe456e3701c88/artifacts/weights/best.pt" ^
+@REM     --run-name "yolov11s_obb-CT" --project-name "labeler"^
+@REM     --tag "continuous-training" ^
+@REM     --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
+@REM     --cl-data-config-yaml "data\dataset_labeler.yaml" ^
+@REM     --cl-ratios 7.5 ^
+@REM     --cl-epochs 50  ^
+@REM     --cl-freeze 0 ^
+@REM     --cl-lr0s 0.0001 ^
+@REM     --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
+@REM     --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_labeler.yaml" ^
+@REM     --hn-is-yolo-obb
+
+@REM --yolo-arch-yaml "configs\yolo_configs\models\yolo11-obb.yaml" --run-name "yolov8s-obb-custom-CL" ^
+
+call uv run tools\cli.py --batchsize 16  --weight-decay 0.005 --optimizer "AdamW" --optimizer-momentum 0.99 --lrf 0.1 --patience 20 --is-single-cls ^
     --scale 0.5 --mosaic 0.2 --copy-paste 0.2 --mixup 0.0 --rotation-degree 45. --erasing 0.0 --warmup-epochs 2 ^
-    --height 800 --width 800^
-    --path-weights "C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/771014640604815853/9ab053acdcbb486992fbe456e3701c88/artifacts/weights/best.pt" ^
-    --run-name "yolov11s_obb-CT" --project-name "labeler"^
-    --tag "continuous-training" ^
-    --cl-save-dir "D:\PhD\Data per camp\DetectionDataset\continuous_learning" --use-continual-learning ^
-    --cl-data-config-yaml "data\dataset_labeler.yaml" ^
-    --cl-ratios 7.5 ^
-    --cl-epochs 50  ^
-    --cl-freeze 0 ^
-    --cl-lr0s 0.0001 ^
-    --hn-save-dir "D:\PhD\Data per camp\DetectionDataset\hard_samples" --use-hn-learning ^
-    --hn-num-epochs 7 --hn-data-config-yaml "data\dataset_labeler.yaml" ^
-    --hn-is-yolo-obb
-
+    --ultralytics-pos-weight 10.0 ^
+    --box 7.5 --cls 0.5 --dfl 1.5 ^
+    --imgsz 800 ^
+    --path-weights "runs/mlflow/140168774036374062/2ff9bb7a991c4cd1a6eabfff0f73386d/artifacts/weights/last.pt" ^
+    --project-name "wildAI-detection"^
+    --tag "CL" ^
+    --cl-save-dir "D:\PhD\Data per camp\IdentificationDataset\continuous_learning" --use-continual-learning ^
+    --cl-data-config-yaml "configs\yolo_configs\data\dataset_identification-detection.yaml" --cl-batch-size 16 ^
+    --cl-ratios 0 1 2.5 7.5 ^
+    --cl-epochs 20 20 10 7 ^
+    --cl-freeze 0 0 10 18  ^
+    --cl-lr0s 0.0001 0.0001 0.00005 0.00005
 
 @REM call uv run tools\cli.py train-herdnet.py
 
