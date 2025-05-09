@@ -110,45 +110,89 @@ if __name__ == "__main__":
     # =============================================================================
     #     Yolo architecture
     # =============================================================================
-    from ultralytics import YOLO
-    import torch
-    import numpy as np
+    # from ultralytics import YOLO
+    # import torch
+    # import numpy as np
 
-    def predict_with_uncertainty(model, img_path, n_iter=10):
-        """Monte Carlo Dropout for uncertainty estimation"""
+    # def predict_with_uncertainty(model, img_path, n_iter=10):
+    #     """Monte Carlo Dropout for uncertainty estimation"""
 
-        from baal.bayesian.dropout import patch_module
-        from baal.active.heuristics import BALD
+    #     from baal.bayesian.dropout import patch_module
+    #     from baal.active.heuristics import BALD
 
-        all_preds = []
-        heuristic = BALD(reduction="mean")
-        _model = patch_module(model, inplace=False)
+    #     all_preds = []
+    #     heuristic = BALD(reduction="mean")
+    #     _model = patch_module(model, inplace=False)
 
-        num_classes = model.nc
+    #     num_classes = model.nc
 
-        with torch.no_grad():
-            for _ in range(n_iter):
-                pred = _model(img_path)[0]  # YOLO prediction
-                try:
-                    pred = pred.boxes.data.cpu().numpy()
-                except:
-                    pred = pred.obb.data.cpu().numpy()
+    #     with torch.no_grad():
+    #         for _ in range(n_iter):
+    #             pred = _model(img_path)[0]  # YOLO prediction
+    #             try:
+    #                 pred = pred.boxes.data.cpu().numpy()
+    #             except:
+    #                 pred = pred.obb.data.cpu().numpy()
 
-                idx = pred[:, -1].astype(int)
-                dummy = np.zeros((pred.shape[0], num_classes, 5))
-                dummy[idx] = pred[:, :-2]
-                all_preds.append(dummy)
+    #             idx = pred[:, -1].astype(int)
+    #             dummy = np.zeros((pred.shape[0], num_classes, 5))
+    #             dummy[idx] = pred[:, :-2]
+    #             all_preds.append(dummy)
 
-        # Calculate uncertainty using BALD
-        stacked = np.stack(all_preds, axis=-1)
-        uncertainty = heuristic(stacked)
+    #     # Calculate uncertainty using BALD
+    #     stacked = np.stack(all_preds, axis=-1)
+    #     uncertainty = heuristic(stacked)
 
-        return {"boxes": stacked, "uncertainty": uncertainty}
+    #     return {"boxes": stacked, "uncertainty": uncertainty}
 
-    model = YOLO(r"D:\datalabeling\base_models_weights\best.pt", task="detect")
+    # model = YOLO(r"D:\datalabeling\base_models_weights\best.pt", task="detect")
 
-    x = r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\images\00a033fefe644429a1e0fcffe88f8b39_0_4_512_512_1152_1152.jpg"
+    # x = r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\images\00a033fefe644429a1e0fcffe88f8b39_0_4_512_512_1152_1152.jpg"
 
-    (out1,) = model(x)
+    # (out1,) = model(x)
 
     # out = predict_with_uncertainty(model,x,n_iter=3)
+    pass
+    
+    
+# =============================================================================
+#     Predictions
+# =============================================================================
+    
+from ultralytics import YOLO
+from PIL import Image
+import time
+import numpy as np
+from datalabeling.ml import Detector, Annotator
+from dotenv import load_dotenv
+from pathlib import Path
+import matplotlib.pyplot as plt
+# %matplotlib inline
+import folium
+from folium.plugins import MarkerCluster, FastMarkerCluster
+import pandas as pd
+
+    
+handler = Detector(path_to_weights=r"C:/Users/Machine Learning/Desktop/workspace-wildAI/datalabeling/runs/mlflow/140168774036374062/f5b7124be14c4c89b8edd26bcf7a9a76/artifacts/weights/best.pt",
+                   imgsz=960,
+                   tilesize=960,
+                   use_sliding_window=True)
+
+image_dir = r"C:\Users\Machine Learning\Desktop\workspace-wildAI\datalabeling\.tmp\images"
+save_path = Path(image_dir).parent / "detection_gps.csv"
+
+image_paths = list(Path(image_dir).glob('*.jpg'))[:]
+
+
+results = handler.predict_directory(
+    path_to_dir = None,
+    images_paths = image_paths,
+    return_gps = True,
+    return_coco = False,
+    as_dataframe = True,
+    save_path = None,
+)
+
+    
+    
+    
