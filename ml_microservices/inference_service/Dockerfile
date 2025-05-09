@@ -25,7 +25,7 @@ FROM python:3.11-slim-bookworm AS runtime
 
 LABEL maintainer="fadel.seydou@gmail.com"
 LABEL version="0.0.1"
-LABEL description="Streamlit dashboard service using uv and multi-stage Docker build"
+LABEL description="Inference service using litserve"
 
 # Create app directory
 WORKDIR /app

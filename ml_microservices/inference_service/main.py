@@ -1,5 +1,7 @@
-from inference_service.src import run_inference_server
-
+from ml_microservices.inference_service.src.inference_service import (
+    run_inference_server,
+)
+import os
 
 if __name__ == "__main__":
-    run_inference_server(port=4141)
+    run_inference_server(port=os.environ["INFERENCE_PORT"])

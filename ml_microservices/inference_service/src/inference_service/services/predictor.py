@@ -16,7 +16,6 @@ class MyModelAPI(ls.LitAPI):
 
         from ..core.utils import GPSUtils, ImageProcessor
         from ..models import Detector
-        import torch
 
         self.model = Detector(
             mlflow_model_name="production",
@@ -26,7 +25,7 @@ class MyModelAPI(ls.LitAPI):
             overlap_ratio=0.2,
             tilesize=960,
             imgsz=960,
-            device="cuda" if torch.cuda.is_available() else "cpu",
+            device=device,  # "cuda" if torch.cuda.is_available() else "cpu",
             tracking_url=os.environ["MLFLOW_TRACKING_URI"],
         )
 
@@ -81,7 +80,6 @@ class MyModelAPI(ls.LitAPI):
 
         with torch.no_grad():
             results = self.model.predict(
-                inference_service_url=None,
                 **x,
             )
             out["detections"] = results

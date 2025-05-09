@@ -2,9 +2,6 @@ import geopy
 import utm
 from PIL import Image
 from PIL.ExifTags import GPSTAGS, TAGS
-# from sahi.slicing import slice_coco
-# from skimage.io import imread, imsave
-# from tqdm import tqdm
 
 
 class ImageProcessor:
