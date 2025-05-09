@@ -1,2 +1,10 @@
-git+https://github.com/FadelMamar/datalabeling.git
 streamlit
+geopy
+tqdm
+pandas
+numpy
+pillow
+utm
+pyaml
+label-studio-sdk
+python-dotenv

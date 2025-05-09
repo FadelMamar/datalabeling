@@ -2,25 +2,26 @@ import streamlit as st
 import pandas as pd
 from typing import List
 import requests
-from dotenv import load_dotenv
 from pathlib import Path
-import os
+import os, yaml
+import dotenv
 import traceback
-from datalabeling.ml.interface import Annotator
-from datalabeling.common.io import load_yaml
+from utils import GPSUtils, Detector
 import logging
 from label_studio_sdk.client import LabelStudio
 from itertools import chain
+from tqdm import tqdm
 
-DOT_ENV = "./.env"
-load_dotenv(DOT_ENV)
+DOT_ENV = ".env"
+dotenv.load_dotenv(DOT_ENV)
+
 LABEL_STUDIO_URL = os.environ["LABEL_STUDIO_URL"]
-LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
-LABEL_STUDIO_CLIENT = LabelStudio(
-    base_url=LABEL_STUDIO_URL, api_key=LABEL_STUDIO_API_KEY
-)
-TRAINING_API_URL = os.environ["TRAINING_API_URL"]
-TRAINING_API_KEY = os.environ["TRAINING_API_KEY"]
+LABEL_STUDIO_API_KEY = None
+LABEL_STUDIO_CLIENT = None
+
+INFERENCE_SERVICE_URL = os.environ["INFERENCE_SERVICE_URL"]
+
+WORKDIR = Path("/inference_results")
 
 
 class StreamlitLogHandler(logging.Handler):
@@ -38,45 +39,38 @@ def main():
 
     st.title("Labeling Workflow Management")
 
-    # Sidebar for common controls
     # with st.sidebar:
     #     st.header("API Configuration")
-    # label_studio_token = st.text_input("Label Studio Token", type="password")
-    # training_api_token = st.text_input("Training API Token", type="password")
+    LABEL_STUDIO_API_KEY = st.text_input("Label Studio Token", type="password")
+    LABEL_STUDIO_CLIENT = LabelStudio(
+        base_url=LABEL_STUDIO_URL, api_key=LABEL_STUDIO_API_KEY
+    )
 
     # Main tabs
-    tab1, tab2, tab3 = st.tabs(
-        ["Upload Annotations", "Project Analytics", "Model Training"]
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        [
+            "Upload Annotations",
+            "Project Analytics",
+            "Model Training",
+            "GPS",
+            "Inference",
+        ]
     )
 
     with tab1:
         st.header("Upload to Label Studio")
         with st.form("upload_annotations"):
             project_id = st.number_input("Project ID", min_value=0, step=1)
-            model_alias = st.text_input("Model Alias").strip()
-            detector_name = st.text_input("Detector name", value="obb-detector").strip()
+            model_alias = st.text_input("Model Alias", value="yolov11x-obb").strip()
             confidence_threshold = st.text_input(
                 "Confidence threshold", value=0.2
             ).strip()
-            path_to_weights = st.text_input(
-                "Path to model weights",
-                value=r"D:\datalabeling\base_models_weights\best.pt",
-            ).strip()
-            tile_size = st.number_input("Tile size", min_value=640, step=1)
             top_n = st.number_input("Top n", min_value=0, step=1)
-            use_sliding_window = True
             # annotation_file = st.file_uploader("Annotation File (JSON)", type=["json"])
 
             annotator_kwargs = {
-                "path_to_weights": path_to_weights,
                 "mlflow_model_alias": model_alias,
-                "mlflow_model_name": detector_name,
-                "tilesize": tile_size,
-                "overlapratio": 0.1,
-                "use_sliding_window": True,
-                "is_yolo_obb": detector_name == "obb-detector",
-                "confidence_threshold": 0.1,
-                "tag_to_append": "",
+                "confidence_threshold": confidence_threshold,
             }
 
             log_widget = st.empty().code
@@ -119,23 +113,13 @@ def main():
                     st.dataframe(instances_count, use_container_width=False)
                     st.dataframe(images_count, use_container_width=False)
 
-                    # Display metrics
-                    # col1, col2, col3 = st.columns(len(images_count.columns))
-                    # col1.metric(
-                    #     "Total Annotations", stats_df["total_annotations"].iloc[0]
-                    # )
-                    # col2.metric("Completed Tasks", stats_df["completed_tasks"].iloc[0])
-                    # col3.metric(
-                    #     "Avg Quality", f"{stats_df['avg_quality'].iloc[0]:.2f}%"
-                    # )
-
                 except Exception as e:
                     st.error(f"Failed to fetch statistics: {str(e)}")
 
         with st.form("train_val_test_stats"):
             path_to_yaml = st.text_input(
                 "Path to data.yaml file",
-                value=r"D:\datalabeling\configs\yolo_configs\data_config.yaml",
+                value=r"..\configs\yolo_configs\data\data_config.yaml",
             ).strip()
             split = st.text_input(
                 "Split to select", value="train", help="train val or test"
@@ -170,24 +154,132 @@ def main():
             batch_size = st.selectbox("Batch Size", [8, 16, 32, 64])
 
             if st.form_submit_button("Start Training"):
-                try:
-                    project_ids = [
-                        int(pid.strip()) for pid in training_projects.split(",")
-                    ]
-                    response = start_training(
-                        project_ids, epochs, batch_size, TRAINING_API_KEY
+                raise NotImplementedError
+
+    with tab4:
+        st.header("GPS")
+        with st.form("gps_coords"):
+            image_dir = st.text_input(
+                "Path to images directory (without quotes)"
+            ).strip()
+
+            if st.form_submit_button("Get coordinates"):
+                with st.spinner("Running...", show_time=True):
+                    gps_coords = get_gps_coords(image_paths=None, image_dir=image_dir)
+                st.dataframe(gps_coords, use_container_width=False)
+
+    with tab5:
+        st.header("Inference")
+
+        with st.form("inference"):
+            model_alias = st.text_input("Model Alias", value="yolov12s").strip()
+            confidence_threshold = st.text_input(
+                "Confidence threshold", value=0.15
+            ).strip()
+            image_dir = st.text_input(
+                "Path to images directory (without quotes)"
+            ).strip()
+            save_path = st.text_input(
+                "Save path (without quotes)", value="detections.csv"
+            ).strip()
+
+            log_widget = st.empty().code
+            handler = StreamlitLogHandler(log_widget)
+            logger = logging.getLogger()
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+
+            if st.form_submit_button("Get predictions"):
+                with st.spinner("Running...", show_time=True):
+                    df_results_px = run_inference(
+                        image_dir=image_dir,
+                        alias=model_alias,
+                        save_path=save_path,
+                        image_paths=None,
+                        exts=[
+                            "*.jpg",
+                            "*.jpeg",
+                            "*.png",
+                        ],
                     )
-                    st.success(
-                        f"Training initiated! Job ID: {response.json()['job_id']}"
-                    )
-                    st.json(response.json())
-                except Exception as e:
-                    st.error(f"Training failed: {str(e)}")
+                st.dataframe(df_results_px, use_container_width=False)
+
+
+@st.cache_data
+def run_inference(
+    image_dir: str,
+    alias: str = None,
+    save_path: str = "results.csv",
+    image_paths: list[None] = None,
+    exts: list[str] = [
+        "*.jpg",
+        "*.jpeg",
+        "*.png",
+    ],
+) -> None:
+    handler = Detector(
+        inference_service_url=INFERENCE_SERVICE_URL,
+        alias=alias,
+        return_gps=True,
+        postprocess_match_threshold=0.5,
+        timeout=3 * 60,
+    )
+
+    exts = [e.lower() for e in exts] + [e.capitalize() for e in exts]
+
+    if image_paths is None:
+        image_paths = chain.from_iterable([Path(image_dir).glob(ext) for ext in exts])
+
+    results = handler.predict_directory(
+        path_to_dir=None,
+        images_paths=image_paths,
+        return_gps=True,
+        as_dataframe=True,
+    )
+
+    if save_path:
+        save_path = WORKDIR / save_path
+        results[["Latitude", "Longitude", "Elevation"]].to_csv(save_path, index=False)
+
+    return results
+
+
+@st.cache_data
+def get_gps_coords(
+    image_dir: str,
+    image_paths: list[str] = None,
+    exts: list[str] = [
+        "*.jpg",
+        "*.jpeg",
+        "*.png",
+    ],
+):
+    exts = [e.lower() for e in exts] + [e.capitalize() for e in exts]
+
+    if image_paths is None:
+        image_paths = chain.from_iterable([Path(image_dir).glob(ext) for ext in exts])
+
+    gps_coords = [
+        GPSUtils.get_gps_coord(file_name=path, return_as_decimal=True)[0]
+        for path in image_paths
+    ]
+
+    gps_coords = pd.DataFrame(
+        data=gps_coords, columns=["Latitude", "Longitude", "Elevation"]
+    )
+
+    return gps_coords
+
+
+def load_yaml(path: str):
+    with open(path, "r", encoding="utf-8") as file:
+        cfg = yaml.load(file, Loader=yaml.FullLoader)
+    return cfg
 
 
 # Mock API client functions (implement according to your API specs)
 def upload_to_label_studio(project_id: int, top_n: int = 0, **annotator_kwargs):
-    handler = Annotator(dotenv_path=str(DOT_ENV), **annotator_kwargs)
+    handler = ...  # Annotator(dotenv_path=str(DOT_ENV), **annotator_kwargs)
     handler.upload_predictions(project_id=project_id, top_n=top_n)
 
 
@@ -213,10 +305,6 @@ def visualize_splits_distribution(
     data_yaml_path: str,
     split="train",
 ):
-    from tqdm import tqdm
-
-    logger = logging.getLogger(__file__)
-
     # load yaml
     yolo_config = load_yaml(data_yaml_path)
 

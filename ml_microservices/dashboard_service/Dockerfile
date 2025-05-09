@@ -1,23 +1,53 @@
-# Use an official slim Python base
-FROM python:3.11-slim-bookworm
+# ---------- Stage 1: Builder ----------
+FROM python:3.11-slim-bookworm AS builder
 
-# Install your package and dependencies
+COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /uvx /bin/
+
+# Install build-time dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git \
  && rm -rf /var/lib/apt/lists/*
 
-# Create & switch to app directory
+
+# Prepare working directory
+WORKDIR /build
+
+# Copy only requirements for caching
+COPY requirements.txt ./
+
+# Install Python dependencies into /install
+RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+RUN uv pip install --no-cache-dir -r requirements.txt
+
+# ---------- Stage 2: Runtime ----------
+FROM python:3.11-slim-bookworm AS runtime
+
+LABEL maintainer="fadel.seydou@gmail.com"
+LABEL version="0.0.1"
+LABEL description="Streamlit dashboard service using uv and multi-stage Docker build"
+
+# Create application directory
 WORKDIR /app
 
-# Copy dependency files first (for better caching)
-COPY .env requirements.txt ./
+# Copy installed dependencies from builder
+COPY --from=builder /bin/uv /bin/uvx /bin/
+COPY --from=builder /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Copy application code and environment file
 COPY app.py ./
+COPY utils.py ./
+COPY .env ./
 
-# Expose the default port
+RUN mkdir -p /inference_results
+VOLUME ["/inference_results"]
+
+RUN uv run streamlit --version
+
+# Expose the Streamlit port
 EXPOSE 8501
 
-# Entrypoint:
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Launch Streamlit
+CMD ["uv", "run", "streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
