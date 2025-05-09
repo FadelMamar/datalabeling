@@ -113,6 +113,7 @@ if __name__ == "__main__":
     from ultralytics import YOLO
     import torch
     import numpy as np
+    # from torchvision.datasets import ImageFolder
 
     def predict_with_uncertainty(model, img_path, n_iter=10):
         """Monte Carlo Dropout for uncertainty estimation"""
@@ -145,10 +146,73 @@ if __name__ == "__main__":
 
         return {"boxes": stacked, "uncertainty": uncertainty}
 
-    model = YOLO(r"D:\datalabeling\base_models_weights\best.pt", task="detect")
+    # detector = YOLO(r"D:\datalabeling\base_models_weights\best.pt", task="detect")
+    classifier = YOLO(
+        r"D:\datalabeling\base_models_weights\yolo11s-cls\weights\best.pt",
+        task="classify",
+    )
 
-    x = r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\images\00a033fefe644429a1e0fcffe88f8b39_0_4_512_512_1152_1152.jpg"
+    # model = classifier.model.train()
+    # out = model(torch.rand(4,3,96,96))
 
-    (out1,) = model(x)
+    # x = r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\images\00a033fefe644429a1e0fcffe88f8b39_0_4_512_512_1152_1152.jpg"
 
-    # out = predict_with_uncertainty(model,x,n_iter=3)
+    # (out1,) = detector(x)
+
+    # xyxy = out1.obb.xyxy.cpu().long().tolist()[0]
+    # x_min,y_min,x_max,y_max = xyxy
+    # det_crop_img = out1.orig_img[y_min:y_max+1, x_min:x_max+1, :] # https://docs.ultralytics.com/modes/predict/#key-features-of-predict-mode BGR
+
+    # # out = predict_with_uncertainty(model,x,n_iter=3)
+
+    # image = r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\cls\train\false_positives"
+
+    # out = classifier(image,batch=16,verbose=False)
+    # pred = np.array([o.probs.top1 for o in out])
+    # accuracy = (pred == np.zeros_like(pred)).sum()/len(pred)
+    # # print(out.probs)
+
+    # out1_1, = classifier(det_crop_img)
+    # # print(out1_1.probs)
+
+    # data = ImageFolder(root=r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\cls\train")
+
+    # out.probs
+
+    # =============================================================================
+    #     Training image classifier
+    # =============================================================================
+    from datalabeling.ml.train import ImageClassifier
+    from datalabeling.common.io import ClassifierDataModule
+    from lightning import Trainer
+    from torchvision import models
+    import torch
+
+    dm = ClassifierDataModule(
+        train_dir=r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\cls\train",
+        val_dir=r"D:\herdnet-Det-PTR_emptyRatio_0.0\yolo_format\cls\val",
+        batch_size=8,
+        num_workers=1,
+        img_size=96,
+    )
+    dm.setup("fit")
+
+    # loader = dm.train_dataloader()
+
+    # batch = next(iter(loader))
+
+    # model = classifier.model.train()
+    # for p in model.parameters():
+    #     p.require_grad = True
+
+    model = models.mobilenet_v3_small(weights="IMAGENET1K_V1")
+    model.classifier = torch.nn.Linear(576, dm.num_classes)
+
+    routine = ImageClassifier(
+        model=model, num_classes=2, threshold=0.5, label_smoothing=0.0, lr=1e-3
+    )
+
+    trainer = Trainer(
+        max_epochs=5,
+    )
+    # trainer.fit(routine, dm)
