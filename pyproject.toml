@@ -24,9 +24,6 @@ dependencies = [
     "scikit-image>=0.25.2",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
-    "torch==2.6.0",
-    "torchaudio>=2.6.0",
-    "torchvision>=0.21.0",
     "wandb==0.18.7",
     "black>=25.1.0",
     "isort>=5.13.2",
@@ -44,6 +41,14 @@ dependencies = [
     "albumentations>=2.0.6",
     "animaloc",
     "pycocotools>=2.0.8",
+    "folium>=0.19.5",
+]
+
+[project.optional-dependencies]
+cpu = [
+    "torch==2.6.0",
+    "torchaudio>=2.6.0",
+    "torchvision>=0.21.0",
 ]
 
 [build-system]
