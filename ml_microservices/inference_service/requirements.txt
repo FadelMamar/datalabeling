@@ -1,1 +1,9 @@
-git+https://github.com/FadelMamar/datalabeling.git
+ultralytics
+sahi
+geopy
+pandas
+pillow
+numpy
+mlflow
+tqdm
+utm

@@ -1,8 +1,7 @@
 import litserve as ls
-import base64
+import base64, os
 
 from PIL import Image
-from pathlib import Path
 
 
 class MyModelAPI(ls.LitAPI):
@@ -15,18 +14,20 @@ class MyModelAPI(ls.LitAPI):
         `device` is e.g. 'cuda:0' or 'cpu'.
         """
 
-        from datalabeling.ml.models import Detector
-        from datalabeling.common.annotation_utils import GPSUtils, ImageProcessor
+        from ..core.utils import GPSUtils, ImageProcessor
+        from ..models import Detector
         import torch
 
         self.model = Detector(
-            path_to_weights="/model_weights/best.pt",
-            confidence_threshold=0.25,
-            overlap_ratio=0.2,
-            tilesize=800,
-            imgsz=800,
+            mlflow_model_name="production",
+            mlflow_model_alias="yolov11s-obb",
             use_sliding_window=True,
-            device="cuda:0" if torch.cuda.is_available() else "cpu",
+            confidence_threshold=0.15,
+            overlap_ratio=0.2,
+            tilesize=960,
+            imgsz=960,
+            device="cuda" if torch.cuda.is_available() else "cpu",
+            tracking_url=os.environ["MLFLOW_TRACKING_URI"],
         )
 
         self.get_image_gps_coord = GPSUtils.get_gps_coord

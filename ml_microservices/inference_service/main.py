@@ -1,4 +1,4 @@
-from inference_service.app import run_inference_server
+from inference_service.src import run_inference_server
 
 
 if __name__ == "__main__":
