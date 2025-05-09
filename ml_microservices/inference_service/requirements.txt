@@ -7,3 +7,7 @@ numpy
 mlflow
 tqdm
 utm
+lightning
+lightning-sdk
+litserve
+python-dotenv

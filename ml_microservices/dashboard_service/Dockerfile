@@ -39,7 +39,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code and environment file
 COPY app.py ./
 COPY utils.py ./
-COPY .env ./
+
+ENV LABEL_STUDIO_URL=http://labeling:8080
+ENV INFERENCE_SERVICE_URL=http://inference:4141/predict
 
 RUN mkdir -p /inference_results
 VOLUME ["/inference_results"]

@@ -12,8 +12,6 @@ from label_studio_sdk.client import LabelStudio
 from itertools import chain
 from tqdm import tqdm
 
-DOT_ENV = ".env"
-dotenv.load_dotenv(DOT_ENV)
 
 LABEL_STUDIO_URL = os.environ["LABEL_STUDIO_URL"]
 LABEL_STUDIO_API_KEY = None
@@ -286,9 +284,9 @@ def upload_to_label_studio(project_id: int, top_n: int = 0, **annotator_kwargs):
 def get_project_statistics(
     project_id: int, annotator_id=0
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    instances_count, images_count = Annotator.get_project_stats(
-        LABEL_STUDIO_CLIENT, project_id=project_id, annotator_id=annotator_id
-    )
+    instances_count, images_count = ...  # Annotator.get_project_stats(
+    #     LABEL_STUDIO_CLIENT, project_id=project_id, annotator_id=annotator_id
+    # )
 
     instances_count.rename(
         columns={col: col + "_num_instances" for col in instances_count.columns},
