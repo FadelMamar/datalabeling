@@ -23,50 +23,64 @@ services:
     depends_on:
       - minio
 
+  # PostgreSQL database
+  # postgres:
+  #   image: postgres:latest
+  #   environment:
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: mlflowdb
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
   mlflow_service:
     build:
       context: ./mlflow_service        # directory containing your Dockerfile
       dockerfile: Dockerfile           # omit if it’s literally named “Dockerfile”
-    image: my-mlflow-server:latest
+    image: mlflow_service:latest
     environment:
-      # must match what you put in your Dockerfile or override as needed
       BACKEND_STORE_URI: sqlite:///mlflow.db
-      DEFAULT_ARTIFACT_ROOT: s3://mlflow/
+      DEFAULT_ARTIFACT_ROOT: s3://mlflow-artifacts
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
     ports:
       - "5000:5000"                     # expose MLflow UI/API on port 5000
     volumes:
-      - mlflow_service_data:/mlflow/mlruns   # persist mlruns metadata
-    networks:
-      - backend                       # attach to your internal network
+      - mlflow_service_data:/mlflow   # persist mlruns metadata
     depends_on:
       - minio
 
-  inference_service:
-    build:
-      context: ./inference_service
-      dockerfile: Dockerfile
-    image: my-inference-service:latest
-    ports:
-      - "4141:4141"
-    volumes:
-      - D:\datalabeling\base_models_weights:/model_weights
+  # inference:
+  #   build:
+  #     context: ./inference_service
+  #     dockerfile: Dockerfile
+  #   image: inference:latest
+  #   ports:
+  #     - "4141:4141"
+  #   volumes:
+  #     - inference_service_data:/model_weights
+  #   depends_on:
+  #     - minio
 
-  dashboard_service:
+  dashboard:
     build:
       context: ./dashboard_service
       dockerfile: Dockerfile
-    image: my-dashboard-service:latest
+    image: dashboard:latest
     ports:
       - "8501:8501"
+    volumes:
+      - dashboard_service_data:/inference_results
 
-networks:
-  backend:
-    driver: bridge
+
 
 volumes:
   minio_data:
   labelstudio_data:
   mlflow_service_data:
+  dashboard_service_data:
+  inference_service_data:
+  postgres_data:
