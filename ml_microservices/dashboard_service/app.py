@@ -37,9 +37,9 @@ def main():
 
     st.title("Labeling Workflow Management")
 
-    # with st.sidebar:
-    #     st.header("API Configuration")
-    LABEL_STUDIO_API_KEY = st.text_input("Label Studio Token", type="password")
+    with st.sidebar:
+        st.header("API Configuration")
+        LABEL_STUDIO_API_KEY = st.text_input("Label Studio Token", type="password")
     LABEL_STUDIO_CLIENT = LabelStudio(
         base_url=LABEL_STUDIO_URL, api_key=LABEL_STUDIO_API_KEY
     )

@@ -52,4 +52,4 @@ ENV MODEL_NAME="labeler"
 ENV MODEL_ALIAS="demo"
 
 # Entrypoint
-CMD ["uv", "run", "main.py"]
+CMD ["uv", "run", "python", "main.py"]

@@ -2,6 +2,10 @@ import litserve as ls
 import base64, os
 
 from PIL import Image
+import torch
+from ray import serve
+
+from .utils import decode_request, postprocess_response
 
 
 class MyModelAPI(ls.LitAPI):
@@ -14,8 +18,8 @@ class MyModelAPI(ls.LitAPI):
         `device` is e.g. 'cuda:0' or 'cpu'.
         """
 
-        from ..core.utils import GPSUtils, ImageProcessor
-        from ..models import Detector
+        from .utils import GPSUtils, ImageProcessor
+        from . import Detector
 
         self.model = Detector(
             mlflow_model_name=os.environ["MODEL_NAME"],
@@ -46,7 +50,7 @@ class MyModelAPI(ls.LitAPI):
                 raise ValueError("Invalid base64 format")
 
             image_bytes = base64.b64decode(img_data)
-            img = Image.open(BytesIO(image_bytes))  # .convert("RGB")
+            img = Image.open(BytesIO(image_bytes))
 
         except Exception as e:
             raise ValueError(f"Image decoding failed: {str(e)}")
@@ -93,44 +97,44 @@ class MyModelAPI(ls.LitAPI):
         return output
 
 
-# def prepare_triton_model(repo_path: str, model_name: str, model_version: str, model_dir: str):
-#     """
-#     Copy the MLflow-fetched model to Triton's model repository structure:
-#       {repo_path}/{model_name}/{model_version}/
-#     """
+@serve.deployment()
+class DetectionService:
+    def __init__(self):
+        from . import Detector
 
-#     dest = Path(repo_path) / model_name / model_version
-#     if dest.exists(): shutil.rmtree(dest)
-#     shutil.copytree(model_dir, dest)
-#     print(f"Model staged at {dest}")
+        # One-time model load
+        device = os.environ.get("DEVICE", "cpu")
+        self.model = Detector(
+            mlflow_model_name=os.environ["MODEL_NAME"],
+            mlflow_model_alias=os.environ["MODEL_ALIAS"],
+            use_sliding_window=True,
+            confidence_threshold=0.15,
+            overlap_ratio=0.2,
+            tilesize=960,
+            imgsz=960,
+            device=device,
+            tracking_url=os.environ["MLFLOW_TRACKING_URI"],
+        )
 
+    async def __call__(self, request):
+        try:
+            # Decode and prepare inputs
+            request_json = await request.json()
+            inputs = decode_request(request_json)
+        except Exception as e:
+            return serve.context.Response(
+                response=f"Request decoding error: {e}", status_code=400
+            )
 
-# @serve.deployment(route_prefix="/predict")
-# @serve.ingress(FastAPI())
-# class RayMNISTService:
-#     def __init__(self, model_handle: RayServeHandle):
-#         """Run inference using Triton gRPC client under the hood"""
-#         from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
-#         self.triton = InferenceServerClient(url="localhost:8001")
-#         self.model_name = "my_model"
-#         self.model_version = "1"
+        # Run prediction
+        try:
+            with torch.no_grad():
+                detections = self.model.predict(**inputs)
+        except Exception as e:
+            return serve.context.Response(
+                response=f"Model prediction error: {e}", status_code=500
+            )
 
-#     @serve.post("/")
-#     async def predict(self, request: Any) -> Any:
-#         data = await request.json()
-#         # prepare Triton inputs
-#         input_data = data["input"]  # e.g. list or nested lists
-#         # build InferInput
-#         input_tensor = InferInput(name="input__0", shape=list(data["shape"]), datatype="FP32")
-#         input_tensor.set_data_from_numpy(np.array(input_data, dtype=np.float32))
-#         outputs = [InferRequestedOutput(name="output__0")]
-#         result = self.triton.infer(model_name=self.model_name, model_version=self.model_version, inputs=[input_tensor], outputs=outputs)
-#         return {"predictions": result.as_numpy("output__0").tolist()}
-
-# def start_rayserve():
-#     """Bootstraps Ray Serve deployment after Triton is ready"""
-#     model_fetcher = MLflowModelFetcher(tracking_uri=os.environ.get("MLFLOW_TRACKING_URI", ""))
-#     local_dir = model_fetcher.fetch(run_id=os.environ.get("MLFLOW_RUN_ID"), artifact_path="model", dst="./models")
-#     prepare_triton_model(repo_path="./triton_models", model_name="my_model", model_version="1", model_dir=local_dir)
-#     serve.start(detached=True)
-#     RayMNISTService.bind(None)
+        # Format and return response
+        result = postprocess_response(inputs["image_gps"], detections)
+        return result
