@@ -3,21 +3,21 @@ FROM python:3.11-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /uvx /bin/
 
-# Install build-time tools
+# Install build-time dependencies
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git build-essential \
+ && apt-get install -y --no-install-recommends git \
  && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Prepare working directory
+WORKDIR /build
 
-# Copy dependency files first
+# Copy only requirements for caching
 COPY pyproject.toml requirements.txt ./
 
-# Install dependencies in a virtualenv
+# Install Python dependencies into /install
 RUN uv venv /opt/venv
 ENV VIRTUAL_ENV=/opt/venv
-RUN uv pip install --upgrade pip \
- && uv pip install --no-cache-dir -e . \
+RUN uv pip install --no-cache-dir -e . \
  && uv pip install --no-cache-dir -r requirements.txt
 
 # ---------- Stage 2: Runtime ----------
@@ -27,8 +27,8 @@ LABEL maintainer="fadel.seydou@gmail.com"
 LABEL version="0.0.1"
 LABEL description="Inference service using litserve"
 
-# Create app directory
-WORKDIR /app
+# Create workspace directory
+WORKDIR /workspace
 
 # Copy installed dependencies from builder
 COPY --from=builder /bin/uv /bin/uvx /bin/
@@ -37,8 +37,7 @@ ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy source code only
-COPY main.py ./
-COPY src/ ./app/
+COPY main.py src/ ./
 
 # Create and mount model weights directory
 RUN mkdir -p /model_weights
@@ -47,5 +46,10 @@ VOLUME ["/model_weights"]
 # Expose inference port
 EXPOSE 4141
 
+ENV MLFLOW_TRACKING_URI=http://mlflow_service:5000
+ENV INFERENCE_PORT=4141
+ENV MODEL_NAME="labeler"
+ENV MODEL_ALIAS="demo"
+
 # Entrypoint
-CMD ["lightning", "serve", "main.py", "--local"]
+CMD ["uv", "run", "main.py"]

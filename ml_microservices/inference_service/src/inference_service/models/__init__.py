@@ -24,7 +24,7 @@ class Detector(object):
         tilesize: int | None = 960,
         imgsz: int = 960,
         device: str = None,
-        tracking_url: str = "http://localhost:5000",
+        tracking_url: str = "http://mlflow_service:5000",
     ):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"

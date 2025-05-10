@@ -18,14 +18,14 @@ class MyModelAPI(ls.LitAPI):
         from ..models import Detector
 
         self.model = Detector(
-            mlflow_model_name="production",
-            mlflow_model_alias="yolov11s-obb",
+            mlflow_model_name=os.environ["MODEL_NAME"],
+            mlflow_model_alias=os.environ["MODEL_ALIAS"],
             use_sliding_window=True,
             confidence_threshold=0.15,
             overlap_ratio=0.2,
             tilesize=960,
             imgsz=960,
-            device=device,  # "cuda" if torch.cuda.is_available() else "cpu",
+            device=device,
             tracking_url=os.environ["MLFLOW_TRACKING_URI"],
         )
 
