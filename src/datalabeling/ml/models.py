@@ -65,8 +65,8 @@ class Detector(object):
                 device=device,
             )
 
-    def _predict_url(
-        self,
+    @staticmethod
+    def predict_url(
         image_path: str,
         inference_service_url: str = "http://127.0.0.1:4141/predict",
         timeout=3 * 60,
@@ -124,7 +124,7 @@ class Detector(object):
 
         # predict using inference service
         if isinstance(inference_service_url, str):
-            self._predict_url(
+            Detector.predict_url(
                 image_path=image_path,
                 inference_service_url=inference_service_url,
                 timeout=timeout,
@@ -256,7 +256,6 @@ class Detector(object):
         results = {}
         paths = images_paths or list(Path(path_to_dir).iterdir())
         for image_path in tqdm(paths, desc="Computing predictions..."):
-
             try:
                 pred = self.predict(
                     image=None,
@@ -273,7 +272,7 @@ class Detector(object):
                 pred, gps_info = pred
                 if isinstance(gps_info, tuple):
                     gps_coords = gps_info[0]
-            
+
             pred.append(dict(gps_coords=gps_coords))
             results.update({str(image_path): pred})
 
@@ -376,7 +375,7 @@ class Detector(object):
             df_i["file_name"] = df_results.iat[i, 0]
             dfs.append(df_i)
 
-        dfs = pd.concat(dfs, axis=0) #.dropna(thresh=5)
+        dfs = pd.concat(dfs, axis=0)  # .dropna(thresh=5)
         # bbox is in coco format (x_min,y_min,w,h)
         dfs["x_min"] = dfs["bbox"].apply(lambda x: x[0])
         dfs["y_min"] = dfs["bbox"].apply(lambda x: x[1])
@@ -394,9 +393,7 @@ class Detector(object):
             dfs[["img_Latitude", "img_Longitude", "Elevation"]] = dfs.gps.apply(
                 lambda x: self.format_gps(x)
             ).apply(pd.Series)
-            dfs[["Latitude", "Longitude"]] = dfs.apply(
-                self.get_detections_gps, axis=1
-            )
+            dfs[["Latitude", "Longitude"]] = dfs.apply(self.get_detections_gps, axis=1)
 
         try:
             dfs.drop(
