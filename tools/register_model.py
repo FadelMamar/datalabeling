@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from sys import version_info
 
-import cloudpickle
+# import cloudpickle
 import mlflow
 from datargs import parse
 
@@ -27,7 +27,7 @@ class Args:
 
     use_sliding_window: bool = False
 
-    is_yolo_obb: bool = False
+    # is_yolo_obb: bool = False
 
 
 PYTHON_VERSION = "{major}.{minor}.1".format(
@@ -45,7 +45,7 @@ conda_env = {
                 "pillow",
                 "ultralytics",
                 "sahi",
-                "cloudpickle",
+                # "cloudpickle",
                 "torch>=2.0.0",
             ],
         },
@@ -68,7 +68,7 @@ def main():
         use_sliding_window=args.use_sliding_window,
         nms_iou=args.nms_iou,
         imgsz=args.imgsz,
-        is_yolo_obb=args.is_yolo_obb,
+        # is_yolo_obb=args.is_yolo_obb,
         sahi_postprocess="NMS",
     )
 

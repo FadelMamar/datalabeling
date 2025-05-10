@@ -63,7 +63,7 @@ class Annotator(object):
 
         self.path_to_weights = path_to_weights
         if self.path_to_weights is None:
-            TRACKING_URI = "http://localhost:5000"
+            TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
             mlflow.set_tracking_uri(TRACKING_URI)
             client = mlflow.MlflowClient()
             name = mlflow_model_name
@@ -88,7 +88,7 @@ class Annotator(object):
         self.to_name = "image"
         self.label_type = "rectanglelabels"
 
-    def predict(self, image: Image.Image, return_coco=True) -> dict:
+    def predict(self, image: Image.Image) -> dict:
         """prediction using Sahi or not depending on self.use_sliding_window
 
         Args:
@@ -97,7 +97,10 @@ class Annotator(object):
         Returns:
             dict: prediction in coco annotation format
         """
-        return self.model.predict(image, return_coco=return_coco)
+        try:
+            return self.model.predict(image, return_coco=True)
+        except Exception:
+            return self.model.predict(image)
 
     def predict_directory(
         self,
@@ -109,7 +112,7 @@ class Annotator(object):
         save_path: str = None,
     ):
         try:
-             results = self.model.predict_directory(
+            results = self.model.predict_directory(
                 path_to_dir=path_to_dir,
                 images_paths=images_paths,
                 return_gps=return_gps,
@@ -117,7 +120,7 @@ class Annotator(object):
                 as_dataframe=as_dataframe,
                 save_path=save_path,
             )
-            
+
         except:
             results = (
                 self.model.unwrap_python_model().detection_model.predict_directory(
