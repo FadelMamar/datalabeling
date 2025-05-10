@@ -9,5 +9,5 @@ tqdm
 utm
 lightning
 lightning-sdk
-litserve
+litserve==0.2.9
 python-dotenv

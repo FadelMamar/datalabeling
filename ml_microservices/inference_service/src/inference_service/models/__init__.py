@@ -65,7 +65,6 @@ class Detector(object):
     def predict(
         self,
         image: Image.Image = None,
-        image_path: str = None,
         return_gps: bool = False,
         return_coco: bool = False,
         sahi_prostprocess: float = "NMS",
@@ -86,12 +85,9 @@ class Detector(object):
         if self.model is None:
             self._set_model()
 
-        # predict using local model
-        if image is None:
-            assert image_path is not None, "Provide the image path."
-            image = Image.open(image_path)
-        else:
-            assert isinstance(image, Image.Image)
+        assert isinstance(image, Image.Image), (
+            f"image should be instance of Image.Image, got {type(image)}"
+        )
 
         if self.use_sliding_window:
             tilesize = override_tilesize or self.tilesize
@@ -123,7 +119,7 @@ class Detector(object):
         out = result
         # get gps coordinates
         if return_gps:
-            gps_coords = GPSUtils.get_gps_coord(file_name=image_path, image=image)
+            gps_coords = GPSUtils.get_gps_coord(file_name=None, image=image)
             out = result, gps_coords
 
         return out

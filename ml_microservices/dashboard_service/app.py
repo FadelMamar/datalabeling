@@ -276,17 +276,25 @@ def load_yaml(path: str):
 
 
 # Mock API client functions (implement according to your API specs)
-def upload_to_label_studio(project_id: int, top_n: int = 0, **annotator_kwargs):
-    handler = ...  # Annotator(dotenv_path=str(DOT_ENV), **annotator_kwargs)
-    handler.upload_predictions(project_id=project_id, top_n=top_n)
+def upload_to_label_studio(
+    alias: str, project_id: int, top_n: int = 0, **annotator_kwargs
+):
+    handler = Detector(
+        inference_service_url=INFERENCE_SERVICE_URL,
+        alias=alias,
+        return_gps=True,
+        postprocess_match_threshold=0.5,
+        timeout=3 * 60,
+    )
+    handler.upload_predictions(project_id=project_id, top_n=top_n, **annotator_kwargs)
 
 
 def get_project_statistics(
     project_id: int, annotator_id=0
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    instances_count, images_count = ...  # Annotator.get_project_stats(
-    #     LABEL_STUDIO_CLIENT, project_id=project_id, annotator_id=annotator_id
-    # )
+    instances_count, images_count = Detector.get_project_stats(
+        LABEL_STUDIO_CLIENT, project_id=project_id, annotator_id=annotator_id
+    )
 
     instances_count.rename(
         columns={col: col + "_num_instances" for col in instances_count.columns},
