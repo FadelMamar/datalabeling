@@ -44,7 +44,7 @@ ENV AWS_SECRET_ACCESS_KEY=minioadmin
 
 # Prepare volumes for persistence
 RUN mkdir -p /mlflow/mlruns
-VOLUME ["/mlflow",]
+VOLUME ["/mlflow"]
 
 # 6. Expose the default MLflow port
 EXPOSE 5000
