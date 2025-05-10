@@ -53,17 +53,22 @@ services:
     depends_on:
       - minio
 
-  # inference:
-  #   build:
-  #     context: ./inference_service
-  #     dockerfile: Dockerfile
-  #   image: inference:latest
-  #   ports:
-  #     - "4141:4141"
-  #   volumes:
-  #     - inference_service_data:/model_weights
-  #   depends_on:
-  #     - minio
+  inference:
+    build:
+      context: ./inference_service
+      dockerfile: Dockerfile
+    image: inference:latest
+    ports:
+      - "4141:4141"
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow_service:5000
+      INFERENCE_PORT: 4141
+      MODEL_NAME: labeler
+      MODEL_ALIAS: demo
+    volumes:
+      - inference_service_data:/model_weights
+    depends_on:
+      - minio
 
   dashboard:
     build:

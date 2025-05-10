@@ -51,7 +51,6 @@ ENV INFERENCE_PORT=4141
 ENV MODEL_NAME="labeler"
 ENV MODEL_ALIAS="demo"
 
-RUN uv pip install opencv-python-headless
 
 # Entrypoint
 CMD ["uv", "run", "python", "main.py"]
